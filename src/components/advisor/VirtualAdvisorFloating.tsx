@@ -26,7 +26,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
   >([
     {
       sender: 'bot',
-      text: '¡Hola! Soy el Asesor Virtual de Café Magnolia. ¿En qué puedo ayudarte hoy? Podés seleccionar una de las preguntas frecuentes abajo o escribir tu duda.',
+      text: '¡Hola! Soy el Asesor Virtual de Hilos de Amor. ¿En qué puedo ayudarte hoy? Podés seleccionar una de las preguntas frecuentes abajo o escribir tu duda.',
       time: 'Ahora',
     },
   ]);
@@ -165,7 +165,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-brand-dark leading-tight">Asesor Virtual</h3>
-                  <p className="text-xs text-brand-brown/80 font-medium">Asistencia 24/7 de Café Magnolia</p>
+                  <p className="text-xs text-brand-brown/80 font-medium">Asistencia 24/7 de Hilos de Amor</p>
                 </div>
               </div>
               <button

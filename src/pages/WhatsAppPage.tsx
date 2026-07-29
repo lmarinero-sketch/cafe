@@ -212,9 +212,9 @@ export const WhatsAppPage: React.FC = () => {
       {activeTab === 'crm' && (
         <div className="bg-[#FFFDF8] rounded-2xl border-2 border-brand-secondary shadow-soft-lg overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[580px]">
           {/* Left Column: Customer Conversations List (3.5 cols) */}
-          <div className="md:col-span-4 lg:col-span-4 border-r border-[#EADBC8] bg-[#FAF5EE] flex flex-col justify-between">
+          <div className="md:col-span-4 lg:col-span-4 border-r border-[#D6E2D4] bg-[#EEF4EC] flex flex-col justify-between">
             {/* Header & Search */}
-            <div className="p-3 border-b border-[#EADBC8] space-y-3 bg-[#FAF5EE]">
+            <div className="p-3 border-b border-[#D6E2D4] space-y-3 bg-[#EEF4EC]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-sm shadow-xs">
@@ -237,13 +237,13 @@ export const WhatsAppPage: React.FC = () => {
                   value={chatSearch}
                   onChange={(e) => setChatSearch(e.target.value)}
                   placeholder="Buscar o iniciar chat..."
-                  className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#EADBC8] bg-[#FFFDF8] text-xs focus:outline-none focus:ring-1 focus:ring-emerald-700/40"
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#D6E2D4] bg-[#FFFFFF] text-xs focus:outline-none focus:ring-1 focus:ring-emerald-700/40"
                 />
               </div>
             </div>
 
             {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto divide-y divide-[#EADBC8]/60">
+            <div className="flex-1 overflow-y-auto divide-y divide-[#D6E2D4]/60">
               {filteredChatCustomers.map((c) => {
                 const isSelected = c.id === selectedCustomerId;
                 const msgs = chatMessages[c.id] || [];

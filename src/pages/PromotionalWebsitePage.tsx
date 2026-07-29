@@ -186,47 +186,47 @@ export const PromotionalWebsitePage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/menu')}
-              className="py-2 px-3.5 rounded-xl bg-[#765747] text-[#FFFDF8] font-bold text-xs hover:bg-[#4A352C] transition-all shadow-soft flex items-center gap-1.5"
+              className="py-2 px-3.5 rounded-xl bg-[#2F5233] text-[#FFFDF8] font-bold text-xs hover:bg-[#1A2E1E] transition-all shadow-soft flex items-center gap-1.5"
             >
-              <Smartphone className="w-3.5 h-3.5 text-[#F4D58D]" /> Pedir en Menú Digital
+              <Smartphone className="w-3.5 h-3.5 text-[#D8E4C3]" /> Pedir en Menú Digital
             </button>
             <button
               onClick={() => navigate('/carta-tradicional')}
-              className="hidden sm:flex py-2 px-3.5 rounded-xl bg-[#FAF5EE] text-[#4A352C] border border-[#EADBC8] font-bold text-xs hover:bg-[#EADBC8]/40 transition-colors items-center gap-1.5"
+              className="hidden sm:flex py-2 px-3.5 rounded-xl bg-[#EBF1EA] text-[#1A2E1E] border border-[#D2E0D0] font-bold text-xs hover:bg-[#D2E0D0]/40 transition-colors items-center gap-1.5"
             >
-              <BookOpen className="w-3.5 h-3.5 text-[#765747]" /> Carta Tradicional
+              <BookOpen className="w-3.5 h-3.5 text-[#2F5233]" /> Carta Tradicional
             </button>
           </div>
         </div>
       </header>
 
       {/* Hero Banner */}
-      <section className="relative overflow-hidden py-12 px-4 bg-gradient-to-b from-[#FFFDF8] to-[#F7F1E7] border-b border-[#EADBC8]">
+      <section className="relative overflow-hidden py-12 px-4 bg-gradient-to-b from-[#FFFDF8] to-[#F4F7F3] border-b border-[#D2E0D0]">
         <div className="max-w-5xl mx-auto text-center space-y-6">
-          <span className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-[#765747] bg-[#F4D58D]/40 px-3.5 py-1.5 rounded-full border border-[#F4D58D]">
-            ✨ Cafetería de Especialidad & Pastelería de Autor en San Juan
+          <span className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-[#2F5233] bg-[#D8E4C3]/40 px-3.5 py-1.5 rounded-full border border-[#D8E4C3]">
+            ✨ Pastelería de Autor & Encordado en San Juan
           </span>
 
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-[#4A352C] tracking-tight leading-tight max-w-3xl mx-auto font-serif">
-            Donde el café de especialidad y la calidez sanjuanina se encuentran
+          <h2 className="text-3xl sm:text-5xl font-extrabold text-[#1A2E1E] tracking-tight leading-tight max-w-3xl mx-auto font-serif">
+            Hilos de Amor — Pastelería Artesanal & Encordado
           </h2>
 
-          <p className="text-sm sm:text-base text-[#765747] max-w-2xl mx-auto font-medium leading-relaxed">
-            Descubrí granos seleccionados tostados artesanalmente, pastelería elaborada diariamente en nuestras sucursales y la experiencia exclusiva del Club Magnolia.
+          <p className="text-sm sm:text-base text-[#2F5233] max-w-2xl mx-auto font-medium leading-relaxed">
+            Descubrí la combinación perfecta entre dulzura artesanal, especialidades de pastelería y la calidez de nuestro espacio en San Juan.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <a
               href="#club-magnolia"
-              className="py-3 px-6 rounded-xl bg-[#765747] text-[#FFFDF8] font-extrabold text-xs sm:text-sm hover:bg-[#4A352C] transition-all shadow-soft-lg flex items-center gap-2"
+              className="py-3 px-6 rounded-xl bg-[#2F5233] text-[#FFFDF8] font-extrabold text-xs sm:text-sm hover:bg-[#1A2E1E] transition-all shadow-soft-lg flex items-center gap-2"
             >
-              <Gift className="w-4 h-4 text-[#F4D58D]" /> Sumate al Club de Beneficios
+              <Gift className="w-4 h-4 text-[#D8E4C3]" /> Sumate al Club de Beneficios
             </a>
             <a
               href="#sucursales"
-              className="py-3 px-6 rounded-xl bg-[#FFFDF8] text-[#4A352C] border border-[#EADBC8] font-bold text-xs sm:text-sm hover:bg-[#FAF5EE] transition-all shadow-xs flex items-center gap-2"
+              className="py-3 px-6 rounded-xl bg-[#FFFDF8] text-[#1A2E1E] border border-[#D2E0D0] font-bold text-xs sm:text-sm hover:bg-[#EBF1EA] transition-all shadow-xs flex items-center gap-2"
             >
-              <MapPin className="w-4 h-4 text-[#765747]" /> Ver Sucursales en San Juan
+              <MapPin className="w-4 h-4 text-[#2F5233]" /> Ver Sucursales en San Juan
             </a>
           </div>
         </div>

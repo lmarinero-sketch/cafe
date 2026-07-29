@@ -72,11 +72,11 @@ export const DashboardPage: React.FC = () => {
 
   // Top Selling Products Chart Data
   const topProductsChartData = [
-    { name: 'Café con Leche', unidades: 340, fill: '#765747' },
-    { name: 'Medialunas', unidades: 290, fill: '#4A352C' },
-    { name: 'Hamburguesa', unidades: 210, fill: '#F4D58D' },
-    { name: 'Cheesecake', unidades: 185, fill: '#B7C9A8' },
-    { name: 'Combo Desayuno', unidades: 160, fill: '#EADBC8' },
+    { name: 'Café con Leche', unidades: 340, fill: '#2F5233' },
+    { name: 'Medialunas', unidades: 290, fill: '#4E7252' },
+    { name: 'Hamburguesa', unidades: 210, fill: '#8FA887' },
+    { name: 'Cheesecake', unidades: 185, fill: '#B8CCA8' },
+    { name: 'Combo Desayuno', unidades: 160, fill: '#D6E2D4' },
   ];
 
   const planLabels = {
@@ -237,18 +237,18 @@ export const DashboardPage: React.FC = () => {
               <AreaChart data={salesChartData}>
                 <defs>
                   <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#765747" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#765747" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="#2F5233" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#2F5233" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EADBC8" />
-                <XAxis dataKey="day" stroke="#4A352C" fontSize={12} />
-                <YAxis stroke="#4A352C" fontSize={11} tickFormatter={(val) => `$${val / 1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#D6E2D4" />
+                <XAxis dataKey="day" stroke="#1A2E1E" fontSize={12} />
+                <YAxis stroke="#1A2E1E" fontSize={11} tickFormatter={(val) => `$${val / 1000}k`} />
                 <Tooltip
                   formatter={(val: number) => [formatCurrency(val), 'Ventas']}
-                  contentStyle={{ backgroundColor: '#FFFDF8', borderRadius: '12px', border: '1px solid #EADBC8', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #D6E2D4', fontSize: '12px' }}
                 />
-                <Area type="monotone" dataKey="ventas" stroke="#765747" strokeWidth={3} fillOpacity={1} fill="url(#colorVentas)" />
+                <Area type="monotone" dataKey="ventas" stroke="#2F5233" strokeWidth={3} fillOpacity={1} fill="url(#colorVentas)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -272,12 +272,12 @@ export const DashboardPage: React.FC = () => {
           <div className="h-64 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={topProductsChartData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#EADBC8" />
-                <XAxis type="number" stroke="#4A352C" fontSize={11} />
-                <YAxis dataKey="name" type="category" stroke="#4A352C" fontSize={11} width={115} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#D6E2D4" />
+                <XAxis type="number" stroke="#1A2E1E" fontSize={11} />
+                <YAxis dataKey="name" type="category" stroke="#1A2E1E" fontSize={11} width={115} />
                 <Tooltip
                   formatter={(val: number) => [`${val} unidades`, 'Vendidas']}
-                  contentStyle={{ backgroundColor: '#FFFDF8', borderRadius: '12px', border: '1px solid #EADBC8', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #D6E2D4', fontSize: '12px' }}
                 />
                 <Bar dataKey="unidades" radius={[0, 8, 8, 0]}>
                   {topProductsChartData.map((entry, index) => (

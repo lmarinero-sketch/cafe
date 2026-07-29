@@ -7,6 +7,7 @@ import { TraditionalMenuPage } from '../pages/TraditionalMenuPage';
 import { PromotionalWebsitePage } from '../pages/PromotionalWebsitePage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { ProductsPage } from '../pages/ProductsPage';
+import { CategoriesPage } from '../pages/CategoriesPage';
 import { TablesPage } from '../pages/TablesPage';
 import { OrdersPage } from '../pages/OrdersPage';
 import { DeliveryPage } from '../pages/DeliveryPage';
@@ -58,7 +59,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'categorias',
-        element: <ProductsPage />,
+        element: <CategoriesPage />,
       },
       {
         path: 'mesas',

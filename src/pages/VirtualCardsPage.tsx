@@ -48,18 +48,18 @@ export const VirtualCardsPage: React.FC = () => {
       {customer && (
         <div className="max-w-md mx-auto space-y-6">
           {/* DIGITAL CARD GRAPHIC CONTAINER */}
-          <div className="bg-gradient-to-br from-[#4A352C] via-[#765747] to-[#4A352C] rounded-3xl p-6 text-brand-card shadow-soft-lg border-2 border-brand-yellow/40 space-y-6 relative overflow-hidden transform hover:scale-[1.01] transition-transform">
+          <div className="bg-gradient-to-br from-[#1A2E1E] via-[#2F5233] to-[#1A2E1E] rounded-3xl p-6 text-brand-card shadow-soft-lg border-2 border-brand-yellow/40 space-y-6 relative overflow-hidden transform hover:scale-[1.01] transition-transform">
             {/* Background Glow */}
             <div className="absolute -top-20 -right-20 w-44 h-44 bg-brand-yellow/20 rounded-full blur-3xl pointer-events-none" />
 
             {/* Card Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-brand-card text-brand-dark flex items-center justify-center font-bold text-lg shadow-xs">
-                  ☕
+                <div className="w-9 h-9 rounded-full overflow-hidden border border-brand-yellow shrink-0 bg-white">
+                  <img src="/logo_hilos_de_amor.jpg" alt="Hilos de Amor" className="w-full h-full object-cover" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-extrabold tracking-tight">Café Magnolia</h3>
+                  <h3 className="text-sm font-extrabold tracking-tight font-serif">Hilos de Amor</h3>
                   <p className="text-[10px] text-brand-yellow font-semibold uppercase tracking-wider">
                     Socio VIP Club
                   </p>
