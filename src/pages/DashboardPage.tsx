@@ -109,8 +109,8 @@ export const DashboardPage: React.FC = () => {
               {planLabels[plan]}
             </span>
           </div>
-          <h2 className="text-2xl font-extrabold text-brand-dark">
-            ¡Buenas tardes, Equipo Café Magnolia! ☕
+          <h2 className="text-2xl font-extrabold text-brand-dark font-serif">
+            ¡Buenas tardes, Equipo Hilos de Amor! 🧁🧵
           </h2>
           <p className="text-xs text-brand-brown/80 mt-1">
             Resumen operativo y comercial en tiempo real.

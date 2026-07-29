@@ -158,13 +158,13 @@ export const PromotionalWebsitePage: React.FC = () => {
       <header className="sticky top-0 z-50 bg-[#FFFDF8]/95 backdrop-blur-md border-b border-[#EADBC8] px-4 py-3 shadow-xs">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#765747] text-[#FFFDF8] flex items-center justify-center font-bold text-xl shadow-soft border border-[#F4D58D]">
-              ☕
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#2F5233] shadow-soft bg-white shrink-0">
+              <img src="/logo_hilos_de_amor.jpg" alt="Hilos de Amor" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h1 className="text-base font-extrabold text-[#4A352C] leading-tight flex items-center gap-1.5">
-                Café Magnolia
-                <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full bg-[#F4D58D]/40 text-[#765747] border border-[#F4D58D]">
+              <h1 className="text-base font-extrabold text-[#1A2E1E] leading-tight flex items-center gap-1.5 font-serif">
+                Hilos de Amor
+                <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full bg-[#E2EAC7] text-[#2F5233] border border-[#8FA887]">
                   San Juan, Arg 🇦🇷
                 </span>
               </h1>
@@ -172,12 +172,12 @@ export const PromotionalWebsitePage: React.FC = () => {
                 href="https://www.growlabs.lat"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[10px] font-bold text-[#765747] hover:underline flex items-center gap-1"
+                className="text-[10px] font-bold text-[#2F5233] hover:underline flex items-center gap-1"
               >
-                <span className="w-4 h-4 rounded-full overflow-hidden border border-[#EADBC8] inline-block shrink-0 bg-white">
+                <span className="w-4 h-4 rounded-full overflow-hidden border border-[#D6E2D4] inline-block shrink-0 bg-white">
                   <img src="/logogrow.png" alt="Grow Labs" className="w-full h-full object-cover" />
                 </span>
-                Diseñado por <span className="text-emerald-800 font-extrabold">Grow Labs</span> ✨
+                Diseñado por <span className="text-emerald-900 font-extrabold">Grow Labs</span> ✨
               </a>
             </div>
           </div>

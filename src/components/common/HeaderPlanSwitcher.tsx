@@ -24,18 +24,18 @@ export const HeaderPlanSwitcher: React.FC = () => {
             onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2.5 cursor-pointer group"
           >
-            <div className="w-9 h-9 rounded-xl bg-brand-brown text-brand-card flex items-center justify-center font-bold text-lg shadow-soft group-hover:scale-105 transition-transform">
-              ☕
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-brand-brown shadow-soft group-hover:scale-105 transition-transform bg-white shrink-0">
+              <img src="/logo_hilos_de_amor.jpg" alt="Hilos de Amor" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-brand-dark leading-tight flex items-center gap-1.5">
-                Café Magnolia
-                <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-brand-secondary/50 text-brand-brown">
+              <h1 className="text-base font-extrabold text-brand-dark leading-tight flex items-center gap-1.5 font-serif">
+                Hilos de Amor
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-brand-secondary/70 text-brand-brown">
                   Demo
                 </span>
               </h1>
               <div className="flex items-center gap-1.5">
-                <p className="text-[11px] text-brand-brown/70 font-medium">Plataforma Gastronómica •</p>
+                <p className="text-[11px] text-brand-brown font-semibold">Pastelería y Encordado •</p>
                 <a
                   href="https://www.growlabs.lat"
                   target="_blank"

@@ -143,17 +143,17 @@ export const PublicMenuPage: React.FC = () => {
       <div className="bg-brand-card p-4 border-b border-brand-secondary sticky top-0 z-30 shadow-xs">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-brown text-brand-card flex items-center justify-center font-bold text-xl shadow-soft">
-              ☕
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-brown shadow-soft bg-white shrink-0">
+              <img src="/logo_hilos_de_amor.jpg" alt="Hilos de Amor" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h2 className="text-base font-extrabold text-brand-dark leading-tight">Café Magnolia</h2>
+              <h2 className="text-base font-extrabold text-brand-dark leading-tight font-serif">Hilos de Amor</h2>
               {selectedTableObj ? (
                 <span className="text-[11px] font-bold text-brand-brown bg-brand-yellow/40 px-2 py-0.5 rounded-full inline-block mt-0.5">
                   📍 {selectedTableObj.number} ({selectedTableObj.sector})
                 </span>
               ) : (
-                <p className="text-[11px] text-brand-brown/80 font-medium">Carta Digital Móvil</p>
+                <p className="text-[11px] text-brand-brown/80 font-semibold">Pastelería y Encordado</p>
               )}
             </div>
           </div>

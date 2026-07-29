@@ -39,11 +39,11 @@ export const TraditionalMenuPage: React.FC = () => {
 
         {/* Traditional Menu Brand Header */}
         <div className="text-center py-2 space-y-1">
-          <div className="w-12 h-12 rounded-full bg-[#765747] text-[#FFFDF8] flex items-center justify-center font-bold text-2xl mx-auto shadow-soft border-2 border-[#F4D58D]">
-            ☕
+          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#2F5233] mx-auto shadow-soft bg-white">
+            <img src="/logo_hilos_de_amor.jpg" alt="Hilos de Amor" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-xl font-extrabold text-[#4A352C] tracking-tight">Café Magnolia</h1>
-          <p className="text-xs text-[#765747] font-serif italic">Cafetería de Especialidad & Pastelería Artesanal</p>
+          <h1 className="text-xl font-extrabold text-[#1A2E1E] tracking-tight font-serif">Hilos de Amor</h1>
+          <p className="text-xs text-[#2F5233] font-serif italic">Pastelería Artesanal & Encordado</p>
         </div>
 
         {/* Quick Search */}

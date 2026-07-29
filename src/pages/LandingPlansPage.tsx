@@ -20,7 +20,7 @@ export const LandingPlansPage: React.FC = () => {
         {/* Header Hero Section */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-secondary/50 border border-brand-secondary text-brand-brown text-xs font-bold uppercase tracking-wider shadow-xs">
-            ☕ Plataforma Comercial & Propuesta de Inversión
+            🧁🧵 Hilos de Amor • Pastelería y Encordado
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-brand-dark tracking-tight leading-tight">
             Planes Comerciales & Canon Mensual
