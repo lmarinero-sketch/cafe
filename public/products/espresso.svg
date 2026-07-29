@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <rect width="400" height="400" fill="#FAF5EE" rx="24"/>
+  <circle cx="200" cy="220" r="110" fill="#EADBC8" opacity="0.6"/>
+  <ellipse cx="200" cy="270" rx="90" ry="18" fill="#765747" opacity="0.2"/>
+  <!-- Cup Plate -->
+  <ellipse cx="200" cy="265" rx="80" ry="20" fill="#EADBC8" stroke="#765747" stroke-width="3"/>
+  <!-- Cup Base -->
+  <path d="M140,170 C140,245 160,255 200,255 C240,255 260,245 260,170 Z" fill="#FFFDF8" stroke="#765747" stroke-width="4"/>
+  <!-- Cup Handle -->
+  <path d="M260,185 C285,185 285,225 260,230" fill="none" stroke="#765747" stroke-width="5" stroke-linecap="round"/>
+  <!-- Liquid Surface -->
+  <ellipse cx="200" cy="170" rx="60" ry="15" fill="#4A352C"/>
+  <ellipse cx="195" cy="170" rx="45" ry="10" fill="#765747"/>
+  <ellipse cx="190" cy="168" rx="25" ry="6" fill="#F4D58D" opacity="0.8"/>
+  <!-- Steam -->
+  <path d="M180,140 Q170,120 180,100" fill="none" stroke="#765747" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+  <path d="M200,135 Q210,115 200,95" fill="none" stroke="#765747" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+  <path d="M220,140 Q210,120 220,100" fill="none" stroke="#765747" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+</svg>

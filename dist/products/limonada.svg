@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <rect width="400" height="400" fill="#FAF5EE" rx="24"/>
+  <circle cx="200" cy="200" r="110" fill="#B7C9A8" opacity="0.4"/>
+  <!-- Glass Base -->
+  <path d="M150,140 L165,270 C167,280 233,280 235,270 L250,140 Z" fill="#FFFDF8" opacity="0.85" stroke="#765747" stroke-width="4"/>
+  <!-- Lemonade Liquid -->
+  <path d="M154,160 L167,265 C169,273 231,273 233,265 L246,160 Z" fill="#FAE8B6"/>
+  <!-- Mint Leaves -->
+  <path d="M180,150 Q165,135 180,120 Q195,135 180,150 Z" fill="#B7C9A8" stroke="#765747" stroke-width="2"/>
+  <path d="M190,155 Q205,140 190,125 Q175,140 190,155 Z" fill="#B7C9A8" stroke="#765747" stroke-width="2"/>
+  <!-- Lemon Slice -->
+  <circle cx="165" cy="140" r="20" fill="#FAE8B6" stroke="#765747" stroke-width="3"/>
+  <!-- Straw -->
+  <line x1="210" y1="90" x2="190" y2="250" stroke="#765747" stroke-width="5" stroke-linecap="round"/>
+</svg>

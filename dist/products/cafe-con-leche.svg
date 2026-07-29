@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <rect width="400" height="400" fill="#FAF5EE" rx="24"/>
+  <circle cx="200" cy="200" r="110" fill="#EADBC8" opacity="0.6"/>
+  <ellipse cx="200" cy="280" rx="95" ry="18" fill="#765747" opacity="0.2"/>
+  <!-- Glass Cup Base -->
+  <path d="M145,140 L160,265 C162,275 238,275 240,265 L255,140 Z" fill="#FFFDF8" opacity="0.9" stroke="#765747" stroke-width="4"/>
+  <path d="M150,160 L163,260 C165,268 235,268 237,260 L250,160 Z" fill="#EADBC8"/>
+  <!-- Coffee Layer -->
+  <path d="M152,180 L163,260 C165,268 235,268 237,260 L248,180 Z" fill="#765747"/>
+  <!-- Milk Foam Layer -->
+  <ellipse cx="200" cy="140" rx="55" ry="16" fill="#FFFDF8" stroke="#765747" stroke-width="3"/>
+  <ellipse cx="195" cy="140" rx="35" ry="9" fill="#EADBC8" opacity="0.8"/>
+  <!-- Heart Latte Art -->
+  <path d="M200,144 C195,134 185,136 185,142 C185,147 200,154 200,154 C200,154 215,147 215,142 C215,136 205,134 200,144 Z" fill="#765747"/>
+</svg>

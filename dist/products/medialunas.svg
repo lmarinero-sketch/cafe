@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <rect width="400" height="400" fill="#FAF5EE" rx="24"/>
+  <circle cx="200" cy="200" r="110" fill="#F4D58D" opacity="0.5"/>
+  <!-- Plate -->
+  <ellipse cx="200" cy="250" rx="130" ry="40" fill="#FFFDF8" stroke="#765747" stroke-width="4"/>
+  <!-- Medialuna 1 -->
+  <path d="M110,240 C100,180 150,140 210,160 C230,170 240,200 230,220 C220,240 180,240 160,220 C140,200 130,220 110,240 Z" fill="#F4D58D" stroke="#765747" stroke-width="4"/>
+  <path d="M150,165 C175,175 190,195 180,215" fill="none" stroke="#765747" stroke-width="3"/>
+  <!-- Medialuna 2 -->
+  <path d="M180,250 C170,190 220,150 280,170 C300,180 310,210 300,230 C290,250 250,250 230,230 C210,210 200,230 180,250 Z" fill="#FAE8B6" stroke="#765747" stroke-width="4"/>
+  <path d="M220,175 C245,185 260,205 250,225" fill="none" stroke="#765747" stroke-width="3"/>
+</svg>
