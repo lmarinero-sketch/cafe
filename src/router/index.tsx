@@ -86,6 +86,14 @@ export const router = createBrowserRouter([
         element: <MetricsPage />,
       },
       {
+        path: 'rotation',
+        element: <RotationPage />,
+      },
+      {
+        path: 'rotacion',
+        element: <RotationPage />,
+      },
+      {
         path: 'insights',
         element: <InsightsPage />,
       },
