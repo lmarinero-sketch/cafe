@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { HeaderPlanSwitcher } from '../components/common/HeaderPlanSwitcher';
 import { Sidebar } from '../components/layout/Sidebar';
 import { FeatureLockModal } from '../components/common/FeatureLockModal';
+import { InteractiveTutorialModal } from '../components/common/InteractiveTutorialModal';
 import { VirtualAdvisorFloating } from '../components/advisor/VirtualAdvisorFloating';
+import { useApp } from '../context/AppContext';
 
 export const AppLayout: React.FC = () => {
+  const { isTutorialOpen, closeTutorialModal } = useApp();
+
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col font-sans text-brand-dark">
       {/* Top Header Plan Switcher */}
@@ -40,6 +44,9 @@ export const AppLayout: React.FC = () => {
 
       {/* Global Feature Lock Modal */}
       <FeatureLockModal />
+
+      {/* Global Interactive Step-by-Step Tutorial Modal */}
+      <InteractiveTutorialModal isOpen={isTutorialOpen} onClose={closeTutorialModal} />
 
       {/* Floating Virtual Advisor Assistant */}
       <VirtualAdvisorFloating />

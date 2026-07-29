@@ -42,13 +42,13 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
 
   const navItems: SidebarItem[] = [
+    // Plan Esencial
     { name: 'Inicio', path: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Productos', path: '/productos', icon: <ShoppingBag className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Categorías', path: '/categorias', icon: <Grid className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Mesas', path: '/mesas', icon: <SquareCheckBig className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Menú Digital', path: '/menu', icon: <QrCode className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Carta Tradicional', path: '/carta-tradicional', icon: <BookOpen className="w-4 h-4" />, requiredPlan: 'esencial' },
-    { name: 'Sitio Promocional', path: '/sitio-promocional', icon: <Globe className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Pedidos', path: '/pedidos', icon: <UtensilsCrossed className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Delivery', path: '/delivery', icon: <Truck className="w-4 h-4" />, requiredPlan: 'esencial' },
     
@@ -58,7 +58,8 @@ export const Sidebar: React.FC = () => {
     { name: 'Métricas', path: '/metricas', icon: <BarChart3 className="w-4 h-4" />, requiredPlan: 'gestion' },
     { name: 'Insights', path: '/insights', icon: <Lightbulb className="w-4 h-4" />, requiredPlan: 'gestion' },
     
-    // Plan Fidelización
+    // Plan Fidelización & Marketing
+    { name: 'Sitio Promocional', path: '/sitio-promocional', icon: <Globe className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
     { name: 'Clientes', path: '/clientes', icon: <Users className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
     { name: 'Puntos y Recompensas', path: '/puntos', icon: <Award className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
     { name: 'Tarjetas Virtuales', path: '/tarjetas', icon: <CreditCard className="w-4 h-4" />, requiredPlan: 'fidelizacion' },

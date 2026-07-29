@@ -57,6 +57,9 @@ interface AppContextType {
   lockModal: LockModalState;
   closeLockModal: () => void;
   checkPlanAccess: (requiredPlan: PlanType, featureName: string) => boolean;
+  isTutorialOpen: boolean;
+  openTutorialModal: () => void;
+  closeTutorialModal: () => void;
 
   // Actions
   addProduct: (product: Omit<Product, 'id'>) => void;
@@ -155,11 +158,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   const [affectedProductsAlert, setAffectedProductsAlert] = useState<string[]>([]);
+  const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
   const [lockModal, setLockModal] = useState<LockModalState>({
     isOpen: false,
     requiredPlan: 'gestion',
     featureName: '',
   });
+
+  const openTutorialModal = () => setIsTutorialOpen(true);
+  const closeTutorialModal = () => setIsTutorialOpen(false);
 
   // Sync state to LocalStorage
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.PLAN, plan); }, [plan]);
@@ -663,6 +670,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         lockModal,
         closeLockModal,
         checkPlanAccess,
+        isTutorialOpen,
+        openTutorialModal,
+        closeTutorialModal,
         addProduct,
         updateProduct,
         toggleProductStatus,

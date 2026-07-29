@@ -42,6 +42,7 @@ export const DashboardPage: React.FC = () => {
     affectedProductsAlert,
     resetDemoData,
     checkPlanAccess,
+    openTutorialModal,
   } = useApp();
   const navigate = useNavigate();
 
@@ -118,10 +119,7 @@ export const DashboardPage: React.FC = () => {
 
         <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap">
           <button
-            onClick={() => {
-              const btn = document.querySelector('header button:first-child') as HTMLButtonElement;
-              if (btn) btn.click();
-            }}
+            onClick={openTutorialModal}
             className="flex-1 md:flex-initial py-2.5 px-4 rounded-xl bg-brand-yellow text-brand-dark border border-brand-yellow font-extrabold text-xs hover:scale-105 transition-all shadow-soft flex items-center justify-center gap-2"
           >
             <Sparkles className="w-4 h-4 text-brand-brown fill-brand-yellow" />

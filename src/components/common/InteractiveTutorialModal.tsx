@@ -96,8 +96,8 @@ export const InteractiveTutorialModal: React.FC<{ isOpen: boolean; onClose: () =
   const step = steps[currentStep];
 
   return (
-    <div className="fixed inset-0 z-[999999] flex items-start justify-center pt-20 pb-6 px-4 bg-brand-dark/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="bg-brand-card rounded-2xl border-2 border-brand-brown p-5 max-w-xl w-full max-h-[calc(100vh-7rem)] flex flex-col justify-between shadow-soft-lg relative">
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-brand-dark/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-brand-card rounded-2xl border-2 border-brand-brown p-6 max-w-xl w-full max-h-[85vh] flex flex-col justify-between shadow-soft-lg relative overflow-hidden">
         {/* Step Selector Dots / Bar */}
         <div className="flex items-center justify-between border-b border-brand-secondary pb-3 shrink-0">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">

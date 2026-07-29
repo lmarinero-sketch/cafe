@@ -6,8 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { InteractiveTutorialModal } from './InteractiveTutorialModal';
 
 export const HeaderPlanSwitcher: React.FC = () => {
-  const { plan, setPlan, resetDemoData } = useApp();
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const { plan, setPlan, resetDemoData, openTutorialModal } = useApp();
   const navigate = useNavigate();
 
   const plans: { id: PlanType; label: string; badge?: string }[] = [
@@ -93,7 +92,7 @@ export const HeaderPlanSwitcher: React.FC = () => {
         {/* Header Right Actions */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setIsTutorialOpen(true)}
+            onClick={openTutorialModal}
             className="py-1.5 px-3 rounded-lg bg-brand-yellow text-brand-dark font-extrabold text-xs flex items-center gap-1.5 transition-transform hover:scale-105 shadow-soft border border-brand-yellow/80"
           >
             <PlayCircle className="w-4 h-4 text-brand-brown fill-brand-yellow" />
@@ -129,12 +128,6 @@ export const HeaderPlanSwitcher: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Interactive Step-by-Step Tutorial Modal */}
-      <InteractiveTutorialModal
-        isOpen={isTutorialOpen}
-        onClose={() => setIsTutorialOpen(false)}
-      />
     </header>
   );
 };
