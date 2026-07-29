@@ -8,24 +8,24 @@ export default {
     extend: {
       colors: {
         brand: {
-          bg: "#F6F9F5",
+          bg: "#F4F7F3",
           card: "#FFFFFF",
-          secondary: "#D6E2D4",
-          brown: "#2F5233",
-          dark: "#1A2E1E",
-          yellow: "#E2EAC7",
-          softYellow: "#EFF4DA",
-          green: "#8FA887",
+          secondary: "#CBD8C8",
+          brown: "#5E7B60",
+          dark: "#243627",
+          yellow: "#DCE6C6",
+          softYellow: "#EBF2DC",
+          green: "#90A88D",
           red: "#E5A9A4",
-          cream: "#EEF4EC"
+          cream: "#E8EFE6"
         }
       },
       fontFamily: {
         sans: ['Calibri', 'Segoe UI', 'sans-serif'],
       },
       boxShadow: {
-        'soft': '0 4px 20px -2px rgba(47, 82, 51, 0.08)',
-        'soft-lg': '0 10px 25px -3px rgba(26, 46, 30, 0.12)',
+        'soft': '0 4px 20px -2px rgba(94, 123, 96, 0.08)',
+        'soft-lg': '0 10px 25px -3px rgba(36, 54, 39, 0.12)',
       }
     },
   },
