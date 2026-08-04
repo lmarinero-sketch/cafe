@@ -120,47 +120,45 @@ export const PromotionalWebsitePage: React.FC<PromotionalWebsitePageProps> = ({
   return (
     <div className="min-h-screen bg-[#0F2417] text-[#FAFAF7] font-sans selection:bg-[#E5C378] selection:text-[#0F2417]">
       {/* ============================================================ */}
-      {/* LUXURY NAVBAR (Modelo B Premium) */}
+      {/* LUXURY NAVBAR (Modelo B Premium - Fully Mobile Responsive) */}
       {/* ============================================================ */}
-      <header className="sticky top-0 z-50 bg-[#0F2417]/95 backdrop-blur-md border-b border-[#E5C378]/20 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-          {/* Nav Links Left */}
-          <nav className="hidden lg:flex items-center gap-6 text-[11px] font-bold tracking-widest text-[#E5C378] uppercase">
-            <a href="#inicio" className="hover:text-white transition-colors border-b-2 border-[#E5C378] pb-0.5">INICIO</a>
-            <a href="#pasteleria" className="hover:text-white transition-colors">PASTELERÍA</a>
-            <a href="#artesanias" className="hover:text-white transition-colors">ARTESANÍAS</a>
-          </nav>
-
-          {/* Centered Monogram Logo */}
+      <header className="sticky top-0 z-50 bg-[#0F2417]/95 backdrop-blur-md border-b border-[#E5C378]/20 px-3 sm:px-6 py-2.5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+          
+          {/* Mobile & Desktop Brand Logo */}
           <div
             onClick={() => navigate('/sitio-promocional')}
-            className="cursor-pointer flex flex-col items-center group text-center"
+            className="cursor-pointer flex items-center gap-2.5 min-w-0"
           >
-            <div className="flex items-center gap-2">
-              <span className="font-serif italic text-2xl font-extrabold text-[#E5C378] tracking-widest group-hover:scale-105 transition-transform">
-                H&A
-              </span>
+            <span className="font-serif italic text-xl sm:text-2xl font-extrabold text-[#E5C378] tracking-widest shrink-0">
+              H&A
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-xs sm:text-sm font-extrabold text-[#FAFAF7] uppercase tracking-[0.15em] font-serif leading-tight whitespace-nowrap truncate">
+                HILOS DE AMOR
+              </h1>
+              <p className="text-[8px] sm:text-[9px] font-serif italic text-[#C5A059] tracking-wider whitespace-nowrap hidden sm:block">
+                Gourmet & Artesanal • San Juan
+              </p>
             </div>
-            <h1 className="text-xs font-extrabold text-[#FAFAF7] uppercase tracking-[0.25em] font-serif leading-tight">
-              HILOS DE AMOR
-            </h1>
-            <p className="text-[9px] font-serif italic text-[#C5A059] tracking-wider">
-              Gourmet & Artesanal • San Juan
-            </p>
           </div>
 
-          {/* Nav Links Right */}
-          <div className="flex items-center gap-4 sm:gap-6">
-            <nav className="hidden lg:flex items-center gap-6 text-[11px] font-bold tracking-widest text-[#E5C378] uppercase">
-              <a href="#nosotros" className="hover:text-white transition-colors">SOBRE NOSOTROS</a>
-              <a href="#contacto" className="hover:text-white transition-colors">CONTACTO</a>
-            </nav>
+          {/* Desktop Nav Links */}
+          <nav className="hidden lg:flex items-center gap-6 text-[11px] font-bold tracking-widest text-[#E5C378] uppercase">
+            <a href="#inicio" className="hover:text-white transition-colors border-b border-[#E5C378] pb-0.5">INICIO</a>
+            <a href="#pasteleria" className="hover:text-white transition-colors">PASTELERÍA</a>
+            <a href="#artesanias" className="hover:text-white transition-colors">ARTESANÍAS</a>
+            <a href="#nosotros" className="hover:text-white transition-colors">SOBRE NOSOTROS</a>
+            <a href="#contacto" className="hover:text-white transition-colors">CONTACTO</a>
+          </nav>
 
+          {/* Right Action Button */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => navigate('/menu')}
-              className="py-2 px-4 rounded-full bg-[#E5C378] hover:bg-[#d4b064] text-[#0F2417] font-extrabold text-xs tracking-wider uppercase transition-all shadow-md flex items-center gap-1.5"
+              className="py-1.5 sm:py-2 px-3 sm:px-4 rounded-full bg-[#E5C378] hover:bg-[#d4b064] text-[#0F2417] font-extrabold text-[10px] sm:text-xs tracking-wider uppercase transition-all shadow-md flex items-center gap-1 shrink-0 whitespace-nowrap"
             >
-              <Smartphone className="w-3.5 h-3.5 text-[#0F2417]" /> Menú Digital
+              <Smartphone className="w-3.5 h-3.5 text-[#0F2417]" /> <span>Menú Digital</span>
             </button>
           </div>
         </div>
@@ -169,7 +167,7 @@ export const PromotionalWebsitePage: React.FC<PromotionalWebsitePageProps> = ({
       {/* ============================================================ */}
       {/* S1: HERO BANNER LUXURY (Modelo B Premium) */}
       {/* ============================================================ */}
-      <section id="inicio" className="relative py-20 sm:py-32 px-4 overflow-hidden border-b border-[#E5C378]/20">
+      <section id="inicio" className="relative py-12 sm:py-28 px-4 overflow-hidden border-b border-[#E5C378]/20">
         {/* Background Image with Dark Emerald Overlay */}
         <div className="absolute inset-0 z-0">
           <img
@@ -180,25 +178,25 @@ export const PromotionalWebsitePage: React.FC<PromotionalWebsitePageProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F2417] via-[#0F2417]/80 to-transparent" />
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto text-center space-y-6">
-          <div className="inline-block">
-            <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.2em] text-[#E5C378] bg-[#1A3825]/90 px-4 py-1.5 rounded-full border border-[#E5C378]/40 shadow-md">
+        <div className="relative z-10 max-w-5xl mx-auto text-center space-y-4 sm:space-y-6">
+          <div className="inline-flex items-center justify-center max-w-full px-2">
+            <span className="text-[9px] sm:text-xs font-extrabold uppercase tracking-wider text-[#E5C378] bg-[#1A3825] px-3.5 py-1.5 rounded-full border border-[#E5C378]/40 shadow-md max-w-full text-center leading-normal">
               {heroBadge}
             </span>
           </div>
 
-          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-[#FAFAF7] font-serif uppercase tracking-[0.08em] leading-tight max-w-4xl mx-auto drop-shadow-md">
+          <h2 className="text-xl sm:text-4xl lg:text-6xl font-extrabold text-[#FAFAF7] font-serif uppercase tracking-wider leading-snug sm:leading-tight max-w-4xl mx-auto drop-shadow-md px-1">
             {heroTitle}
           </h2>
 
-          <p className="text-sm sm:text-lg text-[#C5A059] italic font-serif max-w-2xl mx-auto tracking-wide">
+          <p className="text-xs sm:text-lg text-[#C5A059] italic font-serif max-w-2xl mx-auto tracking-wide px-2">
             {heroSubtitle}
           </p>
 
-          <div className="pt-4 flex justify-center">
+          <div className="pt-2 sm:pt-4 flex justify-center">
             <a
               href="#coleccion"
-              className="py-3.5 px-8 sm:px-10 rounded-full bg-[#E5C378] hover:bg-[#D4AF37] text-[#0F2417] font-extrabold text-xs sm:text-sm tracking-[0.15em] uppercase transition-all shadow-xl hover:scale-105 inline-flex items-center gap-2"
+              className="py-3 px-6 sm:px-10 rounded-full bg-[#E5C378] hover:bg-[#D4AF37] text-[#0F2417] font-extrabold text-[11px] sm:text-sm tracking-wider uppercase transition-all shadow-xl hover:scale-105 inline-flex items-center gap-1.5 whitespace-nowrap"
             >
               {heroCtaPrimary} <ChevronRight className="w-4 h-4" />
             </a>
