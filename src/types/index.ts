@@ -264,7 +264,7 @@ export interface Branch {
 // ============================================================
 // SITE CONTENT (Mini-CMS para el sitio web)
 // ============================================================
-export type SiteSection = 'hero' | 'about' | 'product_star' | 'club' | 'promos' | 'testimonials' | 'footer' | 'social';
+export type SiteSection = 'hero' | 'about' | 'offers' | 'recommended' | 'promos' | 'product_star' | 'club' | 'testimonials' | 'footer' | 'social';
 export type SiteContentType = 'text' | 'image_url' | 'json';
 
 export interface SiteContent {

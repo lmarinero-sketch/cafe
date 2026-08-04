@@ -36,6 +36,33 @@ export const DEFAULT_SITE_CONTENT: SiteContent[] = [
   // Footer
   { id: '22', section: 'footer', key: 'footer_desc', value: 'Pastelería artesanal, café de especialidad y talleres de encordado en San Juan, Argentina.', type: 'text', label: 'Descripción Footer', sortOrder: 1 },
   { id: '23', section: 'footer', key: 'footer_copyright', value: '© 2026 Hilos de Amor • Pastelería & Encordado • San Juan, Argentina', type: 'text', label: 'Texto Copyright', sortOrder: 2 },
+
+  // Offers
+  { id: '24', section: 'offers', key: 'offers_title', value: '🔥 Ofertas Especiales del Día', type: 'text', label: 'Título Sección Ofertas', sortOrder: 1 },
+  { id: '25', section: 'offers', key: 'offers_subtitle', value: 'Aprovechá descuentos exclusivos por tiempo limitado', type: 'text', label: 'Subtítulo Ofertas', sortOrder: 2 },
+  { id: '26', section: 'offers', key: 'offer1_name', value: 'Combo Medialunas 2x1 🥐', type: 'text', label: 'Oferta 1 - Nombre', sortOrder: 3 },
+  { id: '27', section: 'offers', key: 'offer1_desc', value: 'Llevate 6 medialunas calentitas de manteca pura con tu espresso.', type: 'text', label: 'Oferta 1 - Descripción', sortOrder: 4 },
+  { id: '28', section: 'offers', key: 'offer1_price', value: '2800', type: 'text', label: 'Oferta 1 - Precio ($)', sortOrder: 5 },
+  { id: '29', section: 'offers', key: 'offer1_badge', value: '🔥 50% OFF', type: 'text', label: 'Oferta 1 - Badge', sortOrder: 6 },
+  { id: '30', section: 'offers', key: 'offer1_image', value: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80', type: 'image_url', label: 'Oferta 1 - Imagen URL', sortOrder: 7 },
+
+  // Recommended
+  { id: '31', section: 'recommended', key: 'rec_title', value: '⭐ Recomendaciones del Chef Barista', type: 'text', label: 'Título Sección Recomendados', sortOrder: 1 },
+  { id: '32', section: 'recommended', key: 'rec_subtitle', value: 'Nuestra selección exclusiva de especialidades de autor', type: 'text', label: 'Subtítulo Recomendados', sortOrder: 2 },
+  { id: '33', section: 'recommended', key: 'rec1_name', value: 'Cheesecake Frutos del Valle 🍰', type: 'text', label: 'Recomendado 1 - Nombre', sortOrder: 3 },
+  { id: '34', section: 'recommended', key: 'rec1_desc', value: 'Mermelada artesanal de frutos rojos de San Juan sobre masa sablee crocante.', type: 'text', label: 'Recomendado 1 - Descripción', sortOrder: 4 },
+  { id: '35', section: 'recommended', key: 'rec1_price', value: '5200', type: 'text', label: 'Recomendado 1 - Precio ($)', sortOrder: 5 },
+  { id: '36', section: 'recommended', key: 'rec1_badge', value: '👑 Favorito', type: 'text', label: 'Recomendado 1 - Badge', sortOrder: 6 },
+  { id: '37', section: 'recommended', key: 'rec1_image', value: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80', type: 'image_url', label: 'Recomendado 1 - Imagen URL', sortOrder: 7 },
+
+  // Promos
+  { id: '38', section: 'promos', key: 'promos_title', value: '🏷️ Promociones & Combos', type: 'text', label: 'Título Sección Promociones', sortOrder: 1 },
+  { id: '39', section: 'promos', key: 'promos_subtitle', value: 'Disfrutá lo mejor de la carta combinado al mejor precio', type: 'text', label: 'Subtítulo Promociones', sortOrder: 2 },
+  { id: '40', section: 'promos', key: 'promo1_name', value: 'Mañanas de Magnolia ☕', type: 'text', label: 'Promo 1 - Nombre', sortOrder: 3 },
+  { id: '41', section: 'promos', key: 'promo1_desc', value: 'Capuchino italiano cremoso + 2 medialunas de manteca.', type: 'text', label: 'Promo 1 - Descripción', sortOrder: 4 },
+  { id: '42', section: 'promos', key: 'promo1_price', value: '3200', type: 'text', label: 'Promo 1 - Precio ($)', sortOrder: 5 },
+  { id: '43', section: 'promos', key: 'promo1_badge', value: 'Más Vendido', type: 'text', label: 'Promo 1 - Badge', sortOrder: 6 },
+  { id: '44', section: 'promos', key: 'promo1_image', value: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80', type: 'image_url', label: 'Promo 1 - Imagen URL', sortOrder: 7 },
 ];
 
 const LOCAL_STORAGE_KEY = 'hilos_site_content_v1';
