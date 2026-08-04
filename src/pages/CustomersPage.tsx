@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Users, Plus, Search, Award, Phone, Mail, Calendar, ShieldCheck, X, Sparkles, TrendingUp, Gift, MessageCircle, ArrowUpRight } from 'lucide-react';
+import { Users, Plus, Search, Award, Phone, Mail, Calendar, ShieldCheck, X, Sparkles, TrendingUp, Gift, MessageCircle, ArrowUpRight, Trash2, Pencil } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Customer, CustomerLevel } from '../types';
 import { formatCurrency, formatShortDate } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 
 export const CustomersPage: React.FC = () => {
-  const { customers, addCustomer } = useApp();
+  const { customers, addCustomer, updateCustomerData, deleteCustomer, isLoadingCustomers } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -28,11 +30,43 @@ export const CustomersPage: React.FC = () => {
     return matchesLevel && matchesSearch;
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.firstName || !formData.phone) return;
-    addCustomer(formData);
+
+    if (editingCustomer) {
+      await updateCustomerData(editingCustomer.id, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        email: formData.email,
+        birthDate: formData.birthDate,
+        marketingConsent: formData.marketingConsent,
+      });
+      setEditingCustomer(null);
+    } else {
+      await addCustomer(formData);
+    }
     setIsModalOpen(false);
+    setFormData({ firstName: '', lastName: '', phone: '', email: '', birthDate: '1992-05-20', marketingConsent: true });
+  };
+
+  const handleEdit = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setFormData({
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      phone: customer.phone,
+      email: customer.email,
+      birthDate: customer.birthDate,
+      marketingConsent: customer.marketingConsent,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteCustomer(id);
+    setConfirmDeleteId(null);
   };
 
   const getLevelBadge = (level: CustomerLevel) => {
@@ -82,7 +116,11 @@ export const CustomersPage: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setEditingCustomer(null);
+            setFormData({ firstName: '', lastName: '', phone: '', email: '', birthDate: '1992-05-20', marketingConsent: true });
+            setIsModalOpen(true);
+          }}
           className="py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all duration-200 shadow-soft flex items-center gap-2"
         >
           <Plus className="w-4 h-4 text-brand-yellow" />
@@ -182,64 +220,98 @@ export const CustomersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Customers Table */}
-      <div className="bg-brand-card rounded-2xl border border-brand-secondary shadow-soft overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-brand-cream border-b border-brand-secondary/80 text-brand-dark uppercase tracking-wider text-[10px] font-extrabold">
-                <th className="p-3.5">Cliente</th>
-                <th className="p-3.5">Teléfono / Email</th>
-                <th className="p-3.5">Nivel</th>
-                <th className="p-3.5">Puntos</th>
-                <th className="p-3.5">Compras</th>
-                <th className="p-3.5">Total Gastado</th>
-                <th className="p-3.5">Ticket Promedio</th>
-                <th className="p-3.5 text-right">Última Compra</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-brand-secondary/60">
-              {filteredCustomers.map((c) => (
-                <tr key={c.id} className="hover:bg-brand-bg/50 transition-colors">
-                  <td className="p-3.5">
-                    <p className="font-bold text-brand-dark">
-                      {c.firstName} {c.lastName}
-                    </p>
-                    <span className="text-[10px] text-brand-brown/70">Socio #{c.id}</span>
-                  </td>
-                  <td className="p-3.5 text-brand-brown/80 space-y-0.5">
-                    <p className="font-mono text-brand-dark">{c.phone}</p>
-                    <p className="text-[10px]">{c.email}</p>
-                  </td>
-                  <td className="p-3.5">
-                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(c.level)}`}>
-                      Nivel {c.level}
-                    </span>
-                  </td>
-                  <td className="p-3.5 font-extrabold text-brand-brown bg-brand-yellow/20 rounded">
-                    ⭐ {c.points} pts
-                  </td>
-                  <td className="p-3.5 font-bold text-brand-dark">{c.purchaseCount}</td>
-                  <td className="p-3.5 font-bold text-brand-dark">{formatCurrency(c.totalSpent)}</td>
-                  <td className="p-3.5 text-brand-brown">{formatCurrency(c.averageTicket)}</td>
-                  <td className="p-3.5 text-right text-brand-brown/80">
-                    {formatShortDate(c.lastPurchaseDate)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Loading State */}
+      {isLoadingCustomers && (
+        <div className="bg-brand-card rounded-2xl border border-brand-secondary p-8 shadow-soft text-center">
+          <div className="animate-pulse space-y-3">
+            <div className="h-4 bg-brand-secondary/40 rounded w-1/3 mx-auto"></div>
+            <div className="h-3 bg-brand-secondary/30 rounded w-1/2 mx-auto"></div>
+          </div>
+          <p className="text-xs text-brand-brown/70 mt-3">Cargando clientes desde la base de datos...</p>
         </div>
-      </div>
+      )}
 
-      {/* Modal Registration */}
+      {/* Customers Table */}
+      {!isLoadingCustomers && (
+        <div className="bg-brand-card rounded-2xl border border-brand-secondary shadow-soft overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-brand-cream border-b border-brand-secondary/80 text-brand-dark uppercase tracking-wider text-[10px] font-extrabold">
+                  <th className="p-3.5">Cliente</th>
+                  <th className="p-3.5">Teléfono / Email</th>
+                  <th className="p-3.5">Nivel</th>
+                  <th className="p-3.5">Puntos</th>
+                  <th className="p-3.5">Compras</th>
+                  <th className="p-3.5">Total Gastado</th>
+                  <th className="p-3.5">Ticket Promedio</th>
+                  <th className="p-3.5">Última Compra</th>
+                  <th className="p-3.5 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-brand-secondary/60">
+                {filteredCustomers.map((c) => (
+                  <tr key={c.id} className="hover:bg-brand-bg/50 transition-colors">
+                    <td className="p-3.5">
+                      <p className="font-bold text-brand-dark">
+                        {c.firstName} {c.lastName}
+                      </p>
+                      <span className="text-[10px] text-brand-brown/70">Socio #{c.id.slice(0, 8)}</span>
+                    </td>
+                    <td className="p-3.5 text-brand-brown/80 space-y-0.5">
+                      <p className="font-mono text-brand-dark">{c.phone}</p>
+                      <p className="text-[10px]">{c.email}</p>
+                    </td>
+                    <td className="p-3.5">
+                      <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(c.level)}`}>
+                        Nivel {c.level}
+                      </span>
+                    </td>
+                    <td className="p-3.5 font-extrabold text-brand-brown bg-brand-yellow/20 rounded">
+                      ⭐ {c.points} pts
+                    </td>
+                    <td className="p-3.5 font-bold text-brand-dark">{c.purchaseCount}</td>
+                    <td className="p-3.5 font-bold text-brand-dark">{formatCurrency(c.totalSpent)}</td>
+                    <td className="p-3.5 text-brand-brown">{formatCurrency(c.averageTicket)}</td>
+                    <td className="p-3.5 text-brand-brown/80">
+                      {formatShortDate(c.lastPurchaseDate)}
+                    </td>
+                    <td className="p-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleEdit(c)}
+                          className="p-1.5 rounded-lg bg-brand-bg border border-brand-secondary hover:bg-brand-secondary/40 transition-colors"
+                          title="Editar cliente"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-brand-brown" />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(c.id)}
+                          className="p-1.5 rounded-lg bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
+                          title="Eliminar cliente"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Registration / Edit */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
           <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 max-w-md w-full shadow-soft-lg space-y-4">
             <div className="flex items-center justify-between border-b border-brand-secondary pb-3">
-              <h3 className="text-base font-bold text-brand-dark">Registrar Nuevo Cliente</h3>
+              <h3 className="text-base font-bold text-brand-dark">
+                {editingCustomer ? 'Editar Cliente' : 'Registrar Nuevo Cliente'}
+              </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => { setIsModalOpen(false); setEditingCustomer(null); }}
                 className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark"
               >
                 <X className="w-5 h-5" />
@@ -305,26 +377,57 @@ export const CustomersPage: React.FC = () => {
                 />
               </div>
 
-              <div className="bg-brand-cream p-2.5 rounded-xl border border-brand-secondary/60 text-[11px] text-brand-brown">
-                🎉 Al registrarse se le acreditarán automáticamente 150 puntos de bienvenida.
-              </div>
+              {!editingCustomer && (
+                <div className="bg-brand-cream p-2.5 rounded-xl border border-brand-secondary/60 text-[11px] text-brand-brown">
+                  🎉 Al registrarse se le acreditarán automáticamente 150 puntos de bienvenida.
+                </div>
+              )}
 
               <div className="flex items-center gap-2 pt-3">
                 <button
                   type="submit"
                   className="flex-1 py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold hover:bg-brand-dark transition-colors"
                 >
-                  Registrar socio
+                  {editingCustomer ? 'Guardar cambios' : 'Registrar socio'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setEditingCustomer(null); }}
                   className="py-2.5 px-4 rounded-xl border border-brand-secondary font-bold text-brand-dark hover:bg-brand-secondary/30"
                 >
                   Cancelar
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirm Delete */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 max-w-sm w-full shadow-soft-lg space-y-4">
+            <div className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-600" />
+              <h3 className="text-base font-bold text-brand-dark">¿Eliminar cliente?</h3>
+            </div>
+            <p className="text-xs text-brand-brown">
+              Esta acción es irreversible. El cliente será eliminado permanentemente de la base de datos.
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleDelete(confirmDeleteId)}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors text-xs"
+              >
+                Sí, eliminar
+              </button>
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-brand-secondary font-bold text-brand-dark hover:bg-brand-secondary/30 text-xs"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}

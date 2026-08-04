@@ -18,6 +18,7 @@ import {
   Award,
   UserCheck,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Customer } from '../types';
@@ -33,7 +34,9 @@ interface WhatsAppChatMessage {
 }
 
 export const WhatsAppPage: React.FC = () => {
-  const { campaigns, createCampaign, simulateCampaignSend, customers, addCustomerPoints } = useApp();
+  const { campaigns, createCampaign, simulateCampaignSend, deleteCampaignData, isLoadingCampaigns, customers, addCustomerPoints } = useApp();
+
+  const [confirmDeleteCampaignId, setConfirmDeleteCampaignId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'crm' | 'campaigns'>('crm');
 
@@ -528,17 +531,57 @@ export const WhatsAppPage: React.FC = () => {
                     <span className="text-[11px] text-brand-brown font-semibold">
                       Destinatarios: {camp.recipientsCount} personas
                     </span>
-                    {camp.status !== 'leido' && (
+                    <div className="flex items-center gap-1.5">
+                      {camp.status !== 'leido' && (
+                        <button
+                          onClick={() => simulateCampaignSend(camp.id)}
+                          className="py-1.5 px-3 rounded-xl bg-emerald-800 text-white font-bold hover:bg-emerald-900 transition-colors flex items-center gap-1.5 shadow-xs"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-white" /> Simular Envío
+                        </button>
+                      )}
                       <button
-                        onClick={() => simulateCampaignSend(camp.id)}
-                        className="py-1.5 px-3 rounded-xl bg-emerald-800 text-white font-bold hover:bg-emerald-900 transition-colors flex items-center gap-1.5 shadow-xs"
+                        onClick={() => setConfirmDeleteCampaignId(camp.id)}
+                        className="py-1.5 px-3 rounded-xl bg-red-50 border border-red-200 text-red-700 font-bold hover:bg-red-100 transition-colors flex items-center gap-1.5 shadow-xs"
                       >
-                        <Play className="w-3.5 h-3.5 fill-white" /> Simular Envío
+                        <Trash2 className="w-3.5 h-3.5" /> Eliminar
                       </button>
-                    )}
+                    </div>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirm Delete Campaign */}
+      {confirmDeleteCampaignId && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 max-w-sm w-full shadow-soft-lg space-y-4">
+            <div className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-600" />
+              <h3 className="text-base font-bold text-brand-dark">¿Eliminar campaña?</h3>
+            </div>
+            <p className="text-xs text-brand-brown">
+              Esta acción eliminará la campaña permanentemente de la base de datos.
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  await deleteCampaignData(confirmDeleteCampaignId);
+                  setConfirmDeleteCampaignId(null);
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors text-xs"
+              >
+                Sí, eliminar
+              </button>
+              <button
+                onClick={() => setConfirmDeleteCampaignId(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-brand-secondary font-bold text-brand-dark hover:bg-brand-secondary/30 text-xs"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import {
   PlanType,
   Product,
@@ -15,20 +15,22 @@ import {
   SupportTicket,
   OrderStatus,
   RecipeCost,
+  Branch,
 } from '../types';
 import { initialCategories } from '../data/seeds/categories.seed';
-import { initialProducts } from '../data/seeds/products.seed';
-import { initialTables } from '../data/seeds/tables.seed';
-import { initialIngredients } from '../data/seeds/ingredients.seed';
-import { initialOrders } from '../data/seeds/orders.seed';
-import { initialCustomers } from '../data/seeds/customers.seed';
-import { initialRewards } from '../data/seeds/rewards.seed';
-import { initialCampaigns } from '../data/seeds/campaigns.seed';
-import { initialAutomations } from '../data/seeds/automations.seed';
-import { initialInsights } from '../data/seeds/insights.seed';
 import { initialManuals } from '../data/manuals/systemManuals';
 import { calculateNormalizedCost, calculateRecipeCostDetails } from '../utils/costEngine';
 import { useToast } from './ToastContext';
+import { useAuth } from './AuthContext';
+import { isSupabaseConfigured } from '../lib/supabase';
+
+// Supabase Services
+import * as customersService from '../services/customers.service';
+import * as rewardsService from '../services/rewards.service';
+import * as campaignsService from '../services/campaigns.service';
+import * as automationsService from '../services/automations.service';
+import * as redemptionsService from '../services/redemptions.service';
+import * as branchesService from '../services/branches.service';
 
 interface LockModalState {
   isOpen: boolean;
@@ -51,6 +53,7 @@ interface AppContextType {
   insights: Insight[];
   manuals: Manual[];
   tickets: SupportTicket[];
+  branches: Branch[];
   autoPriceUpdate: boolean;
   setAutoPriceUpdate: (val: boolean) => void;
   affectedProductsAlert: string[];
@@ -60,6 +63,13 @@ interface AppContextType {
   isTutorialOpen: boolean;
   openTutorialModal: () => void;
   closeTutorialModal: () => void;
+
+  // Loading states
+  isLoadingCustomers: boolean;
+  isLoadingRewards: boolean;
+  isLoadingCampaigns: boolean;
+  isLoadingAutomations: boolean;
+  isLoadingBranches: boolean;
 
   // Actions
   addProduct: (product: Omit<Product, 'id'>) => void;
@@ -76,17 +86,37 @@ interface AppContextType {
   addIngredient: (ingredient: Omit<Ingredient, 'id' | 'updatedAt' | 'normalizedCost'>) => void;
   updateIngredientPrice: (id: string, newPurchasePrice: number) => void;
 
-  addCustomer: (customer: Omit<Customer, 'id' | 'registrationDate' | 'points' | 'level' | 'purchaseCount' | 'totalSpent' | 'averageTicket' | 'lastPurchaseDate' | 'usedPromotionsCount'>) => Customer;
+  // Customer CRUD (Supabase)
+  addCustomer: (customer: Omit<Customer, 'id' | 'registrationDate' | 'points' | 'level' | 'purchaseCount' | 'totalSpent' | 'averageTicket' | 'lastPurchaseDate' | 'usedPromotionsCount'>) => Promise<Customer | null>;
+  updateCustomerData: (id: string, data: Partial<Customer>) => Promise<void>;
+  deleteCustomer: (id: string) => Promise<void>;
   addCustomerPoints: (customerId: string, pointsAmount: number) => void;
-  redeemReward: (customerId: string, rewardId: string) => boolean;
+  redeemReward: (customerId: string, rewardId: string) => Promise<boolean>;
 
-  createCampaign: (campaign: Omit<Campaign, 'id' | 'status' | 'conversionRate'>) => void;
+  // Reward CRUD (Supabase)
+  addReward: (reward: Omit<Reward, 'id'>) => Promise<void>;
+  updateRewardData: (id: string, data: Partial<Reward>) => Promise<void>;
+  deleteRewardData: (id: string) => Promise<void>;
+
+  // Campaign CRUD (Supabase)
+  createCampaign: (campaign: Omit<Campaign, 'id' | 'status' | 'conversionRate'>) => Promise<void>;
+  updateCampaignData: (id: string, data: Partial<Campaign>) => Promise<void>;
+  deleteCampaignData: (id: string) => Promise<void>;
   simulateCampaignSend: (campaignId: string) => void;
+
+  // Automation CRUD (Supabase)
+  addAutomation: (automation: Omit<Automation, 'id'>) => Promise<void>;
+  updateAutomationData: (id: string, data: Partial<Automation>) => Promise<void>;
+  deleteAutomationData: (id: string) => Promise<void>;
   toggleAutomation: (automationId: string) => void;
+
+  // Branch CRUD (Supabase)
+  addBranch: (branch: Omit<Branch, 'id' | 'createdAt'>) => Promise<void>;
+  updateBranchData: (id: string, data: Partial<Branch>) => Promise<void>;
+  deleteBranchData: (id: string) => Promise<void>;
 
   createSupportTicket: (ticket: Omit<SupportTicket, 'id' | 'createdAt' | 'status'>) => string;
 
-  resetDemoData: () => void;
   getRecipeCostForProduct: (productId: string) => RecipeCost | null;
 }
 
@@ -107,9 +137,11 @@ const STORAGE_KEYS = {
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { showToast } = useToast();
+  const { user } = useAuth();
 
+  // Plan comes from authenticated user's subscription, fallback to fidelizacion
   const [plan, setPlanState] = useState<PlanType>(() => {
-    return (localStorage.getItem(STORAGE_KEYS.PLAN) as PlanType) || 'fidelizacion';
+    return user?.subscription?.planId || (localStorage.getItem(STORAGE_KEYS.PLAN) as PlanType) || 'fidelizacion';
   });
 
   const [autoPriceUpdate, setAutoPriceUpdateState] = useState<boolean>(() => {
@@ -119,38 +151,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-    return saved ? JSON.parse(saved) : initialProducts;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [tables, setTables] = useState<Table[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TABLES);
-    return saved ? JSON.parse(saved) : initialTables;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ORDERS);
-    return saved ? JSON.parse(saved) : initialOrders;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.INGREDIENTS);
-    return saved ? JSON.parse(saved) : initialIngredients;
+    return saved ? JSON.parse(saved) : [];
   });
 
+  // Supabase-backed states (Plan Fidelización)
   const [customers, setCustomers] = useState<Customer[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-    return saved ? JSON.parse(saved) : initialCustomers;
+    return saved ? JSON.parse(saved) : [];
   });
+
+  const [rewards, setRewards] = useState<Reward[]>([]);
 
   const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CAMPAIGNS);
-    return saved ? JSON.parse(saved) : initialCampaigns;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [automations, setAutomations] = useState<Automation[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.AUTOMATIONS);
-    return saved ? JSON.parse(saved) : initialAutomations;
+    return saved ? JSON.parse(saved) : [];
   });
+
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   const [tickets, setTickets] = useState<SupportTicket[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TICKETS);
@@ -165,20 +202,70 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     featureName: '',
   });
 
+  // Loading states for Supabase
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
+  const [isLoadingRewards, setIsLoadingRewards] = useState(false);
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
+  const [isLoadingAutomations, setIsLoadingAutomations] = useState(false);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+
   const openTutorialModal = () => setIsTutorialOpen(true);
   const closeTutorialModal = () => setIsTutorialOpen(false);
 
-  // Sync state to LocalStorage
+  // ============================================================
+  // SUPABASE: Initial data fetch
+  // ============================================================
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const fetchData = async () => {
+      setIsLoadingCustomers(true);
+      setIsLoadingRewards(true);
+      setIsLoadingCampaigns(true);
+      setIsLoadingAutomations(true);
+      setIsLoadingBranches(true);
+
+      try {
+        const [dbCustomers, dbRewards, dbCampaigns, dbAutomations, dbBranches] = await Promise.all([
+          customersService.getCustomers(),
+          rewardsService.getRewards(),
+          campaignsService.getCampaigns(),
+          automationsService.getAutomations(),
+          branchesService.getBranches(),
+        ]);
+
+        setCustomers(dbCustomers);
+        setRewards(dbRewards);
+        setCampaigns(dbCampaigns);
+        setAutomations(dbAutomations);
+        setBranches(dbBranches);
+      } catch (err) {
+        console.error('Error fetching data from Supabase:', err);
+      } finally {
+        setIsLoadingCustomers(false);
+        setIsLoadingRewards(false);
+        setIsLoadingCampaigns(false);
+        setIsLoadingAutomations(false);
+        setIsLoadingBranches(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Sync non-Supabase state to LocalStorage
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.PLAN, plan); }, [plan]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.AUTO_PRICE, JSON.stringify(autoPriceUpdate)); }, [autoPriceUpdate]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products)); }, [products]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.TABLES, JSON.stringify(tables)); }, [tables]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders)); }, [orders]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.INGREDIENTS, JSON.stringify(ingredients)); }, [ingredients]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets)); }, [tickets]);
+
+  // Also keep localStorage as cache for Supabase entities (offline fallback)
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers)); }, [customers]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(campaigns)); }, [campaigns]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.AUTOMATIONS, JSON.stringify(automations)); }, [automations]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets)); }, [tickets]);
 
   const setPlan = (newPlan: PlanType) => {
     setPlanState(newPlan);
@@ -222,7 +309,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setLockModal((prev) => ({ ...prev, isOpen: false }));
   };
 
-  // Products
+  // ============================================================
+  // PRODUCTS (LocalStorage - unchanged)
+  // ============================================================
   const addProduct = (productData: Omit<Product, 'id'>) => {
     const id = `prod-${Date.now()}`;
     const category = initialCategories.find((c) => c.id === productData.categoryId);
@@ -259,7 +348,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
-  // Tables
+  // ============================================================
+  // TABLES (LocalStorage - unchanged)
+  // ============================================================
   const addTable = (tableData: Omit<Table, 'id' | 'qrCode'>) => {
     const id = `tbl-${Date.now()}`;
     const num = tableData.number.replace(/\D/g, '') || '99';
@@ -289,7 +380,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
-  // Orders
+  // ============================================================
+  // ORDERS (LocalStorage - unchanged)
+  // ============================================================
   const createOrder = (orderData: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>): Order => {
     const id = `ord-${Date.now()}`;
     const codeNumber = Math.floor(1000 + Math.random() * 9000);
@@ -335,7 +428,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
-  // Ingredients & Cost Recalculation
+  // ============================================================
+  // INGREDIENTS & Cost Recalculation (LocalStorage - unchanged)
+  // ============================================================
   const addIngredient = (ingData: Omit<Ingredient, 'id' | 'updatedAt' | 'normalizedCost'>) => {
     const id = `ing-${Date.now()}`;
     const normalizedCost = calculateNormalizedCost(
@@ -426,8 +521,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Customers & Loyalty
-  const addCustomer = (customerData: Omit<Customer, 'id' | 'registrationDate' | 'points' | 'level' | 'purchaseCount' | 'totalSpent' | 'averageTicket' | 'lastPurchaseDate' | 'usedPromotionsCount'>): Customer => {
+  // ============================================================
+  // CUSTOMERS & LOYALTY (Supabase-backed)
+  // ============================================================
+  const addCustomer = async (customerData: Omit<Customer, 'id' | 'registrationDate' | 'points' | 'level' | 'purchaseCount' | 'totalSpent' | 'averageTicket' | 'lastPurchaseDate' | 'usedPromotionsCount'>): Promise<Customer | null> => {
+    if (isSupabaseConfigured) {
+      const dbCustomer = await customersService.createCustomer(customerData);
+      if (dbCustomer) {
+        setCustomers((prev) => [dbCustomer, ...prev]);
+        showToast('¡Cliente registrado!', `${dbCustomer.firstName} ${dbCustomer.lastName} recibió 150 puntos de bienvenida.`, 'success');
+        return dbCustomer;
+      } else {
+        showToast('Error', 'No se pudo registrar el cliente en la base de datos.', 'error');
+        return null;
+      }
+    }
+
+    // LocalStorage fallback
     const id = `cli-${Date.now()}`;
     const newCustomer: Customer = {
       ...customerData,
@@ -437,7 +547,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       totalSpent: 0,
       averageTicket: 0,
       lastPurchaseDate: new Date().toISOString(),
-      points: 150, // Welcome bonus points
+      points: 150,
       level: 'Inicial',
       usedPromotionsCount: 0,
     };
@@ -446,7 +556,42 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newCustomer;
   };
 
+  const updateCustomerData = async (id: string, data: Partial<Customer>): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const updated = await customersService.updateCustomer(id, data);
+      if (updated) {
+        setCustomers((prev) => prev.map((c) => (c.id === id ? updated : c)));
+        showToast('Cliente actualizado', 'Los datos del cliente fueron guardados.', 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo actualizar el cliente.', 'error');
+        return;
+      }
+    }
+    // LocalStorage fallback
+    setCustomers((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
+    showToast('Cliente actualizado', 'Los datos del cliente fueron guardados.', 'success');
+  };
+
+  const deleteCustomer = async (id: string): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const success = await customersService.deleteCustomer(id);
+      if (success) {
+        setCustomers((prev) => prev.filter((c) => c.id !== id));
+        showToast('Cliente eliminado', 'El registro fue borrado correctamente.', 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo eliminar el cliente.', 'error');
+        return;
+      }
+    }
+    // LocalStorage fallback
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
+    showToast('Cliente eliminado', 'El registro fue borrado correctamente.', 'success');
+  };
+
   const addCustomerPoints = (customerId: string, pointsAmount: number) => {
+    // Optimistic update
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id === customerId) {
@@ -466,11 +611,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return c;
       })
     );
+
+    // Persist to Supabase in background
+    if (isSupabaseConfigured) {
+      customersService.addCustomerPoints(customerId, pointsAmount).catch(console.error);
+    }
   };
 
-  const redeemReward = (customerId: string, rewardId: string): boolean => {
+  const redeemReward = async (customerId: string, rewardId: string): Promise<boolean> => {
     const customer = customers.find((c) => c.id === customerId);
-    const reward = initialRewards.find((r) => r.id === rewardId);
+    const reward = rewards.find((r) => r.id === rewardId);
 
     if (!customer || !reward) return false;
 
@@ -479,6 +629,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return false;
     }
 
+    // Optimistic update
     setCustomers((prev) =>
       prev.map((c) =>
         c.id === customerId
@@ -491,12 +642,88 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       )
     );
 
+    // Persist to Supabase
+    if (isSupabaseConfigured) {
+      await customersService.updateCustomer(customerId, {
+        points: customer.points - reward.pointsCost,
+        usedPromotionsCount: customer.usedPromotionsCount + 1,
+      });
+      await redemptionsService.createRedemption(customerId, rewardId, reward.pointsCost);
+    }
+
     showToast('¡Beneficio Canjeado!', `Se canjeó "${reward.name}" para ${customer.firstName}.`, 'success');
     return true;
   };
 
-  // WhatsApp & Marketing
-  const createCampaign = (campaignData: Omit<Campaign, 'id' | 'status' | 'conversionRate'>) => {
+  // ============================================================
+  // REWARDS CRUD (Supabase-backed)
+  // ============================================================
+  const addReward = async (rewardData: Omit<Reward, 'id'>): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const dbReward = await rewardsService.createReward(rewardData);
+      if (dbReward) {
+        setRewards((prev) => [...prev, dbReward]);
+        showToast('Recompensa creada', `"${dbReward.name}" agregada al catálogo.`, 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo crear la recompensa.', 'error');
+        return;
+      }
+    }
+    // Fallback
+    const id = `rew-${Date.now()}`;
+    setRewards((prev) => [...prev, { ...rewardData, id }]);
+    showToast('Recompensa creada', `"${rewardData.name}" agregada al catálogo.`, 'success');
+  };
+
+  const updateRewardData = async (id: string, data: Partial<Reward>): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const updated = await rewardsService.updateReward(id, data);
+      if (updated) {
+        setRewards((prev) => prev.map((r) => (r.id === id ? updated : r)));
+        showToast('Recompensa actualizada', 'Los cambios fueron guardados.', 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo actualizar la recompensa.', 'error');
+        return;
+      }
+    }
+    setRewards((prev) => prev.map((r) => (r.id === id ? { ...r, ...data } : r)));
+    showToast('Recompensa actualizada', 'Los cambios fueron guardados.', 'success');
+  };
+
+  const deleteRewardData = async (id: string): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const success = await rewardsService.deleteReward(id);
+      if (success) {
+        setRewards((prev) => prev.filter((r) => r.id !== id));
+        showToast('Recompensa eliminada', 'Se eliminó del catálogo.', 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo eliminar la recompensa.', 'error');
+        return;
+      }
+    }
+    setRewards((prev) => prev.filter((r) => r.id !== id));
+    showToast('Recompensa eliminada', 'Se eliminó del catálogo.', 'success');
+  };
+
+  // ============================================================
+  // CAMPAIGNS (Supabase-backed)
+  // ============================================================
+  const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'status' | 'conversionRate'>): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const dbCampaign = await campaignsService.createCampaign(campaignData);
+      if (dbCampaign) {
+        setCampaigns((prev) => [dbCampaign, ...prev]);
+        showToast('Campaña programada', `"${dbCampaign.name}" se enviará al segmento: ${dbCampaign.segment}.`, 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo crear la campaña.', 'error');
+        return;
+      }
+    }
+    // Fallback
     const id = `cmp-${Date.now()}`;
     const newCampaign: Campaign = {
       ...campaignData,
@@ -508,24 +735,119 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast('Campaña programada', `"${newCampaign.name}" se enviará al segmento: ${newCampaign.segment}.`, 'success');
   };
 
+  const updateCampaignData = async (id: string, data: Partial<Campaign>): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const updated = await campaignsService.updateCampaign(id, data);
+      if (updated) {
+        setCampaigns((prev) => prev.map((c) => (c.id === id ? updated : c)));
+        showToast('Campaña actualizada', 'Los cambios fueron guardados.', 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo actualizar la campaña.', 'error');
+        return;
+      }
+    }
+    setCampaigns((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
+    showToast('Campaña actualizada', 'Los cambios fueron guardados.', 'success');
+  };
+
+  const deleteCampaignData = async (id: string): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const success = await campaignsService.deleteCampaign(id);
+      if (success) {
+        setCampaigns((prev) => prev.filter((c) => c.id !== id));
+        showToast('Campaña eliminada', 'La campaña fue borrada correctamente.', 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo eliminar la campaña.', 'error');
+        return;
+      }
+    }
+    setCampaigns((prev) => prev.filter((c) => c.id !== id));
+    showToast('Campaña eliminada', 'La campaña fue borrada correctamente.', 'success');
+  };
+
   const simulateCampaignSend = (campaignId: string) => {
+    // Optimistic update
     setCampaigns((prev) =>
-      prev.map((cmp) => (cmp.id === campaignId ? { ...cmp, status: 'enviado' } : cmp))
+      prev.map((cmp) => (cmp.id === campaignId ? { ...cmp, status: 'enviado' as const } : cmp))
     );
     showToast('Simulación de WhatsApp', 'Mensaje enviado. Actualizando estado a "Entregado"...', 'info');
 
+    if (isSupabaseConfigured) {
+      campaignsService.updateCampaignStatus(campaignId, 'enviado').catch(console.error);
+    }
+
     setTimeout(() => {
       setCampaigns((prev) =>
-        prev.map((cmp) => (cmp.id === campaignId ? { ...cmp, status: 'entregado' } : cmp))
+        prev.map((cmp) => (cmp.id === campaignId ? { ...cmp, status: 'entregado' as const } : cmp))
       );
+      if (isSupabaseConfigured) {
+        campaignsService.updateCampaignStatus(campaignId, 'entregado').catch(console.error);
+      }
     }, 2000);
 
     setTimeout(() => {
       setCampaigns((prev) =>
-        prev.map((cmp) => (cmp.id === campaignId ? { ...cmp, status: 'leido', conversionRate: 48 } : cmp))
+        prev.map((cmp) => (cmp.id === campaignId ? { ...cmp, status: 'leido' as const, conversionRate: 48 } : cmp))
       );
+      if (isSupabaseConfigured) {
+        campaignsService.updateCampaignStatus(campaignId, 'leido', 48).catch(console.error);
+      }
       showToast('Simulación completada', 'Los destinatarios leyeron el mensaje de WhatsApp.', 'success');
     }, 4000);
+  };
+
+  // ============================================================
+  // AUTOMATIONS (Supabase-backed)
+  // ============================================================
+  const addAutomation = async (automationData: Omit<Automation, 'id'>): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const dbAutomation = await automationsService.createAutomation(automationData);
+      if (dbAutomation) {
+        setAutomations((prev) => [dbAutomation, ...prev]);
+        showToast('Automatización creada', `"${dbAutomation.name}" configurada.`, 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo crear la automatización.', 'error');
+        return;
+      }
+    }
+    const id = `aut-${Date.now()}`;
+    setAutomations((prev) => [{ ...automationData, id }, ...prev]);
+    showToast('Automatización creada', `"${automationData.name}" configurada.`, 'success');
+  };
+
+  const updateAutomationData = async (id: string, data: Partial<Automation>): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const updated = await automationsService.updateAutomation(id, data);
+      if (updated) {
+        setAutomations((prev) => prev.map((a) => (a.id === id ? updated : a)));
+        showToast('Automatización actualizada', 'Los cambios fueron guardados.', 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo actualizar la automatización.', 'error');
+        return;
+      }
+    }
+    setAutomations((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)));
+    showToast('Automatización actualizada', 'Los cambios fueron guardados.', 'success');
+  };
+
+  const deleteAutomationData = async (id: string): Promise<void> => {
+    if (isSupabaseConfigured) {
+      const success = await automationsService.deleteAutomation(id);
+      if (success) {
+        setAutomations((prev) => prev.filter((a) => a.id !== id));
+        showToast('Automatización eliminada', 'El flujo fue borrado correctamente.', 'success');
+        return;
+      } else {
+        showToast('Error', 'No se pudo eliminar la automatización.', 'error');
+        return;
+      }
+    }
+    setAutomations((prev) => prev.filter((a) => a.id !== id));
+    showToast('Automatización eliminada', 'El flujo fue borrado correctamente.', 'success');
   };
 
   const toggleAutomation = (automationId: string) => {
@@ -534,14 +856,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (aut.id === automationId) {
           const nextStatus = aut.status === 'activa' ? 'pausada' : 'activa';
           showToast('Automatización actualizada', `"${aut.name}" ahora está ${nextStatus}.`, 'info');
-          return { ...aut, status: nextStatus };
+
+          // Persist to Supabase
+          if (isSupabaseConfigured) {
+            automationsService.toggleAutomationStatus(automationId, aut.status).catch(console.error);
+          }
+
+          return { ...aut, status: nextStatus as Automation['status'] };
         }
         return aut;
       })
     );
   };
 
-  // Support
+  // ============================================================
+  // SUPPORT (LocalStorage - unchanged)
+  // ============================================================
   const createSupportTicket = (ticketData: Omit<SupportTicket, 'id' | 'createdAt' | 'status'>): string => {
     const id = `TICK-${Math.floor(1000 + Math.random() * 9000)}`;
     const newTicket: SupportTicket = {
@@ -555,21 +885,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return id;
   };
 
-  // Factory Reset
-  const resetDemoData = () => {
-    localStorage.clear();
-    setPlanState('fidelizacion');
-    setAutoPriceUpdateState(true);
-    setProducts(initialProducts);
-    setTables(initialTables);
-    setOrders(initialOrders);
-    setIngredients(initialIngredients);
-    setCustomers(initialCustomers);
-    setCampaigns(initialCampaigns);
-    setAutomations(initialAutomations);
-    setTickets([]);
-    setAffectedProductsAlert([]);
-    showToast('Demo Reiniciada', 'Todos los datos ficticios se restablecieron a su estado inicial.', 'info');
+  // ============================================================
+  // BRANCHES CRUD (Supabase)
+  // ============================================================
+  const addBranch = async (branchData: Omit<Branch, 'id' | 'createdAt'>) => {
+    if (!isSupabaseConfigured) return;
+    const created = await branchesService.createBranch(branchData);
+    if (created) {
+      setBranches((prev) => [...prev, created]);
+      showToast('Sucursal creada', `"${created.name}" fue agregada correctamente.`, 'success');
+    }
+  };
+
+  const updateBranchData = async (id: string, data: Partial<Branch>) => {
+    if (!isSupabaseConfigured) return;
+    const updated = await branchesService.updateBranch(id, data);
+    if (updated) {
+      setBranches((prev) => prev.map((b) => (b.id === id ? updated : b)));
+      showToast('Sucursal actualizada', `Los datos fueron guardados.`, 'success');
+    }
+  };
+
+  const deleteBranchData = async (id: string) => {
+    if (!isSupabaseConfigured) return;
+    const deleted = await branchesService.deleteBranch(id);
+    if (deleted) {
+      setBranches((prev) => prev.filter((b) => b.id !== id));
+      showToast('Sucursal eliminada', 'La sucursal fue removida del sistema.', 'info');
+    }
   };
 
   const getRecipeCostForProduct = (productId: string): RecipeCost | null => {
@@ -658,12 +1001,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         orders,
         ingredients,
         customers,
-        rewards: initialRewards,
+        rewards,
         campaigns,
         automations,
-        insights: initialInsights,
+        insights: [],
         manuals: initialManuals,
         tickets,
+        branches,
         autoPriceUpdate,
         setAutoPriceUpdate,
         affectedProductsAlert,
@@ -673,6 +1017,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         isTutorialOpen,
         openTutorialModal,
         closeTutorialModal,
+        isLoadingCustomers,
+        isLoadingRewards,
+        isLoadingCampaigns,
+        isLoadingAutomations,
+        isLoadingBranches,
         addProduct,
         updateProduct,
         toggleProductStatus,
@@ -684,13 +1033,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addIngredient,
         updateIngredientPrice,
         addCustomer,
+        updateCustomerData,
+        deleteCustomer,
         addCustomerPoints,
         redeemReward,
+        addReward,
+        updateRewardData,
+        deleteRewardData,
         createCampaign,
+        updateCampaignData,
+        deleteCampaignData,
         simulateCampaignSend,
+        addAutomation,
+        updateAutomationData,
+        deleteAutomationData,
         toggleAutomation,
+        addBranch,
+        updateBranchData,
+        deleteBranchData,
         createSupportTicket,
-        resetDemoData,
         getRecipeCostForProduct,
       }}
     >

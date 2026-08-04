@@ -7,7 +7,7 @@ import {
   Truck,
   Sparkles,
   Smartphone,
-  RotateCcw,
+  ExternalLink,
   AlertTriangle,
   ArrowUpRight,
   TrendingUp,
@@ -40,7 +40,6 @@ export const DashboardPage: React.FC = () => {
     products,
     insights,
     affectedProductsAlert,
-    resetDemoData,
     checkPlanAccess,
     openTutorialModal,
   } = useApp();
@@ -133,12 +132,12 @@ export const DashboardPage: React.FC = () => {
             Menú Digital QR
           </button>
           <button
-            onClick={resetDemoData}
-            className="py-2.5 px-3 rounded-xl bg-brand-bg text-brand-brown border border-brand-secondary hover:bg-brand-red/20 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5"
-            title="Restablecer datos ficticios"
+            onClick={() => navigate('/editor-web')}
+            className="py-2.5 px-3 rounded-xl bg-brand-yellow text-brand-dark border border-brand-yellow/80 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 hover:bg-brand-yellow/80"
+            title="Editar sitio web"
           >
-            <RotateCcw className="w-4 h-4" />
-            Reiniciar
+            <ExternalLink className="w-4 h-4" />
+            Editor Web
           </button>
         </div>
       </div>

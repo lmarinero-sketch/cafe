@@ -1,6 +1,8 @@
 import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
+import { AuthGuard } from '../components/common/AuthGuard';
+import { LoginPage } from '../pages/LoginPage';
 import { LandingPlansPage } from '../pages/LandingPlansPage';
 import { PublicMenuPage } from '../pages/PublicMenuPage';
 import { TraditionalMenuPage } from '../pages/TraditionalMenuPage';
@@ -23,8 +25,16 @@ import { WhatsAppPage } from '../pages/WhatsAppPage';
 import { AutomationsPage } from '../pages/AutomationsPage';
 import { ManualsPage } from '../pages/ManualsPage';
 import { SettingsPage } from '../pages/SettingsPage';
+import { WebsiteEditorPage } from '../pages/WebsiteEditorPage';
 
 export const router = createBrowserRouter([
+  // ============================================================
+  // PUBLIC ROUTES (no auth required)
+  // ============================================================
+  {
+    path: '/login',
+    element: <LoginPage />,
+  },
   {
     path: '/planes',
     element: <LandingPlansPage />,
@@ -41,94 +51,109 @@ export const router = createBrowserRouter([
     path: '/sitio-promocional',
     element: <PromotionalWebsitePage />,
   },
+
+  // ============================================================
+  // PROTECTED ROUTES (auth required via AuthGuard)
+  // ============================================================
   {
     path: '/',
-    element: <AppLayout />,
+    element: <AuthGuard />,
     children: [
       {
-        index: true,
-        element: <Navigate to="/planes" replace />,
-      },
-      {
-        path: 'dashboard',
-        element: <DashboardPage />,
-      },
-      {
-        path: 'productos',
-        element: <ProductsPage />,
-      },
-      {
-        path: 'categorias',
-        element: <CategoriesPage />,
-      },
-      {
-        path: 'mesas',
-        element: <TablesPage />,
-      },
-      {
-        path: 'pedidos',
-        element: <OrdersPage />,
-      },
-      {
-        path: 'delivery',
-        element: <DeliveryPage />,
-      },
-      {
-        path: 'ingredientes',
-        element: <IngredientsPage />,
-      },
-      {
-        path: 'recetas',
-        element: <RecipeCostsPage />,
-      },
-      {
-        path: 'metricas',
-        element: <MetricsPage />,
-      },
-      {
-        path: 'rotation',
-        element: <RotationPage />,
-      },
-      {
-        path: 'rotacion',
-        element: <RotationPage />,
-      },
-      {
-        path: 'insights',
-        element: <InsightsPage />,
-      },
-      {
-        path: 'clientes',
-        element: <CustomersPage />,
-      },
-      {
-        path: 'puntos',
-        element: <RewardsPage />,
-      },
-      {
-        path: 'tarjetas',
-        element: <VirtualCardsPage />,
-      },
-      {
-        path: 'whatsapp',
-        element: <WhatsAppPage />,
-      },
-      {
-        path: 'automatizaciones',
-        element: <AutomationsPage />,
-      },
-      {
-        path: 'manuales',
-        element: <ManualsPage />,
-      },
-      {
-        path: 'configuracion',
-        element: <SettingsPage />,
+        element: <AppLayout />,
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/dashboard" replace />,
+          },
+          {
+            path: 'dashboard',
+            element: <DashboardPage />,
+          },
+          {
+            path: 'productos',
+            element: <ProductsPage />,
+          },
+          {
+            path: 'categorias',
+            element: <CategoriesPage />,
+          },
+          {
+            path: 'mesas',
+            element: <TablesPage />,
+          },
+          {
+            path: 'pedidos',
+            element: <OrdersPage />,
+          },
+          {
+            path: 'delivery',
+            element: <DeliveryPage />,
+          },
+          {
+            path: 'ingredientes',
+            element: <IngredientsPage />,
+          },
+          {
+            path: 'recetas',
+            element: <RecipeCostsPage />,
+          },
+          {
+            path: 'metricas',
+            element: <MetricsPage />,
+          },
+          {
+            path: 'rotation',
+            element: <RotationPage />,
+          },
+          {
+            path: 'rotacion',
+            element: <RotationPage />,
+          },
+          {
+            path: 'insights',
+            element: <InsightsPage />,
+          },
+          {
+            path: 'clientes',
+            element: <CustomersPage />,
+          },
+          {
+            path: 'puntos',
+            element: <RewardsPage />,
+          },
+          {
+            path: 'tarjetas',
+            element: <VirtualCardsPage />,
+          },
+          {
+            path: 'whatsapp',
+            element: <WhatsAppPage />,
+          },
+          {
+            path: 'automatizaciones',
+            element: <AutomationsPage />,
+          },
+          {
+            path: 'manuales',
+            element: <ManualsPage />,
+          },
+          {
+            path: 'editor-web',
+            element: <WebsiteEditorPage />,
+          },
+          {
+            path: 'configuracion',
+            element: <SettingsPage />,
+          },
+        ],
       },
     ],
   },
+
+  // Catch-all: redirect to login
   {
     path: '*',
-    element: <Navigate to="/planes" replace />,
+    element: <Navigate to="/login" replace />,
   },
 ]);

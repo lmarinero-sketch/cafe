@@ -60,6 +60,7 @@ export const Sidebar: React.FC = () => {
     
     // Plan Fidelización & Marketing
     { name: 'Sitio Promocional', path: '/sitio-promocional', icon: <Globe className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
+    { name: 'Editor Web', path: '/editor-web', icon: <Settings className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
     { name: 'Clientes', path: '/clientes', icon: <Users className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
     { name: 'Puntos y Recompensas', path: '/puntos', icon: <Award className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
     { name: 'Tarjetas Virtuales', path: '/tarjetas', icon: <CreditCard className="w-4 h-4" />, requiredPlan: 'fidelizacion' },

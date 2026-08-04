@@ -28,7 +28,7 @@ export const AppLayout: React.FC = () => {
 
           <footer className="mt-8 pt-4 border-t border-brand-secondary/60 text-center text-xs text-brand-brown/80">
             <p className="flex items-center justify-center gap-1">
-              <span>Café Magnolia Platform •</span>
+              <span>Hilos de Amor Platform •</span>
               <a
                 href="https://www.growlabs.lat"
                 target="_blank"

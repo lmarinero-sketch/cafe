@@ -233,3 +233,46 @@ export interface LoyaltyConfig {
   referralPoints: number;
   expirationDays: number;
 }
+
+export interface Redemption {
+  id: string;
+  customerId: string;
+  rewardId: string;
+  pointsSpent: number;
+  redeemedAt: string;
+}
+
+// ============================================================
+// BRANCH (Sucursales configurables)
+// ============================================================
+export interface Branch {
+  id: string;
+  name: string;
+  address: string;
+  zone: string;
+  phone: string;
+  whatsapp: string;
+  instagram: string;
+  hours: string;
+  badge: string;
+  features: string[];
+  mapQuery: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+// ============================================================
+// SITE CONTENT (Mini-CMS para el sitio web)
+// ============================================================
+export type SiteSection = 'hero' | 'about' | 'product_star' | 'club' | 'promos' | 'testimonials' | 'footer' | 'social';
+export type SiteContentType = 'text' | 'image_url' | 'json';
+
+export interface SiteContent {
+  id: string;
+  section: SiteSection;
+  key: string;
+  value: string;
+  type: SiteContentType;
+  label: string;
+  sortOrder: number;
+}
