@@ -112,9 +112,13 @@ const promociones = [
 
 // ============================================================
 // COMPONENT
-// ============================================================
+import * as siteContentService from '../services/siteContent.service';
 
-export const PromotionalWebsitePage: React.FC = () => {
+export interface PromotionalWebsitePageProps {
+  customContent?: Record<string, string>;
+}
+
+export const PromotionalWebsitePage: React.FC<PromotionalWebsitePageProps> = ({ customContent }) => {
   const navigate = useNavigate();
   const [joinedClub, setJoinedClub] = useState(false);
   const [memberPhone, setMemberPhone] = useState('');
@@ -122,6 +126,7 @@ export const PromotionalWebsitePage: React.FC = () => {
   const [productPage, setProductPage] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [fetchedContent, setFetchedContent] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setIsVisible(true);
@@ -129,7 +134,35 @@ export const PromotionalWebsitePage: React.FC = () => {
       setBranches(data);
       if (data.length > 0) setSelectedSuc(data[0].id);
     });
-  }, []);
+    if (!customContent) {
+      siteContentService.getContentMap().then((map) => setFetchedContent(map));
+    }
+  }, [customContent]);
+
+  const content = customContent || fetchedContent;
+
+  const heroBadge = content.hero_badge || '✨ Pastelería de Autor & Encordado Artesanal';
+  const heroTitle = content.hero_title || 'Cada bocado, un hilo de amor que conecta lo artesanal con vos';
+  const heroSubtitle = content.hero_subtitle || 'Pastelería artesanal, café de especialidad y talleres de encordado en San Juan, Argentina. Viví la experiencia de lo hecho con cariño.';
+  const heroCtaPrimary = content.hero_cta_primary || 'Sumate al Club';
+  const heroCtaSecondary = content.hero_cta_secondary || 'Ver Productos';
+
+  const aboutTitle = content.about_title || 'Dos pasiones, un solo lugar';
+  const aboutPillar1Title = content.about_pillar1_title || 'Pastelería de Autor';
+  const aboutPillar1Desc = content.about_pillar1_desc || 'Medialunas de manteca pura horneadas cada mañana, cheesecakes artesanales, tortas de chocolate belga y café de especialidad 100% arábica. Todo hecho en casa, sin conservantes, con ingredientes seleccionados de San Juan.';
+  const aboutPillar2Title = content.about_pillar2_title || 'Encordado Artesanal';
+  const aboutPillar2Desc = content.about_pillar2_desc || 'Talleres presenciales de macramé, pulseras tejidas y accesorios con hilos de algodón egipcio. Aprendé una nueva técnica mientras disfrutás un café. Ideales para grupos, cumpleaños y después del trabajo.';
+
+  const starName = content.star_name || 'Nano Banana Coffee ☕🍌';
+  const starDesc = content.star_desc || 'Doble espresso 100% arábica emulsionado con crema aterciopelada de banana orgánica, terminado con canela y cacao amargo. Una experiencia única.';
+  const starPrice = content.star_price || '4500';
+  const starBadge = content.star_badge || '🍌 Lanzamiento 2026';
+
+  const clubTitle = content.club_title || 'Sumate a nuestro Club de Fidelidad';
+  const clubSubtitle = content.club_subtitle || 'Acumulá puntos en cada consumo, accedé a beneficios exclusivos en tu cumpleaños y disfrutá de refill ilimitado en café de filtro.';
+
+  const footerDesc = content.footer_desc || 'Pastelería artesanal, café de especialidad y talleres de encordado en San Juan, Argentina.';
+  const footerCopyright = content.footer_copyright || '© 2026 Hilos de Amor • Pastelería & Encordado • San Juan, Argentina';
 
   const handleJoinClub = (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,15 +236,15 @@ export const PromotionalWebsitePage: React.FC = () => {
 
         <div className={`relative max-w-6xl mx-auto px-4 py-16 sm:py-24 lg:py-32 text-center space-y-6 sm:space-y-8 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-extrabold uppercase tracking-widest text-[#2F5233] bg-[#D8E4C3]/40 px-3.5 py-1.5 rounded-full border border-[#D8E4C3]">
-            ✨ Pastelería de Autor & Encordado Artesanal
+            {heroBadge}
           </div>
 
           <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-[#1A2E1E] tracking-tight leading-[1.1] max-w-4xl mx-auto font-serif">
-            Cada bocado, un <span className="text-[#2F5233]">hilo de amor</span> que conecta lo artesanal con vos
+            {heroTitle}
           </h2>
 
           <p className="text-sm sm:text-base lg:text-lg text-[#2F5233] max-w-2xl mx-auto font-medium leading-relaxed">
-            Pastelería artesanal, café de especialidad y talleres de encordado en San Juan, Argentina. Viví la experiencia de lo hecho con cariño.
+            {heroSubtitle}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
@@ -219,13 +252,13 @@ export const PromotionalWebsitePage: React.FC = () => {
               href="#club"
               className="w-full sm:w-auto py-3.5 px-8 rounded-xl bg-[#2F5233] text-[#FFFDF8] font-extrabold text-sm hover:bg-[#1A2E1E] transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
             >
-              <Gift className="w-4 h-4 text-[#D8E4C3]" /> Sumate al Club
+              <Gift className="w-4 h-4 text-[#D8E4C3]" /> {heroCtaPrimary}
             </a>
             <a
               href="#productos"
               className="w-full sm:w-auto py-3.5 px-8 rounded-xl bg-[#FFFDF8] text-[#1A2E1E] border-2 border-[#D2E0D0] font-bold text-sm hover:bg-[#EBF1EA] transition-all shadow-sm flex items-center justify-center gap-2"
             >
-              <ShoppingBag className="w-4 h-4 text-[#2F5233]" /> Ver Productos
+              <ShoppingBag className="w-4 h-4 text-[#2F5233]" /> {heroCtaSecondary}
             </a>
           </div>
 
