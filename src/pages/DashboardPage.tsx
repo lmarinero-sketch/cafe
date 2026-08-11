@@ -302,27 +302,29 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
           {/* Featured Product Card */}
-          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft space-y-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-brown bg-brand-yellow/40 px-2 py-0.5 rounded">
-              ⭐ Producto Destacado
-            </span>
-            <div className="flex items-center gap-4">
-              <img
-                src={featuredProduct.image}
-                alt={featuredProduct.name}
-                className="w-16 h-16 rounded-xl object-cover bg-brand-bg border border-brand-secondary shrink-0"
-              />
-              <div>
-                <h4 className="text-sm font-bold text-brand-dark">{featuredProduct.name}</h4>
-                <p className="text-xs text-brand-brown font-bold mt-0.5">
-                  {formatCurrency(featuredProduct.price)}
-                </p>
-                <p className="text-[11px] text-brand-brown/70 line-clamp-1 mt-0.5">
-                  {featuredProduct.description}
-                </p>
+          {featuredProduct && (
+            <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft space-y-3">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-brand-brown bg-brand-yellow/40 px-2 py-0.5 rounded">
+                ⭐ Producto Destacado
+              </span>
+              <div className="flex items-center gap-4">
+                <img
+                  src={featuredProduct.image || '/products/espresso.svg'}
+                  alt={featuredProduct.name || 'Producto'}
+                  className="w-16 h-16 rounded-xl object-cover bg-brand-bg border border-brand-secondary shrink-0"
+                />
+                <div>
+                  <h4 className="text-sm font-bold text-brand-dark">{featuredProduct.name}</h4>
+                  <p className="text-xs text-brand-brown font-bold mt-0.5">
+                    {formatCurrency(featuredProduct.price)}
+                  </p>
+                  <p className="text-[11px] text-brand-brown/70 line-clamp-1 mt-0.5">
+                    {featuredProduct.description}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
 
       {/* Insights Section */}

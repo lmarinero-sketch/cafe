@@ -127,7 +127,7 @@ export const RecipeCostsPage: React.FC = () => {
                   }`}
                 >
                   <img
-                    src={p.image}
+                    src={p.image || '/products/espresso.svg'}
                     alt={p.name}
                     className="w-10 h-10 rounded-lg object-cover bg-brand-card shrink-0"
                   />
