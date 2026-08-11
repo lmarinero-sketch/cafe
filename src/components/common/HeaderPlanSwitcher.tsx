@@ -68,7 +68,27 @@ export const HeaderPlanSwitcher: React.FC = () => {
         </div>
 
         {/* Header Right Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
+          {user && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-bg/80 border border-brand-secondary text-xs">
+              <div className="w-6 h-6 rounded-full bg-brand-brown text-brand-card font-extrabold flex items-center justify-center text-[10px] shrink-0">
+                {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-brand-dark">{user.name}</span>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border uppercase tracking-wider ${
+                  user.role === 'admin' ? 'bg-amber-100 text-amber-900 border-amber-300' :
+                  user.role === 'cajero' ? 'bg-emerald-100 text-emerald-900 border-emerald-300' :
+                  user.role === 'cocina' ? 'bg-orange-100 text-orange-900 border-orange-300' :
+                  'bg-blue-100 text-blue-900 border-blue-300'
+                }`}>
+                  {user.role === 'admin' ? 'Administrador' :
+                   user.role === 'cajero' ? 'Cajero' :
+                   user.role === 'cocina' ? 'Cocina' : 'Mozo'}
+                </span>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={handleLogout}

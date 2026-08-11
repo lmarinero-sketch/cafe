@@ -74,7 +74,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<AuthUser | null>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed: AuthUser = JSON.parse(saved);
+      if (!parsed.role) {
+        try {
+          const raw = localStorage.getItem('hilos_de_amor_staff_users');
+          if (raw) {
+            const staff: any[] = JSON.parse(raw);
+            const match = staff.find((u) => u.email && u.email.trim().toLowerCase() === parsed.email.trim().toLowerCase());
+            if (match && match.role) {
+              parsed.role = match.role;
+            }
+          }
+        } catch {}
+        if (!parsed.role) {
+          parsed.role = (parsed.email === TEST_USER.email || parsed.email.includes('lmarinero')) ? 'admin' : 'cajero';
+        }
+      }
+      return parsed;
     } catch {
       return null;
     }
