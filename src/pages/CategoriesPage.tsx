@@ -141,11 +141,11 @@ export const CategoriesPage: React.FC = () => {
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-12 h-12 rounded-xl bg-brand-cream border border-brand-secondary overflow-hidden flex items-center justify-center shadow-xs">
+                  <div className="w-14 h-14 rounded-xl bg-brand-cream border border-brand-secondary/80 overflow-hidden flex items-center justify-center shadow-soft shrink-0">
                     {cat.image ? (
                       <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-xl">🧁</span>
+                      <span className="text-2xl">🧁</span>
                     )}
                   </div>
                   <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300">
