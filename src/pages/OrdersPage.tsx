@@ -1,11 +1,15 @@
-import React from 'react';
-import { ShoppingBag, ArrowRight, CheckCircle2, Clock, Truck, XCircle, MapPin, Phone } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShoppingBag, ArrowRight, CheckCircle2, Clock, Truck, XCircle, MapPin, Phone, Banknote } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { OrderStatus } from '../types';
+import { Order, OrderStatus, PaymentMethod } from '../types';
 import { formatCurrency, formatDate } from '../utils/currency';
 
 export const OrdersPage: React.FC = () => {
-  const { orders, updateOrderStatus } = useApp();
+  const { orders, updateOrderStatus, addTransaction, cashRegisters } = useApp();
+  const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('efectivo');
+
+  const activeRegister = cashRegisters.find(r => r.status === 'abierta');
 
   const columns: { status: OrderStatus; title: string; color: string }[] = [
     { status: 'nuevo', title: 'Nuevo', color: 'bg-amber-100 text-amber-900 border-amber-300' },
@@ -31,6 +35,24 @@ export const OrdersPage: React.FC = () => {
       default:
         return null;
     }
+  };
+
+  const handleCharge = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chargingOrder || !activeRegister) return;
+    
+    // Impact caja
+    addTransaction({
+      registerId: activeRegister.id,
+      orderId: chargingOrder.id,
+      type: 'ingreso',
+      amount: chargingOrder.total,
+      paymentMethod: selectedPayment,
+      description: `Cobro Pedido ${chargingOrder.code}`,
+    });
+
+    updateOrderStatus(chargingOrder.id, 'entregado');
+    setChargingOrder(null);
   };
 
   return (
@@ -106,10 +128,17 @@ export const OrdersPage: React.FC = () => {
                           <div className="flex items-center gap-1">
                             {next && (
                               <button
-                                onClick={() => updateOrderStatus(ord.id, next)}
-                                className="py-1 px-2.5 rounded-lg bg-brand-brown text-brand-card text-[10px] font-bold hover:bg-brand-dark transition-colors flex items-center gap-1"
+                                onClick={() => {
+                                  if (next === 'entregado') {
+                                    setChargingOrder(ord);
+                                    setSelectedPayment(ord.paymentMethod);
+                                  } else {
+                                    updateOrderStatus(ord.id, next);
+                                  }
+                                }}
+                                className={`py-1 px-2.5 rounded-lg text-brand-card text-[10px] font-bold transition-colors flex items-center gap-1 ${next === 'entregado' ? 'bg-brand-green hover:bg-emerald-800' : 'bg-brand-brown hover:bg-brand-dark'}`}
                               >
-                                Avanzar <ArrowRight className="w-3 h-3" />
+                                {next === 'entregado' ? 'Cobrar' : 'Avanzar'} <ArrowRight className="w-3 h-3" />
                               </button>
                             )}
                             <button
@@ -130,6 +159,54 @@ export const OrdersPage: React.FC = () => {
           );
         })}
       </div>
+      {/* Modal Cobrar */}
+      {chargingOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs">
+          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 w-full max-w-sm shadow-soft-lg space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Banknote className="w-5 h-5 text-brand-green" />
+              <h3 className="text-lg font-bold text-brand-dark">Cobrar Pedido</h3>
+            </div>
+            
+            <div className="bg-brand-cream p-4 rounded-xl border border-brand-secondary text-sm space-y-2">
+              <div className="flex justify-between text-brand-brown text-xs"><span>Pedido:</span> <strong>{chargingOrder.code}</strong></div>
+              <div className="flex justify-between text-brand-brown text-xs"><span>Cliente:</span> <strong>{chargingOrder.customerName}</strong></div>
+              <div className="flex justify-between text-lg mt-2 pt-2 border-t border-brand-secondary/40"><span className="font-bold text-brand-dark">Total:</span> <strong className="text-brand-dark">{formatCurrency(chargingOrder.total)}</strong></div>
+            </div>
+
+            {!activeRegister ? (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-xl font-medium">
+                No hay una caja abierta. Ve a Tesorería para abrir turno antes de cobrar.
+              </div>
+            ) : (
+              <form onSubmit={handleCharge} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-brand-dark mb-1">Confirmar Método de Pago</label>
+                  <select 
+                    value={selectedPayment} 
+                    onChange={e => setSelectedPayment(e.target.value as PaymentMethod)}
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none capitalize"
+                  >
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="mercadopago">MercadoPago</option>
+                    <option value="debito">Débito</option>
+                    <option value="credito">Crédito</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button type="button" onClick={() => setChargingOrder(null)} className="flex-1 py-2.5 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition">Cancelar</button>
+                  <button type="submit" className="flex-1 py-2.5 rounded-xl bg-brand-green text-brand-card font-bold text-xs hover:bg-emerald-800 transition">Confirmar y Entregar</button>
+                </div>
+              </form>
+            )}
+            
+            {!activeRegister && (
+               <button type="button" onClick={() => setChargingOrder(null)} className="w-full py-2.5 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition mt-2">Cerrar</button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

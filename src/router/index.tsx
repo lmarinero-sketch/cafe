@@ -12,6 +12,7 @@ import { ProductsPage } from '../pages/ProductsPage';
 import { CategoriesPage } from '../pages/CategoriesPage';
 import { TablesPage } from '../pages/TablesPage';
 import { OrdersPage } from '../pages/OrdersPage';
+import { CajaPage } from '../pages/CajaPage';
 import { DeliveryPage } from '../pages/DeliveryPage';
 import { IngredientsPage } from '../pages/IngredientsPage';
 import { RecipeCostsPage } from '../pages/RecipeCostsPage';
@@ -85,6 +86,10 @@ export const router = createBrowserRouter([
           {
             path: 'pedidos',
             element: <OrdersPage />,
+          },
+          {
+            path: 'caja',
+            element: <CajaPage />,
           },
           {
             path: 'delivery',

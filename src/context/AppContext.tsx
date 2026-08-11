@@ -27,6 +27,7 @@ import { initialCustomers } from '../data/seeds/customers.seed';
 import { initialCampaigns } from '../data/seeds/campaigns.seed';
 import { initialAutomations } from '../data/seeds/automations.seed';
 import { calculateNormalizedCost, calculateRecipeCostDetails } from '../utils/costEngine';
+import { formatCurrency } from '../utils/currency';
 import { useToast } from './ToastContext';
 import { useAuth } from './AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -61,6 +62,8 @@ interface AppContextType {
   manuals: Manual[];
   tickets: SupportTicket[];
   branches: Branch[];
+  cashRegisters: import('../types').CashRegister[];
+  cashTransactions: import('../types').CashTransaction[];
   autoPriceUpdate: boolean;
   setAutoPriceUpdate: (val: boolean) => void;
   affectedProductsAlert: string[];
@@ -124,6 +127,11 @@ interface AppContextType {
 
   createSupportTicket: (ticket: Omit<SupportTicket, 'id' | 'createdAt' | 'status'>) => string;
 
+  // Caja (Cash Register)
+  openRegister: (openedBy: string, initialBalance: number) => void;
+  closeRegister: (registerId: string, finalBalance: number) => void;
+  addTransaction: (transaction: Omit<import('../types').CashTransaction, 'id' | 'timestamp'>) => void;
+
   getRecipeCostForProduct: (productId: string) => RecipeCost | null;
 }
 
@@ -140,6 +148,8 @@ const STORAGE_KEYS = {
   AUTOMATIONS: 'hilos_de_amor_automations',
   TICKETS: 'hilos_de_amor_tickets',
   AUTO_PRICE: 'hilos_de_amor_auto_price',
+  CASH_REGISTERS: 'hilos_de_amor_cash_registers',
+  CASH_TRANSACTIONS: 'hilos_de_amor_cash_transactions',
 };
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -198,6 +208,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [tickets, setTickets] = useState<SupportTicket[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TICKETS);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [cashRegisters, setCashRegisters] = useState<import('../types').CashRegister[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.CASH_REGISTERS);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [cashTransactions, setCashTransactions] = useState<import('../types').CashTransaction[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.CASH_TRANSACTIONS);
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -268,6 +288,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders)); }, [orders]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.INGREDIENTS, JSON.stringify(ingredients)); }, [ingredients]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets)); }, [tickets]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.CASH_REGISTERS, JSON.stringify(cashRegisters)); }, [cashRegisters]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.CASH_TRANSACTIONS, JSON.stringify(cashTransactions)); }, [cashTransactions]);
 
   // Also keep localStorage as cache for Supabase entities (offline fallback)
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers)); }, [customers]);
@@ -922,69 +944,47 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // ============================================================
+  // CAJA (Cash Register)
+  // ============================================================
+  const openRegister = (openedBy: string, initialBalance: number) => {
+    const newRegister: import('../types').CashRegister = {
+      id: `reg-${Date.now()}`,
+      openedAt: new Date().toISOString(),
+      openedBy,
+      initialBalance,
+      status: 'abierta',
+    };
+    setCashRegisters((prev) => [newRegister, ...prev]);
+    showToast('Caja abierta', `Turno iniciado por ${openedBy} con ${formatCurrency(initialBalance)}`, 'success');
+  };
+
+  const closeRegister = (registerId: string, finalBalance: number) => {
+    setCashRegisters((prev) =>
+      prev.map((reg) => {
+        if (reg.id === registerId) {
+          return { ...reg, status: 'cerrada', closedAt: new Date().toISOString(), finalBalance };
+        }
+        return reg;
+      })
+    );
+    showToast('Caja cerrada', 'El turno ha sido cerrado correctamente.', 'success');
+  };
+
+  const addTransaction = (tx: Omit<import('../types').CashTransaction, 'id' | 'timestamp'>) => {
+    const newTx: import('../types').CashTransaction = {
+      ...tx,
+      id: `tx-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+    };
+    setCashTransactions((prev) => [newTx, ...prev]);
+  };
+
   const getRecipeCostForProduct = (productId: string): RecipeCost | null => {
     const product = products.find((p) => p.id === productId);
     if (!product) return null;
 
-    let items = [];
-    if (product.name.includes('Café')) {
-      items = [
-        {
-          ingredientId: 'ing-1',
-          ingredientName: 'Café en Grano Arábica',
-          usageQty: 18,
-          usageUnit: 'gramo' as const,
-          wastePercentage: 3,
-          itemCost: 18 * 24 * 1.03, // ~ 445
-        },
-        {
-          ingredientId: 'ing-2',
-          ingredientName: 'Leche Entera La Serenísima',
-          usageQty: 200,
-          usageUnit: 'mililitro' as const,
-          wastePercentage: 2,
-          itemCost: 200 * 1.2 * 1.02, // ~ 244
-        },
-      ];
-    } else if (product.name.includes('Medialunas')) {
-      items = [
-        {
-          ingredientId: 'ing-4',
-          ingredientName: 'Harina 0000 Pastelera',
-          usageQty: 120,
-          usageUnit: 'gramo' as const,
-          wastePercentage: 2,
-          itemCost: 120 * 0.74 * 1.02,
-        },
-        {
-          ingredientId: 'ing-3',
-          ingredientName: 'Manteca Purísima',
-          usageQty: 60,
-          usageUnit: 'gramo' as const,
-          wastePercentage: 4,
-          itemCost: 60 * 9.5 * 1.04,
-        },
-      ];
-    } else {
-      items = [
-        {
-          ingredientId: 'ing-6',
-          ingredientName: 'Queso Mascarpone',
-          usageQty: 80,
-          usageUnit: 'gramo' as const,
-          wastePercentage: 3,
-          itemCost: 80 * 14.2 * 1.03,
-        },
-        {
-          ingredientId: 'ing-7',
-          ingredientName: 'Frutos Rojos Congelados',
-          usageQty: 40,
-          usageUnit: 'gramo' as const,
-          wastePercentage: 5,
-          itemCost: 40 * 8.0 * 1.05,
-        },
-      ];
-    }
+    const items = product.recipeItems || [];
 
     return calculateRecipeCostDetails(
       product.id,
@@ -1015,6 +1015,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         manuals: initialManuals,
         tickets,
         branches,
+        cashRegisters,
+        cashTransactions,
         autoPriceUpdate,
         setAutoPriceUpdate,
         affectedProductsAlert,
@@ -1059,6 +1061,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateBranchData,
         deleteBranchData,
         createSupportTicket,
+        openRegister,
+        closeRegister,
+        addTransaction,
         getRecipeCostForProduct,
       }}
     >

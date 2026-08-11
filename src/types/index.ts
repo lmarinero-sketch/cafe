@@ -22,6 +22,7 @@ export interface Product {
   channels: Channel[];
   cost?: number; // Costo total calculado si aplica
   suggestedPrice?: number;
+  recipeItems?: RecipeIngredient[];
 }
 
 export type TableSector = 'salon' | 'patio' | 'terraza' | 'vereda';
@@ -54,7 +55,29 @@ export type OrderStatus =
   | 'entregado' 
   | 'cancelado';
 
-export type PaymentMethod = 'efectivo' | 'transferencia' | 'tarjeta';
+export type PaymentMethod = 'efectivo' | 'transferencia' | 'credito' | 'debito' | 'mercadopago';
+
+export interface CashTransaction {
+  id: string;
+  registerId: string;
+  orderId?: string;
+  type: 'ingreso' | 'egreso';
+  amount: number;
+  paymentMethod: PaymentMethod | 'varios';
+  description: string;
+  timestamp: string;
+}
+
+export interface CashRegister {
+  id: string;
+  openedAt: string;
+  closedAt?: string;
+  openedBy: string;
+  initialBalance: number;
+  finalBalance?: number;
+  status: 'abierta' | 'cerrada';
+  expectedBalance?: number;
+}
 
 export interface Order {
   id: string;

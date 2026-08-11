@@ -24,6 +24,7 @@ import {
   X,
   Store,
   Globe,
+  Wallet,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { PlanType } from '../../types';
@@ -52,11 +53,12 @@ export const Sidebar: React.FC = () => {
     { name: 'Pedidos', path: '/pedidos', icon: <UtensilsCrossed className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Delivery', path: '/delivery', icon: <Truck className="w-4 h-4" />, requiredPlan: 'esencial' },
     
-    // Plan Gestión
-    { name: 'Ingredientes', path: '/ingredientes', icon: <Apple className="w-4 h-4" />, requiredPlan: 'gestion' },
-    { name: 'Recetas y Costos', path: '/recetas', icon: <Calculator className="w-4 h-4" />, requiredPlan: 'gestion' },
+    // Plan Gestión (Tesorería & Costos)
+    { name: 'Caja', path: '/caja', icon: <Wallet className="w-4 h-4" />, requiredPlan: 'gestion' },
     { name: 'Métricas', path: '/metricas', icon: <BarChart3 className="w-4 h-4" />, requiredPlan: 'gestion' },
     { name: 'Insights', path: '/insights', icon: <Lightbulb className="w-4 h-4" />, requiredPlan: 'gestion' },
+    { name: 'Ingredientes', path: '/ingredientes', icon: <Apple className="w-4 h-4" />, requiredPlan: 'gestion' },
+    { name: 'Recetas y Costos', path: '/recetas', icon: <Calculator className="w-4 h-4" />, requiredPlan: 'gestion' },
     
     // Plan Fidelización & Marketing
     { name: 'Sitio Promocional', path: '/sitio-promocional', icon: <Globe className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
@@ -167,11 +169,11 @@ export const Sidebar: React.FC = () => {
             })}
           </div>
 
-          {/* Plan Gestión Section */}
+          {/* Plan Gestión - Tesorería Section */}
           <div className="space-y-1">
             <div className="flex items-center justify-between px-3 mb-2">
               <p className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider">
-                Costos & Inteligencia (Gestión)
+                Tesorería & Ingresos
               </p>
               {isPlanLocked('gestion') && (
                 <span className="text-[9px] bg-brand-yellow/40 text-brand-brown font-bold px-1.5 py-0.2 rounded">
@@ -179,7 +181,45 @@ export const Sidebar: React.FC = () => {
                 </span>
               )}
             </div>
-            {navItems.slice(7, 11).map((item) => {
+            {navItems.slice(8, 11).map((item) => {
+              const locked = isPlanLocked(item.requiredPlan);
+              const isActive = location.pathname === item.path;
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={(e) => handleNavClick(e, item)}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
+                    isActive
+                      ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
+                      : locked
+                      ? 'text-brand-dark/50 hover:bg-brand-secondary/20'
+                      : 'text-brand-dark/80 hover:bg-brand-secondary/40 hover:text-brand-dark'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    {item.icon}
+                    <span>{item.name}</span>
+                  </div>
+                  {locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70" />}
+                </NavLink>
+              );
+            })}
+          </div>
+
+          {/* Plan Gestión - Costos e Inventario */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between px-3 mb-2">
+              <p className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider">
+                Costos & Inteligencia
+              </p>
+              {isPlanLocked('gestion') && (
+                <span className="text-[9px] bg-brand-yellow/40 text-brand-brown font-bold px-1.5 py-0.2 rounded">
+                  Plan Gestión
+                </span>
+              )}
+            </div>
+            {navItems.slice(11, 13).map((item) => {
               const locked = isPlanLocked(item.requiredPlan);
               const isActive = location.pathname === item.path;
               return (
@@ -217,7 +257,7 @@ export const Sidebar: React.FC = () => {
                 </span>
               )}
             </div>
-            {navItems.slice(11, 16).map((item) => {
+            {navItems.slice(13, 18).map((item) => {
               const locked = isPlanLocked(item.requiredPlan);
               const isActive = location.pathname === item.path;
               return (
@@ -245,7 +285,7 @@ export const Sidebar: React.FC = () => {
 
           {/* Standard Section */}
           <div className="space-y-1 pt-2 border-t border-brand-secondary/60">
-            {navItems.slice(16).map((item) => {
+            {navItems.slice(18).map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <NavLink
