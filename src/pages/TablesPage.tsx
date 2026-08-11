@@ -98,7 +98,7 @@ export const TablesPage: React.FC = () => {
       </div>
 
       {/* Tables Visual Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTables.map((t) => (
           <div
             key={t.id}
@@ -110,9 +110,9 @@ export const TablesPage: React.FC = () => {
                 : 'border-brand-brown/40'
             }`}
           >
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-brand-dark">{t.number}</span>
+                <span className="text-base font-extrabold text-brand-dark font-serif">{t.number}</span>
                 <span
                   className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${getStatusBadge(
                     t.status
@@ -123,23 +123,23 @@ export const TablesPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 text-xs text-brand-brown/80">
-                <span className="capitalize bg-brand-cream px-2 py-0.5 rounded border border-brand-secondary/60">
+                <span className="capitalize bg-brand-cream px-2.5 py-1 rounded-lg border border-brand-secondary/60 font-semibold">
                   {t.sector}
                 </span>
                 <span className="flex items-center gap-1 font-bold">
-                  <Users className="w-3.5 h-3.5" /> {t.capacity} personas
+                  <Users className="w-3.5 h-3.5 text-brand-brown" /> {t.capacity} personas
                 </span>
               </div>
             </div>
 
             {/* Actions & QR Trigger */}
-            <div className="pt-3 border-t border-brand-secondary/60 space-y-2">
-              <div className="grid grid-cols-3 gap-1">
+            <div className="pt-3 border-t border-brand-secondary/60 space-y-3">
+              <div className="grid grid-cols-3 gap-1.5">
                 <button
                   onClick={() => updateTableStatus(t.id, 'disponible')}
-                  className={`py-1 rounded text-[10px] font-bold ${
+                  className={`py-1.5 rounded-xl text-xs font-bold transition-all ${
                     t.status === 'disponible'
-                      ? 'bg-brand-green text-emerald-950 font-extrabold'
+                      ? 'bg-brand-green text-emerald-950 font-extrabold shadow-xs'
                       : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/30'
                   }`}
                 >
@@ -147,9 +147,9 @@ export const TablesPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => updateTableStatus(t.id, 'ocupada')}
-                  className={`py-1 rounded text-[10px] font-bold ${
+                  className={`py-1.5 rounded-xl text-xs font-bold transition-all ${
                     t.status === 'ocupada'
-                      ? 'bg-brand-brown text-brand-card font-extrabold'
+                      ? 'bg-brand-brown text-brand-card font-extrabold shadow-xs'
                       : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/30'
                   }`}
                 >
@@ -157,9 +157,9 @@ export const TablesPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => updateTableStatus(t.id, 'reservada')}
-                  className={`py-1 rounded text-[10px] font-bold ${
+                  className={`py-1.5 rounded-xl text-xs font-bold transition-all ${
                     t.status === 'reservada'
-                      ? 'bg-brand-yellow text-brand-dark font-extrabold'
+                      ? 'bg-brand-yellow text-brand-dark font-extrabold shadow-xs'
                       : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/30'
                   }`}
                 >
@@ -167,18 +167,20 @@ export const TablesPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   onClick={() => setSelectedQrTable(t)}
-                  className="w-full py-1.5 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark border border-brand-secondary font-bold text-[10px] flex items-center justify-center gap-1 transition-colors"
+                  className="w-full py-2 px-3 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark border border-brand-secondary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
                 >
-                  <QrCode className="w-3.5 h-3.5 text-brand-brown" /> Código QR
+                  <QrCode className="w-4 h-4 text-brand-brown shrink-0" />
+                  <span className="whitespace-nowrap">Código QR</span>
                 </button>
                 <button
                   onClick={() => window.open(`/menu?table=${t.id}&admin=true`, '_blank')}
-                  className="w-full py-1.5 rounded-xl bg-brand-brown hover:bg-brand-dark text-brand-card font-bold text-[10px] shadow-soft flex items-center justify-center gap-1 transition-colors"
+                  className="w-full py-2 px-3 rounded-xl bg-brand-brown hover:bg-brand-dark text-brand-card font-bold text-xs shadow-soft flex items-center justify-center gap-1.5 transition-colors"
                 >
-                  <UtensilsCrossed className="w-3.5 h-3.5 text-brand-yellow" /> Tomar Pedido
+                  <UtensilsCrossed className="w-4 h-4 text-brand-yellow shrink-0" />
+                  <span className="whitespace-nowrap">Tomar Pedido</span>
                 </button>
               </div>
             </div>
