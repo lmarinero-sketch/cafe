@@ -130,9 +130,9 @@ export const PromotionalWebsitePage: React.FC<PromotionalWebsitePageProps> = ({
             onClick={() => navigate('/sitio-promocional')}
             className="cursor-pointer flex items-center gap-2.5 min-w-0"
           >
-            <span className="font-serif italic text-xl sm:text-2xl font-extrabold text-[#E5C378] tracking-widest shrink-0">
-              H&A
-            </span>
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full overflow-hidden border-2 border-[#E5C378] shadow-md bg-white shrink-0">
+              <img src="/logo_hilos_de_amor.jpg" alt="Hilos de Amor" className="w-full h-full object-cover" />
+            </div>
             <div className="min-w-0">
               <h1 className="text-xs sm:text-sm font-extrabold text-[#FAFAF7] uppercase tracking-[0.15em] font-serif leading-tight whitespace-nowrap truncate">
                 HILOS DE AMOR
