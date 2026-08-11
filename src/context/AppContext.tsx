@@ -270,6 +270,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const openTutorialModal = () => setIsTutorialOpen(true);
   const closeTutorialModal = () => setIsTutorialOpen(false);
 
+  // Realtime Live Syncing across tabs & windows
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+  }, [orders]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.TABLES, JSON.stringify(tables));
+  }, [tables]);
+
+  useEffect(() => {
+    const handleSync = () => {
+      const savedOrders = localStorage.getItem(STORAGE_KEYS.ORDERS);
+      if (savedOrders) setOrders(JSON.parse(savedOrders));
+      const savedTables = localStorage.getItem(STORAGE_KEYS.TABLES);
+      if (savedTables) setTables(JSON.parse(savedTables));
+    };
+
+    window.addEventListener('storage', handleSync);
+    const interval = setInterval(handleSync, 2000);
+
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      clearInterval(interval);
+    };
+  }, []);
+
   // ============================================================
   // SUPABASE: Initial data fetch
   // ============================================================

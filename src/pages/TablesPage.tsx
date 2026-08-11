@@ -1,15 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed, Receipt, ShoppingBag, ArrowRight, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed, Receipt, ShoppingBag, ArrowRight, Clock, AlertCircle, CheckCircle2, RotateCcw, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Table, TableStatus } from '../types';
+import { Table, TableStatus, OrderStatus, Order } from '../types';
 import { formatCurrency, formatDate } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 
 export const TablesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { tables, tableSectors, addTable, updateTableStatus, orders } = useApp();
+  const { tables, tableSectors, addTable, updateTableStatus, updateOrderStatus, orders } = useApp();
   const [selectedHistoryTable, setSelectedHistoryTable] = useState<Table | null>(null);
+  const [cancelledAlertOrder, setCancelledAlertOrder] = useState<Order | null>(null);
+  const [lastCancelledCount, setLastCancelledCount] = useState<number>(0);
+
+  // Monitor canceled orders for centered popup alert
+  useEffect(() => {
+    const cancelledOrders = orders.filter((o) => o.status === 'cancelado');
+    if (cancelledOrders.length > lastCancelledCount && lastCancelledCount > 0) {
+      const latest = cancelledOrders[0];
+      if (latest) setCancelledAlertOrder(latest);
+    }
+    setLastCancelledCount(cancelledOrders.length);
+  }, [orders, lastCancelledCount]);
 
   const [selectedSector, setSelectedSector] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -379,6 +391,27 @@ export const TablesPage: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  const getKanbanBadge = (status: OrderStatus) => {
+    switch (status) {
+      case 'nuevo':
+        return { text: '✨ Nuevo', color: 'bg-amber-100 text-amber-900 border-amber-300' };
+      case 'confirmado':
+        return { text: '🔵 Confirmado', color: 'bg-blue-100 text-blue-900 border-blue-300' };
+      case 'en_preparacion':
+        return { text: '🍳 En Preparación', color: 'bg-purple-100 text-purple-900 border-purple-300' };
+      case 'listo':
+        return { text: '🔔 Listo p/ Servir', color: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
+      case 'en_camino':
+        return { text: '🛵 En Camino', color: 'bg-sky-100 text-sky-900 border-sky-300' };
+      case 'entregado':
+        return { text: '✓ Entregado', color: 'bg-gray-100 text-gray-800 border-gray-300' };
+      case 'cancelado':
+        return { text: '❌ Cancelado', color: 'bg-rose-100 text-rose-950 border-rose-300' };
+      default:
+        return { text: status, color: 'bg-brand-cream text-brand-dark border-brand-secondary' };
+    }
+  };
+
   const getStatusBadge = (status: TableStatus, hasPendingPayment?: boolean, pendingTotal?: number) => {
     switch (status) {
       case 'disponible':
@@ -541,6 +574,29 @@ export const TablesPage: React.FC = () => {
                     <span className="font-extrabold">
                       {hasPendingPayment ? formatCurrency(pendingTotal) : 'Sin saldo'}
                     </span>
+                  </div>
+                )}
+
+                {/* Comanda en Vivo por Kanban en la Mesa */}
+                {pendingOrders.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t border-brand-secondary/60">
+                    <span className="text-[10px] font-extrabold text-brand-brown/80 uppercase tracking-wider block">
+                      Estado Kanban en Vivo:
+                    </span>
+                    {pendingOrders.map((po) => {
+                      const kb = getKanbanBadge(po.status);
+                      return (
+                        <div
+                          key={po.id}
+                          className="flex items-center justify-between text-xs bg-brand-bg p-2 rounded-xl border border-brand-secondary/80 shadow-xs"
+                        >
+                          <span className="font-mono font-extrabold text-brand-dark">{po.code}</span>
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${kb.color}`}>
+                            {kb.text}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -737,18 +793,17 @@ export const TablesPage: React.FC = () => {
                   .filter((o) => o.tableId === selectedHistoryTable.id)
                   .map((ord) => {
                     const isPaid = ord.status === 'entregado';
+                    const isCancelled = ord.status === 'cancelado';
+                    const kb = getKanbanBadge(ord.status);
+
                     return (
-                      <div key={ord.id} className="p-4 rounded-xl border border-brand-secondary bg-brand-bg space-y-2">
+                      <div key={ord.id} className={`p-4 rounded-xl border space-y-2 ${isCancelled ? 'border-rose-300 bg-rose-50/30' : 'border-brand-secondary bg-brand-bg'}`}>
                         <div className="flex items-center justify-between">
                           <span className="font-extrabold text-xs text-brand-dark">{ord.code}</span>
                           <span
-                            className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase border ${
-                              isPaid
-                                ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
-                                : 'bg-amber-100 text-amber-950 border-amber-300'
-                            }`}
+                            className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase border ${kb.color}`}
                           >
-                            {isPaid ? '✓ Cobrado' : `Pendiente (${ord.status})`}
+                            {kb.text}
                           </span>
                         </div>
                         <p className="text-[10px] text-brand-brown/80 font-mono">
@@ -768,17 +823,41 @@ export const TablesPage: React.FC = () => {
                           <span className="text-xs font-extrabold text-brand-brown">
                             Total: {formatCurrency(ord.total)}
                           </span>
-                          {!isPaid && (
-                            <button
-                              onClick={() => {
-                                setSelectedHistoryTable(null);
-                                navigate('/pedidos');
-                              }}
-                              className="py-1 px-3 rounded-lg bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors flex items-center gap-1 shadow-xs"
-                            >
-                              Ir a cobrar <ArrowRight className="w-3.5 h-3.5 text-brand-yellow" />
-                            </button>
-                          )}
+
+                          <div className="flex items-center gap-1.5">
+                            {isCancelled ? (
+                              <button
+                                onClick={() => {
+                                  updateOrderStatus(ord.id, 'nuevo');
+                                  setSelectedHistoryTable(null);
+                                }}
+                                className="py-1 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs transition-colors flex items-center gap-1 shadow-xs"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 text-brand-yellow" /> Reactivar Pedido
+                              </button>
+                            ) : !isPaid ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    updateOrderStatus(ord.id, 'cancelado');
+                                    setSelectedHistoryTable(null);
+                                  }}
+                                  className="py-1 px-2.5 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-100 font-bold text-xs transition-colors"
+                                >
+                                  Cancelar
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedHistoryTable(null);
+                                    navigate('/pedidos');
+                                  }}
+                                  className="py-1 px-3 rounded-lg bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors flex items-center gap-1 shadow-xs"
+                                >
+                                  Ir a cobrar <ArrowRight className="w-3.5 h-3.5 text-brand-yellow" />
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     );
@@ -788,6 +867,33 @@ export const TablesPage: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Modal Advertencia Cancelación Centrado en Pantalla */}
+      {cancelledAlertOrder && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-brand-dark/70 backdrop-blur-md animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border-4 border-rose-600 p-6 max-w-md w-full shadow-soft-lg space-y-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto border-2 border-rose-400">
+              <AlertTriangle className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-xl font-extrabold text-brand-dark">¡ATENCIÓN! Pedido Cancelado</h3>
+              <p className="text-xs text-brand-brown/90 mt-2 leading-relaxed">
+                Se ha registrado la cancelación del pedido <strong className="text-rose-700">{cancelledAlertOrder.code}</strong>{' '}
+                asociado a <strong>{cancelledAlertOrder.tableName || 'Mesa'}</strong> por un valor de{' '}
+                <strong className="text-brand-dark">{formatCurrency(cancelledAlertOrder.total)}</strong>.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCancelledAlertOrder(null)}
+              className="w-full py-3 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-extrabold text-xs shadow-md transition-all uppercase tracking-wider"
+            >
+              Entendido / Aceptar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Add Table Form */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
           <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 max-w-md w-full shadow-soft-lg space-y-4">

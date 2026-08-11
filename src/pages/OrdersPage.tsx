@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, ArrowRight, CheckCircle2, Clock, Truck, XCircle, MapPin, Phone, Banknote } from 'lucide-react';
+import { ShoppingBag, ArrowRight, CheckCircle2, Clock, Truck, XCircle, MapPin, Phone, Banknote, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Order, OrderStatus, PaymentMethod } from '../types';
 import { formatCurrency, formatDate } from '../utils/currency';
@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from '../utils/currency';
 export const OrdersPage: React.FC = () => {
   const { orders, updateOrderStatus, addTransaction, cashRegisters } = useApp();
   const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
+  const [cancelingOrderConfirm, setCancelingOrderConfirm] = useState<Order | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('efectivo');
 
   const activeRegister = cashRegisters.find(r => r.status === 'abierta');
@@ -18,6 +19,7 @@ export const OrdersPage: React.FC = () => {
     { status: 'listo', title: 'Listo', color: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
     { status: 'en_camino', title: 'En camino', color: 'bg-sky-100 text-sky-900 border-sky-300' },
     { status: 'entregado', title: 'Entregado', color: 'bg-gray-100 text-gray-800 border-gray-300' },
+    { status: 'cancelado', title: 'Cancelados', color: 'bg-rose-100 text-rose-950 border-rose-300' },
   ];
 
   const getNextStatus = (current: OrderStatus): OrderStatus | null => {
@@ -126,28 +128,40 @@ export const OrdersPage: React.FC = () => {
                           </span>
 
                           <div className="flex items-center gap-1">
-                            {next && (
+                            {ord.status === 'cancelado' ? (
                               <button
-                                onClick={() => {
-                                  if (next === 'entregado') {
-                                    setChargingOrder(ord);
-                                    setSelectedPayment(ord.paymentMethod);
-                                  } else {
-                                    updateOrderStatus(ord.id, next);
-                                  }
-                                }}
-                                className={`py-1 px-2.5 rounded-lg text-brand-card text-[10px] font-bold transition-colors flex items-center gap-1 ${next === 'entregado' ? 'bg-brand-green hover:bg-emerald-800' : 'bg-brand-brown hover:bg-brand-dark'}`}
+                                onClick={() => updateOrderStatus(ord.id, 'nuevo')}
+                                className="py-1 px-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-extrabold transition-colors flex items-center gap-1 shadow-xs"
+                                title="Reactivar pedido"
                               >
-                                {next === 'entregado' ? 'Cobrar' : 'Avanzar'} <ArrowRight className="w-3 h-3" />
+                                <RotateCcw className="w-3 h-3 text-brand-yellow" /> Reactivar
                               </button>
+                            ) : (
+                              <>
+                                {next && (
+                                  <button
+                                    onClick={() => {
+                                      if (next === 'entregado') {
+                                        setChargingOrder(ord);
+                                        setSelectedPayment(ord.paymentMethod);
+                                      } else {
+                                        updateOrderStatus(ord.id, next);
+                                      }
+                                    }}
+                                    className={`py-1 px-2.5 rounded-lg text-brand-card text-[10px] font-bold transition-colors flex items-center gap-1 ${next === 'entregado' ? 'bg-brand-green hover:bg-emerald-800' : 'bg-brand-brown hover:bg-brand-dark'}`}
+                                  >
+                                    {next === 'entregado' ? 'Cobrar' : 'Avanzar'} <ArrowRight className="w-3 h-3" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setCancelingOrderConfirm(ord)}
+                                  className="p-1 rounded text-rose-700 hover:bg-rose-100"
+                                  title="Cancelar pedido"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              </>
                             )}
-                            <button
-                              onClick={() => updateOrderStatus(ord.id, 'cancelado')}
-                              className="p-1 rounded text-rose-700 hover:bg-rose-100"
-                              title="Cancelar pedido"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -159,6 +173,44 @@ export const OrdersPage: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Modal Confirmación de Cancelación */}
+      {cancelingOrderConfirm && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border-2 border-rose-500 p-6 w-full max-w-md shadow-soft-lg space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto border border-rose-300">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-extrabold text-brand-dark">¿Cancelar Pedido {cancelingOrderConfirm.code}?</h3>
+              <p className="text-xs text-brand-brown/80 mt-2 leading-relaxed">
+                Estás a punto de cancelar el pedido de <strong>{cancelingOrderConfirm.customerName}</strong> ({cancelingOrderConfirm.tableName || 'Takeaway'}). 
+                El pedido pasará al estado <span className="font-extrabold text-rose-700">Cancelado</span> y la mesa actualizará su estado en tiempo real.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setCancelingOrderConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition"
+              >
+                No, Volver
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  updateOrderStatus(cancelingOrderConfirm.id, 'cancelado');
+                  setCancelingOrderConfirm(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-rose-700 text-white font-extrabold text-xs hover:bg-rose-800 transition shadow-soft"
+              >
+                Sí, Cancelar Pedido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Cobrar */}
       {chargingOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs">
