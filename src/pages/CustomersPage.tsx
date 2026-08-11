@@ -472,7 +472,7 @@ export const CustomersPage: React.FC = () => {
                 <textarea
                   rows={3}
                   readOnly
-                  value={`¡Hola ${selectedActionCustomer.customer.firstName}! Por ser uno de nuestros clientes más valiosos en Café Magnolia, te regalamos un Voucher del 20% OFF para tu próxima visita. ¡Te esperamos! ☕✨`}
+                  value={`¡Hola ${selectedActionCustomer.customer.firstName}! Por ser uno de nuestros clientes más valiosos en Hilos de Amor, te regalamos un Voucher del 20% OFF para tu próxima visita. ¡Te esperamos! ☕✨`}
                   className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark focus:outline-none"
                 />
               </div>

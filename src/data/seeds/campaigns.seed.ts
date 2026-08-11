@@ -9,7 +9,7 @@ export const initialCampaigns: Campaign[] = [
     status: 'leido',
     recipientsCount: 42,
     segment: 'Nuevos registrados (últimos 7 días)',
-    message: 'Hola {{nombre}}, ¡bienvenido a Café Magnolia! Te regalamos 150 puntos de bienvenida para tu primera visita. Presentá este mensaje en caja.',
+    message: 'Hola {{nombre}}, ¡bienvenido a Hilos de Amor! Te regalamos 150 puntos de bienvenida para tu primera visita. Presentá este mensaje en caja.',
     conversionRate: 68,
   },
   {
@@ -20,7 +20,7 @@ export const initialCampaigns: Campaign[] = [
     status: 'enviado',
     recipientsCount: 18,
     segment: 'Cumpleañeros de Julio',
-    message: '¡Feliz cumpleaños {{nombre}}! 🎂 En tu mes especial, disfrutá una porción de torta gratis al consumir cualquier café en Café Magnolia. ¡Te esperamos!',
+    message: '¡Feliz cumpleaños {{nombre}}! 🎂 En tu mes especial, disfrutá un Lemon pie gratis al consumir cualquier café en Hilos de Amor. ¡Te esperamos!',
     conversionRate: 45,
   },
   {
@@ -31,7 +31,7 @@ export const initialCampaigns: Campaign[] = [
     status: 'leido',
     recipientsCount: 35,
     segment: 'Sin compras > 30 días',
-    message: 'Hola {{nombre}}, ¡te extrañamos en Café Magnolia! Volvé esta semana y obtené un 20% de descuento en tu café preferido.',
+    message: 'Hola {{nombre}}, ¡te extrañamos en Hilos de Amor! Volvé esta semana y obtené un 20% de descuento en tu Latte Frío preferido.',
     conversionRate: 32,
   },
   {
@@ -42,7 +42,7 @@ export const initialCampaigns: Campaign[] = [
     status: 'entregado',
     recipientsCount: 85,
     segment: 'Clientes con > 400 puntos',
-    message: 'Hola {{nombre}}. Tenés {{puntos}} puntos disponibles. Esta semana podés canjearlos por un café y una medialuna. Te esperamos.',
+    message: 'Hola {{nombre}}. Tenés {{puntos}} puntos disponibles. Esta semana podés canjearlos por un Café con Leche y una Medialuna. Te esperamos.',
     conversionRate: 54,
   },
   {
@@ -53,18 +53,18 @@ export const initialCampaigns: Campaign[] = [
     status: 'programado',
     recipientsCount: 120,
     segment: 'Todos los clientes activos',
-    message: '¡Hola {{nombre}}! Este fin de semana 2x1 en porciones de Cheesecake y Torta Fudge pidiendo por nuestra app o en salón.',
+    message: '¡Hola {{nombre}}! Este fin de semana 2x1 en porciones de Cheesecake de frutos rojos pidiendo por nuestra app o en salón.',
     conversionRate: 0,
   },
   {
     id: 'cmp-6',
-    name: 'Lanzamiento Combo Almuerzo Gourmet',
+    name: 'Lanzamiento Combo Salados',
     templateName: 'Combo especial',
     scheduledAt: '2026-08-03T12:00:00Z',
     status: 'programado',
     recipientsCount: 95,
-    segment: 'Clientes de Almuerzos',
-    message: '{{nombre}}, probá nuestro nuevo Combo Hamburguesa Artesanal + Limonada con 15% de descuento exclusivo esta semana.',
+    segment: 'Clientes frecuentes',
+    message: '{{nombre}}, probá nuestro nuevo Ciabatta crudo + Jugo Naranja con 15% de descuento exclusivo esta semana.',
     conversionRate: 0,
   },
 ];

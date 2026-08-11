@@ -1,5 +1,5 @@
 -- Migration: Create automations table for Plan Fidelización
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 -- Create automation_status enum type
 CREATE TYPE automation_status AS ENUM ('activa', 'pausada');

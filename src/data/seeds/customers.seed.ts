@@ -42,6 +42,6 @@ export const initialCustomers: Customer[] = Array.from({ length: 50 }, (_, i) =>
     level,
     usedPromotionsCount: (i % 4),
     marketingConsent: true,
-    favoriteProduct: i % 2 === 0 ? 'Café con Leche' : 'Cheesecake de Frutos Rojos',
+    favoriteProduct: i % 2 === 0 ? 'Café c/leche (Mediano)' : 'Cheesecake de frutos rojos',
   };
 });

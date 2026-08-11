@@ -1,5 +1,5 @@
 -- Migration: Create customers table for Plan Fidelización
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 -- Create customer_level enum type
 CREATE TYPE customer_level AS ENUM ('Inicial', 'Frecuente', 'Preferencial', 'VIP');

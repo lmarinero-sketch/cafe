@@ -1,7 +1,7 @@
 
 -- === 001_create_customers.sql ===
 -- Migration: Create customers table for Plan Fidelización
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 -- Create customer_level enum type
 CREATE TYPE customer_level AS ENUM ('Inicial', 'Frecuente', 'Preferencial', 'VIP');
@@ -64,7 +64,7 @@ CREATE TRIGGER customers_updated_at
 
 -- === 002_create_rewards.sql ===
 -- Migration: Create rewards table for Plan Fidelización
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 CREATE TABLE IF NOT EXISTS rewards (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -102,7 +102,7 @@ CREATE TRIGGER rewards_updated_at
 
 -- === 003_create_campaigns.sql ===
 -- Migration: Create campaigns table for Plan Fidelización
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 -- Create campaign_status enum type
 CREATE TYPE campaign_status AS ENUM ('programado', 'enviado', 'entregado', 'leido');
@@ -146,7 +146,7 @@ CREATE TRIGGER campaigns_updated_at
 
 -- === 004_create_automations.sql ===
 -- Migration: Create automations table for Plan Fidelización
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 -- Create automation_status enum type
 CREATE TYPE automation_status AS ENUM ('activa', 'pausada');
@@ -190,7 +190,7 @@ CREATE TRIGGER automations_updated_at
 
 -- === 005_create_redemptions.sql ===
 -- Migration: Create redemptions table for Plan Fidelización
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 CREATE TABLE IF NOT EXISTS redemptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -216,7 +216,7 @@ CREATE POLICY "Allow anonymous delete redemptions"
 
 -- === 006_seed_data.sql ===
 -- Migration: Seed initial data for Plan Fidelización demo
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 -- ============================================================
 -- REWARDS SEED DATA
@@ -227,7 +227,7 @@ INSERT INTO rewards (name, description, points_cost, category, is_available) VAL
   ('20% Off en Pastelería', 'Descuento del 20% aplicable sobre cualquier porción de torta o cheesecake.', 500, 'Descuentos', true),
   ('Porción de Cheesecake de Frutos Rojos', 'Disfrutá una porción entera de nuestro emblemático cheesecake.', 800, 'Pastelería', true),
   ('Envío sin Cargo en Delivery', 'Envío completamente gratis para tus pedidos con entrega a domicilio.', 300, 'Delivery', true),
-  ('Combo Desayuno Magnolia Gratis', 'Canjeá un combo completo: café con leche + 2 medialunas + jugo exprimido.', 1200, 'Promociones', true),
+  ('Combo Desayuno Hilos de Amor Gratis', 'Canjeá un combo completo: café con leche + 2 medialunas + jugo exprimido.', 1200, 'Promociones', true),
   ('Upgrade a Taza Extra Grande', 'Agrandá el tamaño de tu café o capuchino al tamaño XL sin costo.', 150, 'Cafetería', true),
   ('Voucher $5.000 para Almuerzos', 'Voucher de $5.000 de descuento en cualquier opción de nuestro menú de almuerzos.', 1500, 'Descuentos', true);
 
@@ -290,9 +290,9 @@ END $$;
 -- CAMPAIGNS SEED DATA
 -- ============================================================
 INSERT INTO campaigns (name, template_name, scheduled_at, status, recipients_count, segment, message, conversion_rate) VALUES
-  ('Bienvenida a Nuevos Socios', 'Bienvenida', '2026-07-28T10:00:00Z', 'leido', 42, 'Nuevos registrados (últimos 7 días)', 'Hola {{nombre}}, ¡bienvenido a Café Magnolia! Te regalamos 150 puntos de bienvenida para tu primera visita. Presentá este mensaje en caja.', 68),
-  ('Especial Cumpleaños del Mes', 'Cumpleaños', '2026-07-29T09:00:00Z', 'enviado', 18, 'Cumpleañeros de Julio', '¡Feliz cumpleaños {{nombre}}! 🎂 En tu mes especial, disfrutá una porción de torta gratis al consumir cualquier café en Café Magnolia. ¡Te esperamos!', 45),
-  ('Recuperación de Clientes Inactivos', 'Cliente inactivo', '2026-07-25T16:00:00Z', 'leido', 35, 'Sin compras > 30 días', 'Hola {{nombre}}, ¡te extrañamos en Café Magnolia! Volvé esta semana y obtené un 20% de descuento en tu café preferido.', 32),
+  ('Bienvenida a Nuevos Socios', 'Bienvenida', '2026-07-28T10:00:00Z', 'leido', 42, 'Nuevos registrados (últimos 7 días)', 'Hola {{nombre}}, ¡bienvenido a Hilos de Amor! Te regalamos 150 puntos de bienvenida para tu primera visita. Presentá este mensaje en caja.', 68),
+  ('Especial Cumpleaños del Mes', 'Cumpleaños', '2026-07-29T09:00:00Z', 'enviado', 18, 'Cumpleañeros de Julio', '¡Feliz cumpleaños {{nombre}}! 🎂 En tu mes especial, disfrutá una porción de torta gratis al consumir cualquier café en Hilos de Amor. ¡Te esperamos!', 45),
+  ('Recuperación de Clientes Inactivos', 'Cliente inactivo', '2026-07-25T16:00:00Z', 'leido', 35, 'Sin compras > 30 días', 'Hola {{nombre}}, ¡te extrañamos en Hilos de Amor! Volvé esta semana y obtené un 20% de descuento en tu café preferido.', 32),
   ('Notificación de Puntos Acumulados', 'Nuevos puntos', '2026-07-27T11:30:00Z', 'entregado', 85, 'Clientes con > 400 puntos', 'Hola {{nombre}}. Tenés {{puntos}} puntos disponibles. Esta semana podés canjearlos por un café y una medialuna. Te esperamos.', 54),
   ('Promoción Fin de Semana Pastelería', 'Promoción semanal', '2026-08-01T09:30:00Z', 'programado', 120, 'Todos los clientes activos', '¡Hola {{nombre}}! Este fin de semana 2x1 en porciones de Cheesecake y Torta Fudge pidiendo por nuestra app o en salón.', 0),
   ('Lanzamiento Combo Almuerzo Gourmet', 'Combo especial', '2026-08-03T12:00:00Z', 'programado', 95, 'Clientes de Almuerzos', '{{nombre}}, probá nuestro nuevo Combo Hamburguesa Artesanal + Limonada con 15% de descuento exclusivo esta semana.', 0);
@@ -301,11 +301,11 @@ INSERT INTO campaigns (name, template_name, scheduled_at, status, recipients_cou
 -- AUTOMATIONS SEED DATA
 -- ============================================================
 INSERT INTO automations (name, condition, segment, message, status, next_run, estimated_recipients, executed_count) VALUES
-  ('Bienvenida tras el Registro', 'Cliente se registra en el menú digital o caja', 'Nuevos Clientes', '¡Hola! Te damos la bienvenida a Café Magnolia. Acumulás 150 puntos por registrarte.', 'activa', 'En tiempo real', 15, 142),
+  ('Bienvenida tras el Registro', 'Cliente se registra en el menú digital o caja', 'Nuevos Clientes', '¡Hola! Te damos la bienvenida a Hilos de Amor. Acumulás 150 puntos por registrarte.', 'activa', 'En tiempo real', 15, 142),
   ('Saludo y Regalo de Cumpleaños', 'Es la fecha de cumpleaños del cliente', 'Cumpleañeros', '¡Feliz cumpleaños {{nombre}}! Tenés una porción de torta gratis esperándote.', 'activa', 'Todos los días 09:00 hs', 3, 88),
   ('Aviso de Recompensa Disponible', 'Puntos del cliente superan costo de recompensa', 'Clientes con Puntos Canjeables', 'Hola {{nombre}}, alcanzaste {{puntos}} puntos. ¡Ya podés canjear tu beneficio!', 'activa', 'Semanal (Lunes 10:00 hs)', 24, 310),
-  ('Recuperación de Cliente Inactivo (30 días)', 'Días desde última compra >= 30', 'Clientes Inactivos', 'Hace tiempo no te vemos por Café Magnolia. Te regalamos 20% off en tu próxima visita.', 'activa', 'Diario a las 11:00 hs', 8, 165),
-  ('Oferta Desayuno para Clientes Matutinos', 'Compra habitual en horario 08:00 - 11:00 hs', 'Compradores Frecuentes de Mañana', 'Empezá tu mañana en Café Magnolia: 2x1 en Medialunas pidiendo tu café favorito.', 'activa', 'Martes 07:30 hs', 45, 220),
+  ('Recuperación de Cliente Inactivo (30 días)', 'Días desde última compra >= 30', 'Clientes Inactivos', 'Hace tiempo no te vemos por Hilos de Amor. Te regalamos 20% off en tu próxima visita.', 'activa', 'Diario a las 11:00 hs', 8, 165),
+  ('Oferta Desayuno para Clientes Matutinos', 'Compra habitual en horario 08:00 - 11:00 hs', 'Compradores Frecuentes de Mañana', 'Empezá tu mañana en Hilos de Amor: 2x1 en Medialunas pidiendo tu café favorito.', 'activa', 'Martes 07:30 hs', 45, 220),
   ('Sugerencia Delivery Nocturno', 'Compra habitual en canal Delivery (19:00 - 22:00 hs)', 'Clientes de Delivery Nocturno', '¿Sin ganas de cocinar hoy? Pedí tu hamburguesa artesanal con envío gratis.', 'activa', 'Viernes 19:00 hs', 38, 190),
   ('Combo Relacionado a Producto Favorito', 'Producto más comprado = Cheesecake de Frutos Rojos', 'Amantes del Cheesecake', 'Hoy acompañá tu Cheesecake favorito con un Capuchino con 30% de descuento.', 'pausada', 'Pausada', 20, 75),
   ('Upgrade a Nivel Preferencial / VIP', 'Cliente asciende de nivel en el programa de puntos', 'Clientes Ascendidos', '¡Felicitaciones {{nombre}}! Ascendiste al Nivel {{nivel}}. Disfrutá de beneficios exclusivos.', 'activa', 'En tiempo real', 5, 42);

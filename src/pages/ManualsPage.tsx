@@ -22,7 +22,7 @@ export const ManualsPage: React.FC = () => {
         <div>
           <h2 className="text-2xl font-extrabold text-brand-dark">Base de Manuales & Documentación</h2>
           <p className="text-xs text-brand-brown/80 mt-1">
-            Guías interactivas paso a paso para operar Café Magnolia ({manuals.length} manuales disponibles)
+            Guías interactivas paso a paso para operar Hilos de Amor ({manuals.length} manuales disponibles)
           </p>
         </div>
       </div>

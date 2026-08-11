@@ -19,7 +19,7 @@ const productosDestacados = [
   { name: 'Capuchino', price: 3800, image: '/products/capuchino.svg', category: 'Cafetería', badge: 'Popular' },
   { name: 'Medialunas de Manteca', price: 2800, image: '/products/medialunas.svg', category: 'Pastelería', badge: 'Recién Horneadas' },
   { name: 'Cheesecake de Frutos Rojos', price: 5200, image: '/products/cheesecake.svg', category: 'Pastelería', badge: 'Especialidad' },
-  { name: 'Combo Desayuno Magnolia', price: 6800, image: '/products/combo-desayuno.svg', category: 'Combos', badge: 'Más Pedido' },
+  { name: 'Combo Desayuno Hilos de Amor', price: 6800, image: '/products/combo-desayuno.svg', category: 'Combos', badge: 'Más Pedido' },
   { name: 'Hamburguesa Artesanal', price: 8500, image: '/products/hamburguesa.svg', category: 'Almuerzos', badge: 'Gourmet' },
   { name: 'Torta de Chocolate', price: 4800, image: '/products/torta-chocolate.svg', category: 'Pastelería', badge: 'De Autor' },
   { name: 'Limonada Casera', price: 3000, image: '/products/limonada.svg', category: 'Bebidas', badge: 'Fresca' },

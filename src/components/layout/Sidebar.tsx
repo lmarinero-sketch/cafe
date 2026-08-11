@@ -275,7 +275,7 @@ export const Sidebar: React.FC = () => {
               CM
             </div>
             <div className="overflow-hidden">
-              <h5 className="text-xs font-bold text-brand-dark truncate">Café Magnolia</h5>
+              <h5 className="text-xs font-bold text-brand-dark truncate">Hilos de Amor</h5>
               <p className="text-[10px] text-brand-brown/80 truncate">Sucursal Recoleta</p>
             </div>
           </div>

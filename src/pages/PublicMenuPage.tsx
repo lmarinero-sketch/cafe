@@ -409,7 +409,7 @@ export const PublicMenuPage: React.FC = () => {
 
       {/* Public Menu Footer */}
       <footer className="p-4 mt-6 text-center text-xs text-brand-brown/80 border-t border-brand-secondary/60 space-y-1">
-        <p>Café Magnolia • Carta Digital</p>
+        <p>Hilos de Amor • Carta Digital</p>
         <p>
           <a
             href="https://www.growlabs.lat"
@@ -644,7 +644,7 @@ export const PublicMenuPage: React.FC = () => {
             <CheckCircle2 className="w-12 h-12 text-emerald-800 mx-auto" />
             <h3 className="text-lg font-extrabold text-brand-dark">¡Pedido Recibido!</h3>
             <p className="text-xs text-brand-brown/90">
-              Tu pedido ha sido enviado a la cocina de Café Magnolia.
+              Tu pedido ha sido enviado a la cocina de Hilos de Amor.
             </p>
             <div className="p-3 bg-brand-cream rounded-xl border border-brand-secondary font-mono font-extrabold text-sm text-brand-brown">
               Código: #{orderSuccessCode}

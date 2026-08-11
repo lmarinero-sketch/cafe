@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem(STORAGE_KEY);
     // Also clear app data cache
     Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('cafe_magnolia_')) {
+      if (key.startsWith('hilos_de_amor_')) {
         localStorage.removeItem(key);
       }
     });

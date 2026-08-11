@@ -19,6 +19,13 @@ import {
 } from '../types';
 import { initialCategories } from '../data/seeds/categories.seed';
 import { initialManuals } from '../data/manuals/systemManuals';
+import { initialProducts } from '../data/seeds/products.seed';
+import { initialTables } from '../data/seeds/tables.seed';
+import { initialOrders } from '../data/seeds/orders.seed';
+import { initialIngredients } from '../data/seeds/ingredients.seed';
+import { initialCustomers } from '../data/seeds/customers.seed';
+import { initialCampaigns } from '../data/seeds/campaigns.seed';
+import { initialAutomations } from '../data/seeds/automations.seed';
 import { calculateNormalizedCost, calculateRecipeCostDetails } from '../utils/costEngine';
 import { useToast } from './ToastContext';
 import { useAuth } from './AuthContext';
@@ -123,16 +130,16 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  PLAN: 'cafe_magnolia_plan',
-  PRODUCTS: 'cafe_magnolia_products',
-  TABLES: 'cafe_magnolia_tables',
-  ORDERS: 'cafe_magnolia_orders',
-  INGREDIENTS: 'cafe_magnolia_ingredients',
-  CUSTOMERS: 'cafe_magnolia_customers',
-  CAMPAIGNS: 'cafe_magnolia_campaigns',
-  AUTOMATIONS: 'cafe_magnolia_automations',
-  TICKETS: 'cafe_magnolia_tickets',
-  AUTO_PRICE: 'cafe_magnolia_auto_price',
+  PLAN: 'hilos_de_amor_plan',
+  PRODUCTS: 'hilos_de_amor_products',
+  TABLES: 'hilos_de_amor_tables',
+  ORDERS: 'hilos_de_amor_orders',
+  INGREDIENTS: 'hilos_de_amor_ingredients',
+  CUSTOMERS: 'hilos_de_amor_customers',
+  CAMPAIGNS: 'hilos_de_amor_campaigns',
+  AUTOMATIONS: 'hilos_de_amor_automations',
+  TICKETS: 'hilos_de_amor_tickets',
+  AUTO_PRICE: 'hilos_de_amor_auto_price',
 };
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -151,40 +158,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : initialProducts;
   });
 
   const [tables, setTables] = useState<Table[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TABLES);
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : initialTables;
   });
 
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ORDERS);
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : initialOrders;
   });
 
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.INGREDIENTS);
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : initialIngredients;
   });
 
   // Supabase-backed states (Plan Fidelización)
   const [customers, setCustomers] = useState<Customer[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : initialCustomers;
   });
 
   const [rewards, setRewards] = useState<Reward[]>([]);
 
   const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CAMPAIGNS);
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : initialCampaigns;
   });
 
   const [automations, setAutomations] = useState<Automation[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.AUTOMATIONS);
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : initialAutomations;
   });
 
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -313,7 +320,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // PRODUCTS (LocalStorage - unchanged)
   // ============================================================
   const addProduct = (productData: Omit<Product, 'id'>) => {
-    const id = `prod-${Date.now()}`;
+    const id = crypto.randomUUID();
     const category = initialCategories.find((c) => c.id === productData.categoryId);
     const newProduct: Product = {
       ...productData,
@@ -352,7 +359,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // TABLES (LocalStorage - unchanged)
   // ============================================================
   const addTable = (tableData: Omit<Table, 'id' | 'qrCode'>) => {
-    const id = `tbl-${Date.now()}`;
+    const id = crypto.randomUUID();
     const num = tableData.number.replace(/\D/g, '') || '99';
     const newTable: Table = {
       ...tableData,
@@ -384,7 +391,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // ORDERS (LocalStorage - unchanged)
   // ============================================================
   const createOrder = (orderData: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>): Order => {
-    const id = `ord-${Date.now()}`;
+    const id = crypto.randomUUID();
     const codeNumber = Math.floor(1000 + Math.random() * 9000);
     const code = `ORD-${codeNumber}`;
     const pointsEarned = Math.round(orderData.total * 0.05);
@@ -432,7 +439,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // INGREDIENTS & Cost Recalculation (LocalStorage - unchanged)
   // ============================================================
   const addIngredient = (ingData: Omit<Ingredient, 'id' | 'updatedAt' | 'normalizedCost'>) => {
-    const id = `ing-${Date.now()}`;
+    const id = crypto.randomUUID();
     const normalizedCost = calculateNormalizedCost(
       ingData.purchasePrice,
       ingData.purchaseQty,
@@ -477,7 +484,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Identify affected products (e.g., Coffee, Capuchino, Cheesecake, etc.)
     const affected: string[] = [];
     if (ingredientName.toLowerCase().includes('café')) {
-      affected.push('Café Espresso', 'Café con Leche', 'Capuchino', 'Combo Desayuno Magnolia');
+      affected.push('Café Espresso', 'Café con Leche', 'Capuchino', 'Combo Desayuno Hilos de Amor');
     } else if (ingredientName.toLowerCase().includes('leche')) {
       affected.push('Café con Leche', 'Capuchino', 'Combo Merienda Completa');
     } else if (ingredientName.toLowerCase().includes('mascarpone') || ingredientName.toLowerCase().includes('frutos')) {
@@ -538,7 +545,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     // LocalStorage fallback
-    const id = `cli-${Date.now()}`;
+    const id = crypto.randomUUID();
     const newCustomer: Customer = {
       ...customerData,
       id,
@@ -671,7 +678,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
     // Fallback
-    const id = `rew-${Date.now()}`;
+    const id = crypto.randomUUID();
     setRewards((prev) => [...prev, { ...rewardData, id }]);
     showToast('Recompensa creada', `"${rewardData.name}" agregada al catálogo.`, 'success');
   };
@@ -724,7 +731,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
     // Fallback
-    const id = `cmp-${Date.now()}`;
+    const id = crypto.randomUUID();
     const newCampaign: Campaign = {
       ...campaignData,
       id,

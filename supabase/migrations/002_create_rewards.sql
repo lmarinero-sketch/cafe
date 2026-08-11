@@ -1,5 +1,5 @@
 -- Migration: Create rewards table for Plan Fidelización
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 CREATE TABLE IF NOT EXISTS rewards (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

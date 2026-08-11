@@ -42,7 +42,7 @@ async function executeSql(sql, filename) {
 }
 
 async function main() {
-  console.log('🚀 Café Magnolia - Ejecutando Migraciones SQL via Management API\n');
+  console.log('🚀 Café Hilos de Amor - Ejecutando Migraciones SQL via Management API\n');
   console.log(`📌 Project: ${PROJECT_REF}`);
   console.log('─'.repeat(60));
 

@@ -4,8 +4,8 @@ export const initialManuals: Manual[] = [
   {
     id: 'man-1',
     category: 'Primeros Pasos',
-    title: 'Primeros pasos en Café Magnolia',
-    description: 'Guía rápida para comenzar a operar con la plataforma gastronómica Café Magnolia.',
+    title: 'Primeros pasos en Hilos de Amor',
+    description: 'Guía rápida para comenzar a operar con la plataforma gastronómica Hilos de Amor.',
     steps: [
       'Ingresá al Dashboard general para visualizar las métricas principales del día.',
       'Verificá qué plan tenés activo en la barra superior (Plan Esencial, Gestión o Fidelización).',
@@ -197,7 +197,7 @@ export const initialManuals: Manual[] = [
     description: 'Ajustes del comercio, reglas de redondeo y restauración de fábrica.',
     steps: [
       'Ingresá al módulo "Configuración".',
-      'Personalizá el nombre del comercio (ej. Café Magnolia), teléfono y moneda.',
+      'Personalizá el nombre del comercio (ej. Hilos de Amor), teléfono y moneda.',
       'Utilizá el botón "Reiniciar toda la demo" para restablecer los productos, pedidos y clientes a los datos seed originales.',
     ],
     faqs: [

@@ -1,5 +1,5 @@
 -- Migration: Create campaigns table for Plan Fidelización
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 -- Create campaign_status enum type
 CREATE TYPE campaign_status AS ENUM ('programado', 'enviado', 'entregado', 'leido');

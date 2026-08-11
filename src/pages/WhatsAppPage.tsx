@@ -50,7 +50,7 @@ export const WhatsAppPage: React.FC = () => {
       {
         id: 'm1',
         sender: 'customer',
-        text: '¡Hola Café Magnolia! Buenas tardes. Quería consultar si tienen disponible una mesa en el sector Terraza para hoy a las 19:30 hs. Somos 4 personas. ☕',
+        text: '¡Hola Hilos de Amor! Buenas tardes. Quería consultar si tienen disponible una mesa en el sector Terraza para hoy a las 19:30 hs. Somos 4 personas. ☕',
         timestamp: '10:42 hs',
       },
       {
@@ -101,7 +101,7 @@ export const WhatsAppPage: React.FC = () => {
     {
       id: 'm-default',
       sender: 'customer',
-      text: `Hola Café Magnolia, soy ${selectedCustomer?.firstName}. Quisiera consultar por la carta del día.`,
+      text: `Hola Hilos de Amor, soy ${selectedCustomer?.firstName}. Quisiera consultar por la carta del día.`,
       timestamp: '11:00 hs',
     },
   ];

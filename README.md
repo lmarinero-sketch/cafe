@@ -1,4 +1,4 @@
-# ☕ Café Magnolia - Plataforma Comercial & Demo Gastronómica
+# ☕ Hilos de Amor - Plataforma Comercial & Demo Gastronómica
 
 Plataforma gastronómica moderna desarrollada con **Vite + React + TypeScript + Tailwind CSS** para la demostración comercial de tres planes de software (**Plan Esencial**, **Plan Gestión** y **Plan Fidelización**).
 

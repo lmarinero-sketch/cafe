@@ -58,7 +58,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent[] = [
   // Promos
   { id: '38', section: 'promos', key: 'promos_title', value: '🏷️ Promociones & Combos', type: 'text', label: 'Título Sección Promociones', sortOrder: 1 },
   { id: '39', section: 'promos', key: 'promos_subtitle', value: 'Disfrutá lo mejor de la carta combinado al mejor precio', type: 'text', label: 'Subtítulo Promociones', sortOrder: 2 },
-  { id: '40', section: 'promos', key: 'promo1_name', value: 'Mañanas de Magnolia ☕', type: 'text', label: 'Promo 1 - Nombre', sortOrder: 3 },
+  { id: '40', section: 'promos', key: 'promo1_name', value: 'Mañanas de Hilos de Amor ☕', type: 'text', label: 'Promo 1 - Nombre', sortOrder: 3 },
   { id: '41', section: 'promos', key: 'promo1_desc', value: 'Capuchino italiano cremoso + 2 medialunas de manteca.', type: 'text', label: 'Promo 1 - Descripción', sortOrder: 4 },
   { id: '42', section: 'promos', key: 'promo1_price', value: '3200', type: 'text', label: 'Promo 1 - Precio ($)', sortOrder: 5 },
   { id: '43', section: 'promos', key: 'promo1_badge', value: 'Más Vendido', type: 'text', label: 'Promo 1 - Badge', sortOrder: 6 },

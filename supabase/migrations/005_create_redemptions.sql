@@ -1,5 +1,5 @@
 -- Migration: Create redemptions table for Plan Fidelización
--- Café Magnolia - Plataforma Gastronómica
+-- Hilos de Amor - Plataforma Gastronómica
 
 CREATE TABLE IF NOT EXISTS redemptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
