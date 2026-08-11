@@ -311,7 +311,7 @@ export interface SiteContent {
 export interface StaffUser {
   id: string;
   name: string;
-  role: 'admin' | 'cajero' | 'mozo';
+  role: 'admin' | 'cajero' | 'mozo' | 'cocina';
   email: string;
   password?: string;
   status: 'active' | 'inactive';

@@ -24,6 +24,7 @@ export interface AuthUser {
   businessName: string;
   email: string;
   phone: string;
+  role?: 'admin' | 'cajero' | 'mozo' | 'cocina';
   avatarUrl?: string;
   subscription: UserSubscription;
 }
@@ -106,6 +107,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         businessName: 'Hilos de Amor — Pastelería & Encordado',
         email: matchedStaff.email,
         phone: '+54 264 422-8900',
+        role: matchedStaff.role || 'cajero',
         subscription: TEST_USER.subscription,
       };
       setUser(authUser);
@@ -126,6 +128,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ...TEST_USER,
         email: normalizedEmail,
         name: normalizedEmail.includes('lmarinero') ? 'Lucas Marinero' : TEST_USER.name,
+        role: 'admin',
       };
       setUser(authUser);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));

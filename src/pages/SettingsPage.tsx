@@ -260,6 +260,7 @@ export const SettingsPage: React.FC = () => {
                     <option value="admin">Administrador</option>
                     <option value="cajero">Cajero</option>
                     <option value="mozo">Mozo</option>
+                    <option value="cocina">Cocina</option>
                   </select>
                 </div>
               </div>

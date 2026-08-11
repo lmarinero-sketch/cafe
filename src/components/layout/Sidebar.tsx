@@ -35,6 +35,7 @@ interface SidebarItem {
   path: string;
   icon: React.ReactNode;
   requiredPlan: PlanType;
+  allowedRoles?: ('admin' | 'cajero' | 'mozo' | 'cocina')[];
 }
 
 export const Sidebar: React.FC = () => {
@@ -44,6 +45,8 @@ export const Sidebar: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const userRole = user?.role || 'admin';
 
   interface NavSection {
     title: string;
@@ -56,19 +59,19 @@ export const Sidebar: React.FC = () => {
     {
       title: 'Gestión Operativa',
       items: [
-        { name: 'Inicio', path: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" />, requiredPlan: 'esencial' },
-        { name: 'Productos', path: '/productos', icon: <ShoppingBag className="w-4 h-4" />, requiredPlan: 'esencial' },
-        { name: 'Categorías', path: '/categorias', icon: <Grid className="w-4 h-4" />, requiredPlan: 'esencial' },
-        { name: 'Mesas', path: '/mesas', icon: <SquareCheckBig className="w-4 h-4" />, requiredPlan: 'esencial' },
-        { name: 'Menú Digital', path: '/menu', icon: <QrCode className="w-4 h-4" />, requiredPlan: 'esencial' },
-        { name: 'Pedidos', path: '/pedidos', icon: <UtensilsCrossed className="w-4 h-4" />, requiredPlan: 'esencial' },
-        { name: 'Delivery', path: '/delivery', icon: <Truck className="w-4 h-4" />, requiredPlan: 'esencial' },
+        { name: 'Inicio', path: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
+        { name: 'Productos', path: '/productos', icon: <ShoppingBag className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
+        { name: 'Categorías', path: '/categorias', icon: <Grid className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
+        { name: 'Mesas', path: '/mesas', icon: <SquareCheckBig className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
+        { name: 'Menú Digital', path: '/menu', icon: <QrCode className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
+        { name: 'Pedidos', path: '/pedidos', icon: <UtensilsCrossed className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
+        { name: 'Delivery', path: '/delivery', icon: <Truck className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
       ],
     },
     {
       title: 'Tesorería & Ingresos',
       items: [
-        { name: 'Caja', path: '/caja', icon: <Wallet className="w-4 h-4 shrink-0" />, requiredPlan: 'esencial' },
+        { name: 'Caja', path: '/caja', icon: <Wallet className="w-4 h-4 shrink-0" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero'] },
       ],
     },
     {
@@ -76,10 +79,10 @@ export const Sidebar: React.FC = () => {
       badge: 'Plan Gestión',
       badgePlan: 'gestion',
       items: [
-        { name: 'Ingredientes', path: '/ingredientes', icon: <Apple className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
-        { name: 'Recetas y Costos', path: '/recetas', icon: <Calculator className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
-        { name: 'Métricas', path: '/metricas', icon: <BarChart3 className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
-        { name: 'Insights', path: '/insights', icon: <Lightbulb className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
+        { name: 'Ingredientes', path: '/ingredientes', icon: <Apple className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion', allowedRoles: ['admin', 'cocina'] },
+        { name: 'Recetas y Costos', path: '/recetas', icon: <Calculator className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion', allowedRoles: ['admin', 'cocina'] },
+        { name: 'Métricas', path: '/metricas', icon: <BarChart3 className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion', allowedRoles: ['admin'] },
+        { name: 'Insights', path: '/insights', icon: <Lightbulb className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion', allowedRoles: ['admin'] },
       ],
     },
     {
@@ -87,22 +90,29 @@ export const Sidebar: React.FC = () => {
       badge: 'Plan Fidelización',
       badgePlan: 'fidelizacion',
       items: [
-        { name: 'Sitio Promocional', path: '/sitio-promocional', icon: <Globe className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
-        { name: 'Editor Web', path: '/editor-web', icon: <Settings className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
-        { name: 'Clientes', path: '/clientes', icon: <Users className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
-        { name: 'Puntos y Recompensas', path: '/puntos', icon: <Award className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
-        { name: 'Tarjetas Virtuales', path: '/tarjetas', icon: <CreditCard className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
+        { name: 'Sitio Promocional', path: '/sitio-promocional', icon: <Globe className="w-4 h-4" />, requiredPlan: 'fidelizacion', allowedRoles: ['admin'] },
+        { name: 'Editor Web', path: '/editor-web', icon: <Settings className="w-4 h-4" />, requiredPlan: 'fidelizacion', allowedRoles: ['admin'] },
+        { name: 'Clientes', path: '/clientes', icon: <Users className="w-4 h-4" />, requiredPlan: 'fidelizacion', allowedRoles: ['admin'] },
+        { name: 'Puntos y Recompensas', path: '/puntos', icon: <Award className="w-4 h-4" />, requiredPlan: 'fidelizacion', allowedRoles: ['admin'] },
+        { name: 'Tarjetas Virtuales', path: '/tarjetas', icon: <CreditCard className="w-4 h-4" />, requiredPlan: 'fidelizacion', allowedRoles: ['admin'] },
       ],
     },
     {
       title: 'Sistema & Personal',
       items: [
-        { name: 'Usuarios y Equipo', path: '/configuracion', icon: <Users className="w-4 h-4" />, requiredPlan: 'esencial' },
-        { name: 'Manuales', path: '/manuales', icon: <BookOpen className="w-4 h-4" />, requiredPlan: 'esencial' },
-        { name: 'Configuración', path: '/configuracion', icon: <Settings className="w-4 h-4" />, requiredPlan: 'esencial' },
+        { name: 'Usuarios y Equipo', path: '/configuracion', icon: <Users className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
+        { name: 'Manuales', path: '/manuales', icon: <BookOpen className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
+        { name: 'Configuración', path: '/configuracion', icon: <Settings className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
       ],
     },
   ];
+
+  const visibleNavSections = navSections
+    .map((sec) => ({
+      ...sec,
+      items: sec.items.filter((item) => !item.allowedRoles || item.allowedRoles.includes(userRole)),
+    }))
+    .filter((sec) => sec.items.length > 0);
 
   const handleNavClick = (e: React.MouseEvent, item: SidebarItem) => {
     if (!checkPlanAccess(item.requiredPlan, item.name)) {
@@ -191,7 +201,7 @@ export const Sidebar: React.FC = () => {
 
           {/* Dynamic Navigation Sections */}
           <div className="space-y-4">
-            {navSections.map((sec, idx) => (
+            {visibleNavSections.map((sec, idx) => (
               <div key={idx} className="space-y-1">
                 <div className={`flex items-center justify-between px-3 mb-1.5 ${isCollapsed ? 'hidden' : 'flex'}`}>
                   <p className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider">
