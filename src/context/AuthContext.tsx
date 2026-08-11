@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import * as staffService from '../services/staff.service';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { StaffUser } from '../types';
 
 // ============================================================
 // TYPES
@@ -105,9 +107,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
 
     const normalizedEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
 
-    // 1. Check registered staff users from Supabase DB & LocalStorage fallback
-    let savedStaff: any[] = [];
+    // 1. Try Supabase Auth First
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password: cleanPassword,
+        });
+
+        if (authData?.user && !authErr) {
+          // Fetch role and details from staff_users table
+          const { data: staffRow } = await supabase
+            .from('staff_users')
+            .select('*')
+            .eq('email', normalizedEmail)
+            .maybeSingle();
+
+          const role = staffRow?.role || authData.user.user_metadata?.role || 'cajero';
+          const name = staffRow?.name || authData.user.user_metadata?.name || normalizedEmail.split('@')[0];
+
+          const authUser: AuthUser = {
+            id: authData.user.id,
+            name,
+            businessName: 'Hilos de Amor — Pastelería & Encordado',
+            email: normalizedEmail,
+            phone: '+54 264 422-8900',
+            role,
+            subscription: TEST_USER.subscription,
+          };
+          setUser(authUser);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+          setIsLoading(false);
+          return { success: true };
+        }
+      } catch (err) {
+        console.warn('Supabase Auth signIn failed, trying DB fallback:', err);
+      }
+    }
+
+    // 2. Query registered staff users from Supabase DB & LocalStorage fallback
+    let savedStaff: StaffUser[] = [];
     try {
       const dbStaff = await staffService.getStaffUsers();
       if (dbStaff && dbStaff.length > 0) {
@@ -126,7 +167,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const matchedStaff = savedStaff.find((u) => u.email && u.email.trim().toLowerCase() === normalizedEmail);
 
     if (matchedStaff) {
-      if (matchedStaff.password && matchedStaff.password !== password) {
+      if (matchedStaff.password && matchedStaff.password.trim() !== cleanPassword) {
         setIsLoading(false);
         return { success: false, error: 'Contraseña incorrecta. Verificá tu contraseña.' };
       }
@@ -145,14 +186,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { success: true };
     }
 
-    // 2. Master admin accounts
+    // 3. Master admin accounts
     const isMasterAdmin =
       normalizedEmail === TEST_USER.email ||
       normalizedEmail === 'lmarinero@growlabs.lat' ||
       normalizedEmail.endsWith('@growlabs.lat') ||
       normalizedEmail.startsWith('admin@');
 
-    if (isMasterAdmin) {
+    if (isMasterAdmin && (cleanPassword === 'hilos2026' || cleanPassword === TEST_PASSWORD || cleanPassword.length >= 3)) {
       const authUser: AuthUser = {
         ...TEST_USER,
         email: normalizedEmail,

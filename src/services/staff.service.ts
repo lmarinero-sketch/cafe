@@ -27,22 +27,48 @@ export async function getStaffUsers(): Promise<StaffUser[]> {
 export async function createStaffUser(user: Omit<StaffUser, 'id'>): Promise<StaffUser | null> {
   if (!isSupabaseConfigured || !supabase) return null;
 
+  const emailClean = user.email.trim().toLowerCase();
+  const passClean = user.password?.trim() || '123456';
+
+  // 1. Register in Supabase Auth
+  try {
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: emailClean,
+      password: passClean,
+      options: {
+        data: {
+          name: user.name,
+          role: user.role,
+        },
+      },
+    });
+    if (authError) {
+      console.warn('Supabase Auth signUp note:', authError.message);
+    }
+  } catch (err) {
+    console.warn('Supabase Auth signUp exception:', err);
+  }
+
+  // 2. Save in public.staff_users table
   const { data, error } = await supabase
     .from('staff_users')
-    .insert([
-      {
-        name: user.name,
-        email: user.email,
-        password: user.password || '123456',
-        role: user.role,
-        status: user.status || 'active',
-      },
-    ])
+    .upsert(
+      [
+        {
+          name: user.name,
+          email: emailClean,
+          password: passClean,
+          role: user.role,
+          status: user.status || 'active',
+        },
+      ],
+      { onConflict: 'email' }
+    )
     .select()
     .single();
 
   if (error) {
-    console.error('Error creating staff_user in Supabase:', error);
+    console.error('Error saving staff_user in Supabase DB:', error);
     return null;
   }
 
@@ -61,8 +87,8 @@ export async function updateStaffUserInDb(id: string, user: Partial<StaffUser>):
 
   const updatePayload: Record<string, any> = {};
   if (user.name !== undefined) updatePayload.name = user.name;
-  if (user.email !== undefined) updatePayload.email = user.email;
-  if (user.password !== undefined) updatePayload.password = user.password;
+  if (user.email !== undefined) updatePayload.email = user.email.trim().toLowerCase();
+  if (user.password !== undefined) updatePayload.password = user.password.trim();
   if (user.role !== undefined) updatePayload.role = user.role;
   if (user.status !== undefined) updatePayload.status = user.status;
 
