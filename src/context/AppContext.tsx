@@ -136,7 +136,14 @@ interface AppContextType {
 
   // Caja (Cash Register)
   openRegister: (openedBy: string, initialBalance: number) => void;
-  closeRegister: (registerId: string, finalBalance: number) => void;
+  closeRegister: (
+    registerId: string,
+    finalBalance: number,
+    closedBy?: string,
+    expectedBalance?: number,
+    difference?: number,
+    notes?: string
+  ) => void;
   addTransaction: (transaction: Omit<import('../types').CashTransaction, 'id' | 'timestamp'>) => void;
 
   addStaffUser: (user: Omit<StaffUser, 'id'>) => void;
@@ -1114,16 +1121,33 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast('Caja abierta', `Turno iniciado por ${openedBy} con ${formatCurrency(initialBalance)}`, 'success');
   };
 
-  const closeRegister = (registerId: string, finalBalance: number) => {
+  const closeRegister = (
+    registerId: string,
+    finalBalance: number,
+    closedBy?: string,
+    expectedBalance?: number,
+    difference?: number,
+    notes?: string
+  ) => {
     setCashRegisters((prev) =>
       prev.map((reg) => {
         if (reg.id === registerId) {
-          return { ...reg, status: 'cerrada', closedAt: new Date().toISOString(), finalBalance };
+          return {
+            ...reg,
+            status: 'cerrada',
+            closedAt: new Date().toISOString(),
+            finalBalance,
+            cashPhysicalCount: finalBalance,
+            closedBy: closedBy || reg.openedBy,
+            expectedBalance,
+            difference,
+            notes,
+          };
         }
         return reg;
       })
     );
-    showToast('Caja cerrada', 'El turno ha sido cerrado correctamente.', 'success');
+    showToast('Caja cerrada', 'El turno ha sido cerrado correctamente y el comprobante está listo.', 'success');
   };
 
   const addTransaction = (tx: Omit<import('../types').CashTransaction, 'id' | 'timestamp'>) => {

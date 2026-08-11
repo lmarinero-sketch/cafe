@@ -78,10 +78,14 @@ export interface CashRegister {
   openedAt: string;
   closedAt?: string;
   openedBy: string;
+  closedBy?: string;
   initialBalance: number;
   finalBalance?: number;
-  status: 'abierta' | 'cerrada';
   expectedBalance?: number;
+  difference?: number;
+  cashPhysicalCount?: number;
+  notes?: string;
+  status: 'abierta' | 'cerrada';
 }
 
 export interface Order {
