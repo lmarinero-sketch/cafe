@@ -497,27 +497,27 @@ export const TablesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-brand-card p-6 rounded-2xl border border-brand-secondary shadow-soft">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-brand-card p-4 sm:p-6 rounded-2xl border border-brand-secondary shadow-soft">
         <div>
-          <h2 className="text-2xl font-extrabold text-brand-dark">Gestión de Mesas & Códigos QR</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-brand-dark">Gestión de Mesas & Códigos QR</h2>
           <p className="text-xs text-brand-brown/80 mt-1">
             Visualización gráfica de sectores, capacidad y comandos asociados ({tables.length} mesas)
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => setIsModalOpen(true)}
-            className="py-2.5 px-4 rounded-xl border-2 border-brand-brown text-brand-brown font-bold text-xs hover:bg-brand-brown/10 transition-all duration-200 flex items-center gap-2"
+            className="flex-1 sm:flex-initial py-2.5 px-3 sm:px-4 rounded-xl border-2 border-brand-brown text-brand-brown font-bold text-xs hover:bg-brand-brown/10 transition-all duration-200 flex items-center justify-center gap-2"
           >
             Administrar Sectores
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all duration-200 shadow-soft flex items-center gap-2"
+            className="flex-1 sm:flex-initial py-2.5 px-3 sm:px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all duration-200 shadow-soft flex items-center justify-center gap-2"
           >
-            <Plus className="w-4 h-4 text-brand-yellow" />
-            Agregar mesa
+            <Plus className="w-4 h-4 text-brand-yellow shrink-0" />
+            <span className="whitespace-nowrap">Agregar mesa</span>
           </button>
         </div>
       </div>
@@ -656,17 +656,17 @@ export const TablesPage: React.FC = () => {
                       return (
                         <div
                           key={po.id}
-                          className="flex items-center justify-between text-xs bg-brand-bg p-2 rounded-xl border border-brand-secondary/80 shadow-xs"
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs bg-brand-bg p-2.5 rounded-xl border border-brand-secondary/80 shadow-xs gap-2"
                         >
                           <span className="font-mono font-extrabold text-brand-dark">{po.code}</span>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 flex-wrap w-full sm:w-auto justify-end">
                             {prevSt && (
                               <button
                                 onClick={() => updateOrderStatus(po.id, prevSt)}
-                                className="p-1 rounded-lg bg-brand-bg hover:bg-brand-secondary/40 text-brand-brown border border-brand-secondary/80 transition-colors"
+                                className="p-1.5 rounded-lg bg-brand-bg hover:bg-brand-secondary/40 text-brand-brown border border-brand-secondary/80 transition-colors"
                                 title="Retroceder estado"
                               >
-                                <ArrowLeft className="w-3 h-3" />
+                                <ArrowLeft className="w-3.5 h-3.5" />
                               </button>
                             )}
                             <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${kb.color}`}>
@@ -682,10 +682,10 @@ export const TablesPage: React.FC = () => {
                                     updateOrderStatus(po.id, nextSt);
                                   }
                                 }}
-                                className="p-1 rounded-lg bg-brand-brown hover:bg-brand-dark text-white transition-colors"
+                                className="p-1.5 rounded-lg bg-brand-brown hover:bg-brand-dark text-white transition-colors"
                                 title="Avanzar estado"
                               >
-                                <ArrowRight className="w-3 h-3 text-brand-yellow" />
+                                <ArrowRight className="w-3.5 h-3.5 text-brand-yellow" />
                               </button>
                             )}
                             <button
@@ -693,7 +693,7 @@ export const TablesPage: React.FC = () => {
                                 setChargingOrder(po);
                                 setSelectedPayment(po.paymentMethod);
                               }}
-                              className="py-1 px-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[10px] shadow-xs flex items-center gap-1 transition-all shrink-0"
+                              className="py-1 px-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[10px] shadow-xs flex items-center gap-1 transition-all shrink-0 ml-auto sm:ml-0"
                               title="Cobrar este pedido"
                             >
                               <Banknote className="w-3 h-3 text-brand-yellow" /> Cobrar

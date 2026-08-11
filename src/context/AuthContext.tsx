@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import * as staffService from '../services/staff.service';
 
 // ============================================================
 // TYPES
@@ -102,16 +103,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // 1. Check registered staff users
+    // 1. Check registered staff users from Supabase DB & LocalStorage fallback
     let savedStaff: any[] = [];
     try {
-      const raw = localStorage.getItem('hilos_de_amor_staff_users');
-      if (raw) savedStaff = JSON.parse(raw);
-    } catch {}
+      const dbStaff = await staffService.getStaffUsers();
+      if (dbStaff && dbStaff.length > 0) {
+        savedStaff = dbStaff;
+      } else {
+        const raw = localStorage.getItem('hilos_de_amor_staff_users');
+        if (raw) savedStaff = JSON.parse(raw);
+      }
+    } catch {
+      try {
+        const raw = localStorage.getItem('hilos_de_amor_staff_users');
+        if (raw) savedStaff = JSON.parse(raw);
+      } catch {}
+    }
 
     const matchedStaff = savedStaff.find((u) => u.email && u.email.trim().toLowerCase() === normalizedEmail);
 

@@ -41,6 +41,7 @@ import * as campaignsService from '../services/campaigns.service';
 import * as automationsService from '../services/automations.service';
 import * as redemptionsService from '../services/redemptions.service';
 import * as branchesService from '../services/branches.service';
+import * as staffService from '../services/staff.service';
 
 interface LockModalState {
   isOpen: boolean;
@@ -339,12 +340,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsLoadingBranches(true);
 
       try {
-        const [dbCustomers, dbRewards, dbCampaigns, dbAutomations, dbBranches] = await Promise.all([
+        const [dbCustomers, dbRewards, dbCampaigns, dbAutomations, dbBranches, dbStaff] = await Promise.all([
           customersService.getCustomers(),
           rewardsService.getRewards(),
           campaignsService.getCampaigns(),
           automationsService.getAutomations(),
           branchesService.getBranches(),
+          staffService.getStaffUsers(),
         ]);
 
         setCustomers(dbCustomers);
@@ -352,6 +354,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setCampaigns(dbCampaigns);
         setAutomations(dbAutomations);
         setBranches(dbBranches);
+        if (dbStaff && dbStaff.length > 0) {
+          setStaffUsers(dbStaff);
+        }
       } catch (err) {
         console.error('Error fetching data from Supabase:', err);
       } finally {
@@ -1059,18 +1064,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // ============================================================
   // STAFF & SECTORS
   // ============================================================
-  const addStaffUser = (userData: Omit<StaffUser, 'id'>) => {
-    const newUser: StaffUser = { ...userData, id: crypto.randomUUID() };
+  const addStaffUser = async (userData: Omit<StaffUser, 'id'>) => {
+    const created = await staffService.createStaffUser(userData);
+    const newUser: StaffUser = created || { ...userData, id: crypto.randomUUID() };
     setStaffUsers((prev) => [...prev, newUser]);
     showToast('Usuario creado', `Se agregó al usuario ${newUser.name}.`, 'success');
   };
 
-  const updateStaffUser = (id: string, data: Partial<StaffUser>) => {
+  const updateStaffUser = async (id: string, data: Partial<StaffUser>) => {
+    await staffService.updateStaffUserInDb(id, data);
     setStaffUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)));
     showToast('Usuario actualizado', 'Los datos del usuario fueron guardados.', 'success');
   };
 
-  const deleteStaffUser = (id: string) => {
+  const deleteStaffUser = async (id: string) => {
+    await staffService.deleteStaffUserFromDb(id);
     setStaffUsers((prev) => prev.filter((u) => u.id !== id));
     showToast('Usuario eliminado', 'El usuario ha sido removido del sistema.', 'info');
   };
