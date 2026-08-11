@@ -186,7 +186,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
       const parsed = saved ? JSON.parse(saved) : null;
-      return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialProducts;
+      if (
+        Array.isArray(parsed) &&
+        parsed.length > 0 &&
+        parsed.some((p) => p.id.startsWith('prod-cafe-') || p.id.startsWith('prod-latte-') || p.id.startsWith('prod-lemon-pie'))
+      ) {
+        return parsed;
+      }
+      return initialProducts;
     } catch {
       return initialProducts;
     }
