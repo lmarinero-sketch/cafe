@@ -24,37 +24,50 @@ import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/currency';
 
 export const MetricsPage: React.FC = () => {
-  const { orders, products } = useApp();
+  const { orders, products, categories } = useApp();
 
   const totalSales = orders.reduce((sum, o) => sum + o.total, 0);
   const totalOrdersCount = orders.length;
   const avgTicket = totalOrdersCount > 0 ? Math.round(totalSales / totalOrdersCount) : 0;
 
   // Chart Data: Sales per category
-  const categoryData = [
-    { name: 'Cafetería', value: 452000 },
-    { name: 'Pastelería', value: 380000 },
-    { name: 'Desayunos', value: 290000 },
-    { name: 'Almuerzos', value: 540000 },
-    { name: 'Bebidas', value: 180000 },
-    { name: 'Promociones', value: 310000 },
-  ];
+  const categorySalesMap: Record<string, number> = {};
+  orders.forEach(order => {
+    order.items.forEach(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (product) {
+        const catId = product.categoryId;
+        categorySalesMap[catId] = (categorySalesMap[catId] || 0) + (item.quantity * item.unitPrice);
+      }
+    });
+  });
+
+  const categoryData = Object.entries(categorySalesMap).map(([catId, value]) => {
+    const cat = categories.find(c => c.id === catId);
+    return { name: cat ? cat.name : 'Otros', value };
+  }).sort((a, b) => b.value - a.value);
 
   // Chart Data: Sales by Channel
-  const channelData = [
-    { name: 'Salón', value: 980000, color: '#765747' },
-    { name: 'Delivery', value: 720000, color: '#F4D58D' },
-    { name: 'Retiro', value: 452000, color: '#B7C9A8' },
-  ];
+  const channelSalesMap: Record<string, number> = {};
+  orders.forEach(order => {
+    const channel = order.type === 'salon' ? 'Salón' : order.type === 'delivery' ? 'Delivery' : 'Para llevar';
+    channelSalesMap[channel] = (channelSalesMap[channel] || 0) + order.total;
+  });
+  
+  const channelColors = ['#8C6A5D', '#F4A261', '#2A9D8F'];
+  const channelData = Object.entries(channelSalesMap).map(([name, value], index) => ({ name, value, color: channelColors[index % channelColors.length] })).sort((a, b) => b.value - a.value);
 
   // Top Selling Products Chart Data
-  const topProductsData = [
-    { name: 'Café con Leche', unidades: 340 },
-    { name: 'Medialunas', unidades: 290 },
-    { name: 'Hamburguesa', unidades: 210 },
-    { name: 'Cheesecake', unidades: 185 },
-    { name: 'Combo Desayuno', unidades: 160 },
-  ];
+  const productSalesMap: Record<string, number> = {};
+  orders.forEach(order => {
+    order.items.forEach(item => {
+      productSalesMap[item.productName] = (productSalesMap[item.productName] || 0) + item.quantity;
+    });
+  });
+  const topProductsData = Object.entries(productSalesMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, unidades]) => ({ name, unidades }));
 
   const COLORS = ['#765747', '#4A352C', '#F4D58D', '#B7C9A8', '#EADBC8', '#DFA7A0'];
 
@@ -80,7 +93,7 @@ export const MetricsPage: React.FC = () => {
         <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft">
           <span className="text-xs font-semibold text-brand-brown/80">Facturación Acumulada</span>
           <h3 className="text-2xl font-extrabold text-brand-dark mt-1">{formatCurrency(totalSales)}</h3>
-          <p className="text-[11px] text-emerald-800 font-semibold mt-1">Margen estimado: ~58%</p>
+          <p className="text-[11px] text-emerald-800 font-semibold mt-1">Total de {totalOrdersCount} pedidos</p>
         </div>
 
         <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft">
@@ -91,14 +104,14 @@ export const MetricsPage: React.FC = () => {
 
         <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft">
           <span className="text-xs font-semibold text-brand-brown/80">Producto Más Vendido</span>
-          <h3 className="text-lg font-extrabold text-brand-dark mt-1">Café con Leche</h3>
-          <p className="text-[11px] text-brand-brown/80 mt-1">340 unidades este mes</p>
+          <h3 className="text-lg font-extrabold text-brand-dark mt-1">{topProductsData.length > 0 ? topProductsData[0].name : 'Sin ventas'}</h3>
+          <p className="text-[11px] text-brand-brown/80 mt-1">{topProductsData.length > 0 ? `${topProductsData[0].unidades} unidades` : '0 unidades'}</p>
         </div>
 
         <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft">
           <span className="text-xs font-semibold text-brand-brown/80">Canal Principal</span>
-          <h3 className="text-lg font-extrabold text-brand-dark mt-1">Salón (46%)</h3>
-          <p className="text-[11px] text-brand-brown/80 mt-1">Seguido por Delivery (33%)</p>
+          <h3 className="text-lg font-extrabold text-brand-dark mt-1">{channelData.length > 0 ? channelData[0].name : 'N/A'}</h3>
+          <p className="text-[11px] text-brand-brown/80 mt-1">{channelData.length > 0 ? `${Math.round((channelData[0].value / totalSales) * 100)}% de ingresos` : '-'}</p>
         </div>
       </div>
 

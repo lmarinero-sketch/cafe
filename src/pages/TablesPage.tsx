@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Table, TableSector, TableStatus } from '../types';
+import { Table, TableStatus } from '../types';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 
 export const TablesPage: React.FC = () => {
-  const { tables, addTable, updateTableStatus } = useApp();
+  const { tables, tableSectors, addTable, updateTableStatus } = useApp();
 
   const [selectedSector, setSelectedSector] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -14,17 +14,9 @@ export const TablesPage: React.FC = () => {
   const [formData, setFormData] = useState({
     number: 'Mesa 13',
     capacity: 4,
-    sector: 'terraza' as TableSector,
+    sector: 'terraza',
     status: 'disponible' as TableStatus,
   });
-
-  const sectors: { id: TableSector | 'all'; label: string }[] = [
-    { id: 'all', label: 'Todos los sectores' },
-    { id: 'salon', label: 'Salón' },
-    { id: 'patio', label: 'Patio' },
-    { id: 'terraza', label: 'Terraza' },
-    { id: 'vereda', label: 'Vereda' },
-  ];
 
   const filteredTables = tables.filter(
     (t) => selectedSector === 'all' || t.sector === selectedSector
@@ -61,18 +53,36 @@ export const TablesPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all duration-200 shadow-soft flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4 text-brand-yellow" />
-          Agregar mesa
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="py-2.5 px-4 rounded-xl border-2 border-brand-brown text-brand-brown font-bold text-xs hover:bg-brand-brown/10 transition-all duration-200 flex items-center gap-2"
+          >
+            Administrar Sectores
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all duration-200 shadow-soft flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4 text-brand-yellow" />
+            Agregar mesa
+          </button>
+        </div>
       </div>
 
       {/* Sector Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto bg-brand-card p-3 rounded-2xl border border-brand-secondary shadow-soft">
-        {sectors.map((sec) => (
+        <button
+          onClick={() => setSelectedSector('all')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            selectedSector === 'all'
+              ? 'bg-brand-brown text-brand-card shadow-soft'
+              : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
+          }`}
+        >
+          Todos los sectores
+        </button>
+        {tableSectors.map((sec) => (
           <button
             key={sec.id}
             onClick={() => setSelectedSector(sec.id)}
@@ -269,13 +279,12 @@ export const TablesPage: React.FC = () => {
                   <label className="block font-bold text-brand-dark mb-1">Sector</label>
                   <select
                     value={formData.sector}
-                    onChange={(e) => setFormData({ ...formData, sector: e.target.value as TableSector })}
+                    onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
                   >
-                    <option value="salon">Salón</option>
-                    <option value="patio">Patio</option>
-                    <option value="terraza">Terraza</option>
-                    <option value="vereda">Vereda</option>
+                    {tableSectors.map((sec) => (
+                      <option key={sec.id} value={sec.id}>{sec.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>

@@ -58,25 +58,38 @@ export const DashboardPage: React.FC = () => {
 
   const featuredProduct = products.find((p) => p.isFeatured) || products[0];
 
-  // Recharts Chart Data (Sales evolution for past 7 days)
-  const salesChartData = [
-    { day: 'Lun', ventas: 142000, pedidos: 18 },
-    { day: 'Mar', ventas: 168000, pedidos: 22 },
-    { day: 'Mié', ventas: 195000, pedidos: 26 },
-    { day: 'Jue', ventas: 182000, pedidos: 24 },
-    { day: 'Vie', ventas: 245000, pedidos: 34 },
-    { day: 'Sáb', ventas: 310000, pedidos: 45 },
-    { day: 'Dom', ventas: 285000, pedidos: 39 },
-  ];
+  // Calculate Sales evolution for past 7 days
+  const last7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().split('T')[0];
+  });
 
-  // Top Selling Products Chart Data
-  const topProductsChartData = [
-    { name: 'Café con Leche', unidades: 340, fill: '#2F5233' },
-    { name: 'Medialunas', unidades: 290, fill: '#4E7252' },
-    { name: 'Hamburguesa', unidades: 210, fill: '#8FA887' },
-    { name: 'Cheesecake', unidades: 185, fill: '#B8CCA8' },
-    { name: 'Combo Desayuno', unidades: 160, fill: '#D6E2D4' },
-  ];
+  const salesChartData = last7Days.map(dateStr => {
+    const dayOrders = orders.filter(o => o.createdAt.startsWith(dateStr));
+    const ventas = dayOrders.reduce((sum, o) => sum + o.total, 0);
+    const dateObj = new Date(dateStr + 'T12:00:00');
+    const dayName = new Intl.DateTimeFormat('es-AR', { weekday: 'short' }).format(dateObj);
+    return { day: dayName.charAt(0).toUpperCase() + dayName.slice(1), ventas };
+  });
+
+  // Calculate Top Selling Products
+  const productSales: Record<string, number> = {};
+  orders.forEach(order => {
+    order.items.forEach(item => {
+      productSales[item.productName] = (productSales[item.productName] || 0) + item.quantity;
+    });
+  });
+
+  const colors = ['#2F5233', '#4A6B48', '#6A8765', '#9BB598', '#C3D6C1'];
+  const topProductsChartData = Object.entries(productSales)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, unidades], index) => ({
+      name,
+      unidades,
+      fill: colors[index % colors.length]
+    }));
 
   const planLabels = {
     esencial: 'Plan Esencial',

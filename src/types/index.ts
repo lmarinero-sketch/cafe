@@ -25,14 +25,18 @@ export interface Product {
   recipeItems?: RecipeIngredient[];
 }
 
-export type TableSector = 'salon' | 'patio' | 'terraza' | 'vereda';
+export interface Sector {
+  id: string;
+  name: string;
+  label: string;
+}
 export type TableStatus = 'disponible' | 'ocupada' | 'reservada';
 
 export interface Table {
   id: string;
   number: string; // e.g. "Mesa 01"
   capacity: number;
-  sector: TableSector;
+  sector: string;
   status: TableStatus;
   qrCode: string;
 }
@@ -85,6 +89,8 @@ export interface Order {
   createdAt: string;
   tableId?: string;
   tableName?: string;
+  waiterId?: string;
+  waiterName?: string;
   type: OrderType;
   status: OrderStatus;
   items: OrderItem[];
@@ -298,4 +304,12 @@ export interface SiteContent {
   type: SiteContentType;
   label: string;
   sortOrder: number;
+}
+
+export interface StaffUser {
+  id: string;
+  name: string;
+  role: 'admin' | 'cajero' | 'mozo';
+  email: string;
+  status: 'active' | 'inactive';
 }

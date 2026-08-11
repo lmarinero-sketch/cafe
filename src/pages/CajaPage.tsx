@@ -250,7 +250,16 @@ export const CajaPage: React.FC = () => {
               </div>
               <div>
                 <label className="block text-xs font-bold text-brand-dark mb-1">Monto</label>
-                <input required type="number" min={1} value={txAmount} onChange={e => setTxAmount(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none" />
+                <input 
+                  required 
+                  type="text" 
+                  value={txAmount ? new Intl.NumberFormat('es-AR').format(txAmount) : ''} 
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setTxAmount(val ? parseInt(val, 10) : 0);
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none" 
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-brand-dark mb-1">Método</label>

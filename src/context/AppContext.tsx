@@ -16,6 +16,8 @@ import {
   OrderStatus,
   RecipeCost,
   Branch,
+  StaffUser,
+  Sector,
 } from '../types';
 import { initialCategories } from '../data/seeds/categories.seed';
 import { initialManuals } from '../data/manuals/systemManuals';
@@ -62,6 +64,8 @@ interface AppContextType {
   manuals: Manual[];
   tickets: SupportTicket[];
   branches: Branch[];
+  staffUsers: StaffUser[];
+  tableSectors: Sector[];
   cashRegisters: import('../types').CashRegister[];
   cashTransactions: import('../types').CashTransaction[];
   autoPriceUpdate: boolean;
@@ -132,6 +136,14 @@ interface AppContextType {
   closeRegister: (registerId: string, finalBalance: number) => void;
   addTransaction: (transaction: Omit<import('../types').CashTransaction, 'id' | 'timestamp'>) => void;
 
+  addStaffUser: (user: Omit<StaffUser, 'id'>) => void;
+  updateStaffUser: (id: string, data: Partial<StaffUser>) => void;
+  deleteStaffUser: (id: string) => void;
+
+  addSector: (sector: Omit<Sector, 'id'>) => void;
+  updateSector: (id: string, data: Partial<Sector>) => void;
+  deleteSector: (id: string) => void;
+
   getRecipeCostForProduct: (productId: string) => RecipeCost | null;
 }
 
@@ -150,6 +162,8 @@ const STORAGE_KEYS = {
   AUTO_PRICE: 'hilos_de_amor_auto_price',
   CASH_REGISTERS: 'hilos_de_amor_cash_registers',
   CASH_TRANSACTIONS: 'hilos_de_amor_cash_transactions',
+  STAFF_USERS: 'hilos_de_amor_staff_users',
+  TABLE_SECTORS: 'hilos_de_amor_table_sectors',
 };
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -221,6 +235,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [staffUsers, setStaffUsers] = useState<StaffUser[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.STAFF_USERS);
+    return saved ? JSON.parse(saved) : [
+      { id: 'usr-admin-1', name: 'Administrador', role: 'admin', email: 'admin@cafe.com', status: 'active' }
+    ];
+  });
+
+  const [tableSectors, setTableSectors] = useState<Sector[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.TABLE_SECTORS);
+    return saved ? JSON.parse(saved) : [
+      { id: 'salon', name: 'salon', label: 'Salón Principal' },
+      { id: 'patio', name: 'patio', label: 'Patio Central' },
+      { id: 'terraza', name: 'terraza', label: 'Terraza' },
+      { id: 'vereda', name: 'vereda', label: 'Vereda' },
+    ];
+  });
+
   const [affectedProductsAlert, setAffectedProductsAlert] = useState<string[]>([]);
   const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
   const [lockModal, setLockModal] = useState<LockModalState>({
@@ -290,6 +321,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets)); }, [tickets]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CASH_REGISTERS, JSON.stringify(cashRegisters)); }, [cashRegisters]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CASH_TRANSACTIONS, JSON.stringify(cashTransactions)); }, [cashTransactions]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.STAFF_USERS, JSON.stringify(staffUsers)); }, [staffUsers]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.TABLE_SECTORS, JSON.stringify(tableSectors)); }, [tableSectors]);
 
   // Also keep localStorage as cache for Supabase entities (offline fallback)
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers)); }, [customers]);
@@ -945,7 +978,42 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // ============================================================
-  // CAJA (Cash Register)
+  // STAFF & SECTORS
+  // ============================================================
+  const addStaffUser = (userData: Omit<StaffUser, 'id'>) => {
+    const newUser: StaffUser = { ...userData, id: crypto.randomUUID() };
+    setStaffUsers((prev) => [...prev, newUser]);
+    showToast('Usuario creado', `Se agregó al usuario ${newUser.name}.`, 'success');
+  };
+
+  const updateStaffUser = (id: string, data: Partial<StaffUser>) => {
+    setStaffUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)));
+    showToast('Usuario actualizado', 'Los datos del usuario fueron guardados.', 'success');
+  };
+
+  const deleteStaffUser = (id: string) => {
+    setStaffUsers((prev) => prev.filter((u) => u.id !== id));
+    showToast('Usuario eliminado', 'El usuario ha sido removido del sistema.', 'info');
+  };
+
+  const addSector = (sectorData: Omit<Sector, 'id'>) => {
+    const newSector: Sector = { ...sectorData, id: crypto.randomUUID() };
+    setTableSectors((prev) => [...prev, newSector]);
+    showToast('Sector creado', `Se agregó el sector ${newSector.label}.`, 'success');
+  };
+
+  const updateSector = (id: string, data: Partial<Sector>) => {
+    setTableSectors((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
+    showToast('Sector actualizado', 'Los datos del sector fueron guardados.', 'success');
+  };
+
+  const deleteSector = (id: string) => {
+    setTableSectors((prev) => prev.filter((s) => s.id !== id));
+    showToast('Sector eliminado', 'El sector ha sido removido del sistema.', 'info');
+  };
+
+  // ============================================================
+  // CONTEXT VALUE
   // ============================================================
   const openRegister = (openedBy: string, initialBalance: number) => {
     const newRegister: import('../types').CashRegister = {
@@ -1015,6 +1083,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         manuals: initialManuals,
         tickets,
         branches,
+        staffUsers,
+        tableSectors,
         cashRegisters,
         cashTransactions,
         autoPriceUpdate,
@@ -1064,6 +1134,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         openRegister,
         closeRegister,
         addTransaction,
+        addStaffUser,
+        updateStaffUser,
+        deleteStaffUser,
+        addSector,
+        updateSector,
+        deleteSector,
         getRecipeCostForProduct,
       }}
     >

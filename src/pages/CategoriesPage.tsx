@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Grid, Edit, Eye, EyeOff, Tag, Coffee, Utensils, Check, X, Layers } from 'lucide-react';
+import { Plus, Grid, Edit, Eye, EyeOff, Tag, Coffee, Utensils, Check, X, Layers, List } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Category } from '../types';
+import { Category, Product } from '../types';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
+import { formatCurrency } from '../utils/currency';
 
 export const CategoriesPage: React.FC = () => {
   const { categories, products } = useApp();
@@ -10,6 +11,7 @@ export const CategoriesPage: React.FC = () => {
   const [categoryList, setCategoryList] = useState<Category[]>(categories);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -135,7 +137,13 @@ export const CategoriesPage: React.FC = () => {
                   onClick={() => handleOpenEditModal(cat)}
                   className="flex-1 py-2 px-3 rounded-xl border border-brand-secondary text-brand-dark font-bold text-xs hover:bg-brand-secondary/30 transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <Edit className="w-3.5 h-3.5 text-brand-brown" /> Editar Categoría
+                  <Edit className="w-3.5 h-3.5 text-brand-brown" /> Editar
+                </button>
+                <button
+                  onClick={() => setViewingCategory(cat)}
+                  className="flex-1 py-2 px-3 rounded-xl bg-brand-bg text-brand-dark border border-brand-secondary font-bold text-xs hover:bg-brand-secondary/40 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <List className="w-3.5 h-3.5 text-brand-brown" /> Ver Productos
                 </button>
               </div>
             </div>
@@ -199,6 +207,44 @@ export const CategoriesPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal View Category Products */}
+      {viewingCategory && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-xs">
+          <div className="bg-brand-card rounded-2xl border-2 border-brand-brown p-6 max-w-lg w-full shadow-soft-lg space-y-4 max-h-[80vh] flex flex-col relative">
+            <div className="flex items-center justify-between border-b border-brand-secondary pb-3 shrink-0">
+              <h3 className="text-base font-extrabold text-brand-dark font-serif flex items-center gap-2">
+                <List className="w-5 h-5 text-brand-brown" />
+                Productos: {viewingCategory.name}
+              </h3>
+              <button
+                onClick={() => setViewingCategory(null)}
+                className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+              {products.filter(p => p.categoryId === viewingCategory.id).length === 0 ? (
+                <p className="text-center text-brand-brown/60 text-xs py-4">No hay productos en esta categoría.</p>
+              ) : (
+                products.filter(p => p.categoryId === viewingCategory.id).map(prod => (
+                  <div key={prod.id} className="flex items-center justify-between p-3 rounded-xl border border-brand-secondary bg-brand-bg">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-brand-dark">{prod.name}</span>
+                      <span className="text-xs text-brand-brown/80">{formatCurrency(prod.price)}</span>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${prod.isAvailable ? 'bg-brand-green/20 text-emerald-900' : 'bg-red-100 text-red-900'}`}>
+                      {prod.isAvailable ? 'Disponible' : 'Agotado'}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

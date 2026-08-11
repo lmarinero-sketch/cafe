@@ -18,6 +18,7 @@ import { IngredientsPage } from '../pages/IngredientsPage';
 import { RecipeCostsPage } from '../pages/RecipeCostsPage';
 import { MetricsPage } from '../pages/MetricsPage';
 import { RotationPage } from '../pages/RotationPage';
+import { DigitalMenuAdminPage } from '../pages/DigitalMenuAdminPage';
 import { InsightsPage } from '../pages/InsightsPage';
 import { CustomersPage } from '../pages/CustomersPage';
 import { RewardsPage } from '../pages/RewardsPage';
@@ -104,9 +105,14 @@ export const router = createBrowserRouter([
             element: <RecipeCostsPage />,
           },
           {
-            path: 'metricas',
-            element: <MetricsPage />,
+            path: 'customers',
+            element: <CustomersPage />,
           },
+          {
+            path: 'menu-admin',
+            element: <DigitalMenuAdminPage />,
+          },
+
           {
             path: 'rotation',
             element: <RotationPage />,
