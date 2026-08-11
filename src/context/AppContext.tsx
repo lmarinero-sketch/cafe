@@ -183,23 +183,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-    return saved ? JSON.parse(saved) : initialProducts;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialProducts;
+    } catch {
+      return initialProducts;
+    }
   });
 
   const [tables, setTables] = useState<Table[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.TABLES);
-    return saved ? JSON.parse(saved) : initialTables;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.TABLES);
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialTables;
+    } catch {
+      return initialTables;
+    }
   });
 
   const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ORDERS);
-    return saved ? JSON.parse(saved) : initialOrders;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ORDERS);
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialOrders;
+    } catch {
+      return initialOrders;
+    }
   });
 
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.INGREDIENTS);
-    return saved ? JSON.parse(saved) : initialIngredients;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.INGREDIENTS);
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialIngredients;
+    } catch {
+      return initialIngredients;
+    }
   });
 
   // Supabase-backed states (Plan Fidelización)
