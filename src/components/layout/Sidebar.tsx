@@ -52,7 +52,6 @@ export const Sidebar: React.FC = () => {
     { name: 'Categorías', path: '/categorias', icon: <Grid className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Mesas', path: '/mesas', icon: <SquareCheckBig className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Menú Digital', path: '/menu', icon: <QrCode className="w-4 h-4" />, requiredPlan: 'esencial' },
-    { name: 'Carta Tradicional', path: '/carta-tradicional', icon: <BookOpen className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Pedidos', path: '/pedidos', icon: <UtensilsCrossed className="w-4 h-4" />, requiredPlan: 'esencial' },
     { name: 'Delivery', path: '/delivery', icon: <Truck className="w-4 h-4" />, requiredPlan: 'esencial' },
     

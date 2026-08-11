@@ -299,31 +299,75 @@ export const ProductsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-brand-dark mb-1">Imagen (SVG / URL)</label>
-                <select
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
-                >
-                  <option value="/products/espresso.svg">Café Espresso</option>
-                  <option value="/products/cafe-con-leche.svg">Café con Leche</option>
-                  <option value="/products/capuchino.svg">Capuchino</option>
-                  <option value="/products/te.svg">Té Orgánico</option>
-                  <option value="/products/medialunas.svg">Medialunas</option>
-                  <option value="/products/tostadas.svg">Tostadas</option>
-                  <option value="/products/sandwich.svg">Sándwich Jamón/Queso</option>
-                  <option value="/products/cheesecake.svg">Cheesecake</option>
-                  <option value="/products/brownie.svg">Brownie</option>
-                  <option value="/products/torta-chocolate.svg">Torta Fudge</option>
-                  <option value="/products/jugo-naranja.svg">Jugo de Naranja</option>
-                  <option value="/products/limonada.svg">Limonada</option>
-                  <option value="/products/combo-desayuno.svg">Combo Desayuno</option>
-                  <option value="/products/combo-merienda.svg">Combo Merienda</option>
-                  <option value="/products/ensalada.svg">Ensalada</option>
-                  <option value="/products/hamburguesa.svg">Hamburguesa</option>
-                  <option value="/products/pizza.svg">Pizza Margherita</option>
-                  <option value="/products/empanadas.svg">Empanadas</option>
-                </select>
+                <label className="block font-bold text-brand-dark mb-1">Imagen del Producto (Preset / URL / Subir Foto)</label>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.image}
+                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                      placeholder="https://ejemplo.com/foto.jpg o /products/..."
+                      className="flex-1 px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs font-mono focus:outline-none"
+                    />
+                    <label className="px-3 py-2 rounded-xl bg-brand-brown hover:bg-brand-dark text-brand-card font-bold text-xs cursor-pointer transition-colors flex items-center gap-1 shrink-0">
+                      <Image className="w-4 h-4 text-brand-yellow" />
+                      <span>Subir foto</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              if (typeof reader.result === 'string') {
+                                setFormData({ ...formData, image: reader.result });
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-3 bg-brand-cream p-2.5 rounded-xl border border-brand-secondary/60">
+                    <div className="w-12 h-12 rounded-lg bg-white border border-brand-secondary flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+                      <img src={formData.image} alt="Vista previa" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-[10px] font-bold text-brand-brown/80 uppercase block">O elegir ícono preset:</span>
+                      <select
+                        value={formData.image.startsWith('/products/') ? formData.image : ''}
+                        onChange={(e) => {
+                          if (e.target.value) setFormData({ ...formData, image: e.target.value });
+                        }}
+                        className="w-full mt-0.5 px-2 py-1 rounded-lg border border-brand-secondary/80 bg-white text-xs"
+                      >
+                        <option value="">-- Usar URL / Foto Personalizada --</option>
+                        <option value="/products/espresso.svg">Café Espresso</option>
+                        <option value="/products/cafe-con-leche.svg">Café con Leche</option>
+                        <option value="/products/capuchino.svg">Capuchino</option>
+                        <option value="/products/te.svg">Té Orgánico</option>
+                        <option value="/products/medialunas.svg">Medialunas</option>
+                        <option value="/products/tostadas.svg">Tostadas</option>
+                        <option value="/products/sandwich.svg">Sándwich Jamón/Queso</option>
+                        <option value="/products/cheesecake.svg">Cheesecake</option>
+                        <option value="/products/brownie.svg">Brownie</option>
+                        <option value="/products/torta-chocolate.svg">Torta Fudge</option>
+                        <option value="/products/jugo-naranja.svg">Jugo de Naranja</option>
+                        <option value="/products/limonada.svg">Limonada</option>
+                        <option value="/products/combo-desayuno.svg">Combo Desayuno</option>
+                        <option value="/products/combo-merienda.svg">Combo Merienda</option>
+                        <option value="/products/ensalada.svg">Ensalada</option>
+                        <option value="/products/hamburguesa.svg">Hamburguesa</option>
+                        <option value="/products/pizza.svg">Pizza Margherita</option>
+                        <option value="/products/empanadas.svg">Empanadas</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div>

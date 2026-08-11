@@ -14,6 +14,7 @@ import {
   Utensils,
   ChevronRight,
   Star,
+  Maximize2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Product, OrderItem, PaymentMethod, OrderType } from '../types';
@@ -30,6 +31,7 @@ export const PublicMenuPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [expandedImageProduct, setExpandedImageProduct] = useState<Product | null>(null);
   const [productQty, setProductQty] = useState(1);
   const [productNotes, setProductNotes] = useState('');
 
@@ -243,11 +245,23 @@ export const PublicMenuPage: React.FC = () => {
                 }}
                 className="bg-brand-card rounded-2xl border border-brand-secondary p-3 shadow-xs hover:border-brand-brown/50 cursor-pointer transition-all flex flex-col justify-between"
               >
-                <img
-                  src={p.image}
-                  alt={p.name}
-                  className="w-full h-28 rounded-xl object-cover bg-brand-bg mb-2"
-                />
+                <div className="relative group">
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    className="w-full h-28 rounded-xl object-cover bg-brand-bg mb-2"
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedImageProduct(p);
+                    }}
+                    className="absolute top-1.5 right-1.5 p-1 rounded-full bg-brand-dark/70 text-[#E5C378] hover:bg-brand-dark transition-all shadow-xs"
+                    title="Ver imagen completa"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <div>
                   <h4 className="text-xs font-bold text-brand-dark truncate">{p.name}</h4>
                   <p className="text-xs font-extrabold text-brand-brown mt-0.5">
@@ -284,7 +298,13 @@ export const PublicMenuPage: React.FC = () => {
                     : 'border-brand-secondary hover:border-brand-brown/40 cursor-pointer'
                 }`}
               >
-                <div className="relative shrink-0">
+                <div
+                  className="relative shrink-0 group cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandedImageProduct(p);
+                  }}
+                >
                   <img
                     src={p.image}
                     alt={p.name}
@@ -292,6 +312,9 @@ export const PublicMenuPage: React.FC = () => {
                       isOutOfStock ? 'grayscale opacity-75' : ''
                     }`}
                   />
+                  <div className="absolute top-1 right-1 p-1 rounded-full bg-brand-dark/70 text-[#E5C378] opacity-90 group-hover:scale-110 transition-all shadow-xs">
+                    <Maximize2 className="w-3 h-3" />
+                  </div>
                   {isOutOfStock && (
                     <span className="absolute inset-0 m-auto w-max h-max bg-brand-red/90 text-rose-950 font-extrabold text-[9px] uppercase px-1.5 py-0.5 rounded shadow-xs">
                       Agotado
@@ -659,6 +682,67 @@ export const PublicMenuPage: React.FC = () => {
             >
               Entendido
             </button>
+          </div>
+        </div>
+      )}
+      {/* Modal Visor de Imagen Expandida */}
+      {expandedImageProduct && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-brand-dark/80 backdrop-blur-md animate-fade-in"
+          onClick={() => setExpandedImageProduct(null)}
+        >
+          <div
+            className="bg-brand-card rounded-3xl border-2 border-[#E5C378] p-5 max-w-lg w-full shadow-2xl space-y-4 relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setExpandedImageProduct(null)}
+              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-brand-dark/80 text-white flex items-center justify-center hover:bg-brand-dark transition-all shadow-md"
+              title="Cerrar visor"
+            >
+              <X className="w-5 h-5 text-[#E5C378]" />
+            </button>
+
+            {/* Main High Res Image View */}
+            <div className="relative w-full h-72 sm:h-96 rounded-2xl overflow-hidden bg-brand-bg border border-brand-secondary/80 shadow-inner flex items-center justify-center">
+              <img
+                src={expandedImageProduct.image}
+                alt={expandedImageProduct.name}
+                className="w-full h-full object-contain p-2"
+              />
+              <div className="absolute top-3 left-3 bg-brand-dark/90 backdrop-blur-xs text-[#E5C378] px-3 py-1 rounded-full text-xs font-serif font-bold tracking-wider border border-[#E5C378]/40 shadow-xs">
+                Hilos de Amor • Visor de Imagen
+              </div>
+            </div>
+
+            {/* Product Information Footer */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-extrabold text-brand-dark font-serif">{expandedImageProduct.name}</h3>
+                <span className="text-base font-extrabold text-brand-brown font-serif">
+                  {formatCurrency(expandedImageProduct.price)}
+                </span>
+              </div>
+              {expandedImageProduct.description && (
+                <p className="text-xs text-brand-brown/90 leading-relaxed font-medium">
+                  {expandedImageProduct.description}
+                </p>
+              )}
+
+              <div className="pt-3 flex gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedProduct(expandedImageProduct);
+                    setProductQty(1);
+                    setProductNotes('');
+                    setExpandedImageProduct(null);
+                  }}
+                  className="w-full py-3 rounded-2xl bg-brand-brown hover:bg-brand-dark text-brand-card font-extrabold text-xs shadow-soft transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4 text-brand-yellow" /> Pedir este producto
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

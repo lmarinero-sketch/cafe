@@ -99,6 +99,8 @@ interface AppContextType {
 
   addIngredient: (ingredient: Omit<Ingredient, 'id' | 'updatedAt' | 'normalizedCost'>) => void;
   updateIngredientPrice: (id: string, newPurchasePrice: number) => void;
+  updateIngredient: (id: string, ingredientData: Partial<Ingredient>) => void;
+  deleteIngredient: (id: string) => void;
 
   // Customer CRUD (Supabase)
   addCustomer: (customer: Omit<Customer, 'id' | 'registrationDate' | 'points' | 'level' | 'purchaseCount' | 'totalSpent' | 'averageTicket' | 'lastPurchaseDate' | 'usedPromotionsCount'>) => Promise<Customer | null>;
@@ -537,6 +539,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     setIngredients((prev) => [...prev, newIngredient]);
     showToast('Ingrediente agregado', `"${newIngredient.name}" guardado.`, 'success');
+  };
+
+  const updateIngredient = (id: string, ingData: Partial<Ingredient>) => {
+    setIngredients((prev) =>
+      prev.map((ing) => {
+        if (ing.id === id) {
+          const updated = { ...ing, ...ingData, updatedAt: new Date().toISOString() };
+          updated.normalizedCost = calculateNormalizedCost(
+            updated.purchasePrice,
+            updated.purchaseQty,
+            updated.purchaseUnit,
+            updated.usageUnit
+          );
+          return updated;
+        }
+        return ing;
+      })
+    );
+    showToast('Ingrediente actualizado', 'Los cambios se guardaron correctamente.', 'success');
+  };
+
+  const deleteIngredient = (id: string) => {
+    setIngredients((prev) => prev.filter((ing) => ing.id !== id));
+    showToast('Ingrediente eliminado', 'El ingrediente ha sido eliminado.', 'info');
   };
 
   const updateIngredientPrice = (id: string, newPurchasePrice: number) => {
@@ -1138,6 +1164,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateOrderStatus,
         addIngredient,
         updateIngredientPrice,
+        updateIngredient,
+        deleteIngredient,
         addCustomer,
         updateCustomerData,
         deleteCustomer,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Edit, Apple, AlertTriangle, ArrowUpDown, X } from 'lucide-react';
+import { Plus, Search, Edit, Apple, AlertTriangle, ArrowUpDown, X, Trash2, Edit3 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Ingredient, IngredientUnit } from '../types';
 import { formatCurrency, formatDate } from '../utils/currency';
@@ -8,6 +8,8 @@ export const IngredientsPage: React.FC = () => {
   const {
     ingredients,
     addIngredient,
+    updateIngredient,
+    deleteIngredient,
     updateIngredientPrice,
     autoPriceUpdate,
     setAutoPriceUpdate,
@@ -17,6 +19,8 @@ export const IngredientsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPriceIng, setEditingPriceIng] = useState<Ingredient | null>(null);
+  const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
+  const [deletingIngredient, setDeletingIngredient] = useState<Ingredient | null>(null);
   const [newPriceInput, setNewPriceInput] = useState<number>(24000);
 
   const [formData, setFormData] = useState({
@@ -152,15 +156,31 @@ export const IngredientsPage: React.FC = () => {
                     ${ing.normalizedCost.toFixed(2)} / {ing.usageUnit}
                   </td>
                   <td className="p-3.5 text-right">
-                    <button
-                      onClick={() => {
-                        setEditingPriceIng(ing);
-                        setNewPriceInput(ing.purchasePrice);
-                      }}
-                      className="py-1 px-2.5 rounded-lg bg-brand-bg border border-brand-secondary text-brand-brown hover:text-brand-dark text-[11px] font-bold transition-colors"
-                    >
-                      Actualizar precio
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => setEditingIngredient(ing)}
+                        className="p-1.5 rounded-lg bg-brand-bg border border-brand-secondary text-brand-brown hover:bg-brand-brown hover:text-brand-card text-xs font-bold transition-all"
+                        title="Editar ingrediente"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingPriceIng(ing);
+                          setNewPriceInput(ing.purchasePrice);
+                        }}
+                        className="py-1 px-2 rounded-lg bg-brand-bg border border-brand-secondary text-brand-brown hover:bg-brand-secondary/30 text-[11px] font-bold transition-colors"
+                      >
+                        $ Precio
+                      </button>
+                      <button
+                        onClick={() => setDeletingIngredient(ing)}
+                        className="p-1.5 rounded-lg text-rose-700 hover:bg-rose-100 transition-colors"
+                        title="Borrar ingrediente"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -211,13 +231,138 @@ export const IngredientsPage: React.FC = () => {
                 >
                   Guardar cambio
                 </button>
+      {/* Modal Editar Ingrediente Completo */}
+      {editingIngredient && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 max-w-md w-full space-y-4 shadow-soft-lg">
+            <div className="flex items-center justify-between border-b border-brand-secondary pb-3">
+              <h3 className="text-base font-bold text-brand-dark">Editar Ingrediente</h3>
+              <button
+                onClick={() => setEditingIngredient(null)}
+                className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!editingIngredient) return;
+                updateIngredient(editingIngredient.id, editingIngredient);
+                setEditingIngredient(null);
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-brand-dark mb-1">Nombre</label>
+                <input
+                  type="text"
+                  required
+                  value={editingIngredient.name}
+                  onChange={(e) => setEditingIngredient({ ...editingIngredient, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-brand-dark mb-1">Categoría</label>
+                  <input
+                    type="text"
+                    value={editingIngredient.category}
+                    onChange={(e) => setEditingIngredient({ ...editingIngredient, category: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-brand-dark mb-1">Proveedor</label>
+                  <input
+                    type="text"
+                    value={editingIngredient.supplier}
+                    onChange={(e) => setEditingIngredient({ ...editingIngredient, supplier: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-brand-dark mb-1">Precio Compra ($)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingIngredient.purchasePrice}
+                    onChange={(e) => setEditingIngredient({ ...editingIngredient, purchasePrice: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-brand-dark mb-1">Merma (%)</label>
+                  <input
+                    type="number"
+                    value={editingIngredient.wastePercentage}
+                    onChange={(e) => setEditingIngredient({ ...editingIngredient, wastePercentage: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold hover:bg-brand-dark transition-colors"
+                >
+                  Guardar Cambios
+                </button>
                 <button
                   type="button"
-                  onClick={() => setEditingPriceIng(null)}
+                  onClick={() => setEditingIngredient(null)}
                   className="py-2.5 px-4 rounded-xl border border-brand-secondary font-bold text-brand-dark hover:bg-brand-secondary/30"
                 >
                   Cancelar
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Eliminación Ingrediente */}
+      {deletingIngredient && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border-2 border-rose-500 p-6 max-w-sm w-full space-y-4 text-center shadow-soft-lg">
+            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto border border-rose-300">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-brand-dark">¿Eliminar Ingrediente?</h3>
+              <p className="text-xs text-brand-brown/80 mt-1">
+                ¿Estás seguro de que deseas eliminar <strong>"{deletingIngredient.name}"</strong>? Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingIngredient(null)}
+                className="flex-1 py-2 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteIngredient(deletingIngredient.id);
+                  setDeletingIngredient(null);
+                }}
+                className="flex-1 py-2 rounded-xl bg-rose-700 text-white font-extrabold text-xs hover:bg-rose-800 transition"
+              >
+                Sí, Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
               </div>
             </form>
           </div>
