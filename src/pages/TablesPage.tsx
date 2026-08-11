@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig } from 'lucide-react';
+import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Table, TableStatus } from '../types';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
@@ -167,12 +167,20 @@ export const TablesPage: React.FC = () => {
                 </button>
               </div>
 
-              <button
-                onClick={() => setSelectedQrTable(t)}
-                className="w-full py-1.5 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark border border-brand-secondary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <QrCode className="w-3.5 h-3.5 text-brand-brown" /> Ver Código QR
-              </button>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <button
+                  onClick={() => setSelectedQrTable(t)}
+                  className="w-full py-1.5 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark border border-brand-secondary font-bold text-[10px] flex items-center justify-center gap-1 transition-colors"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-brand-brown" /> Código QR
+                </button>
+                <button
+                  onClick={() => window.open(`/menu?table=${t.id}&admin=true`, '_blank')}
+                  className="w-full py-1.5 rounded-xl bg-brand-brown hover:bg-brand-dark text-brand-card font-bold text-[10px] shadow-soft flex items-center justify-center gap-1 transition-colors"
+                >
+                  <UtensilsCrossed className="w-3.5 h-3.5 text-brand-yellow" /> Tomar Pedido
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -192,28 +200,14 @@ export const TablesPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Mock QR graphic */}
+            {/* Real QR graphic */}
             <div className="bg-brand-cream p-6 rounded-2xl border border-brand-secondary flex flex-col items-center justify-center space-y-2">
-              <div className="w-44 h-44 bg-white p-3 rounded-xl shadow-soft flex items-center justify-center border-2 border-brand-dark">
-                {/* SVG QR Code Illustration */}
-                <svg viewBox="0 0 100 100" className="w-full h-full">
-                  <rect x="0" y="0" width="100" height="100" fill="#FFFFFF" />
-                  <rect x="10" y="10" width="25" height="25" fill="#4A352C" />
-                  <rect x="15" y="15" width="15" height="15" fill="#FFFFFF" />
-                  <rect x="18" y="18" width="9" height="9" fill="#4A352C" />
-
-                  <rect x="65" y="10" width="25" height="25" fill="#4A352C" />
-                  <rect x="70" y="15" width="15" height="15" fill="#FFFFFF" />
-                  <rect x="73" y="18" width="9" height="9" fill="#4A352C" />
-
-                  <rect x="10" y="65" width="25" height="25" fill="#4A352C" />
-                  <rect x="15" y="70" width="15" height="15" fill="#FFFFFF" />
-                  <rect x="18" y="73" width="9" height="9" fill="#4A352C" />
-
-                  <rect x="45" y="45" width="10" height="10" fill="#4A352C" />
-                  <rect x="60" y="60" width="15" height="15" fill="#4A352C" />
-                  <rect x="40" y="70" width="15" height="15" fill="#765747" />
-                </svg>
+              <div className="w-44 h-44 bg-white p-3 rounded-xl shadow-soft flex items-center justify-center border-2 border-brand-dark overflow-hidden">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/menu?table=' + selectedQrTable.id)}`}
+                  alt={`QR Mesa ${selectedQrTable.number}`}
+                  className="w-full h-full object-contain"
+                />
               </div>
               <p className="text-xs font-bold text-brand-dark">{selectedQrTable.number}</p>
               <p className="text-[10px] text-brand-brown/80 capitalize">
@@ -221,16 +215,54 @@ export const TablesPage: React.FC = () => {
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                window.open(`/menu?table=${selectedQrTable.id}`, '_blank');
-                setSelectedQrTable(null);
-              }}
-              className="w-full py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft flex items-center justify-center gap-2"
-            >
-              <ExternalLink className="w-4 h-4 text-brand-yellow" />
-              Abrir menú asociado a esta mesa
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(window.location.origin + '/menu?table=' + selectedQrTable.id)}`;
+                  const printWindow = window.open('', '_blank');
+                  if (printWindow) {
+                    printWindow.document.write(`
+                      <html>
+                        <head>
+                          <title>QR ${selectedQrTable.number}</title>
+                          <style>
+                            body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
+                            img { max-width: 300px; margin-bottom: 20px; }
+                            h1 { color: #2F5233; margin: 0 0 10px 0; font-size: 24px; }
+                            p { color: #555; font-size: 14px; margin: 0; }
+                            @media print {
+                              @page { margin: 0; size: auto; }
+                              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                            }
+                          </style>
+                        </head>
+                        <body>
+                          <h1>Hilos de Amor</h1>
+                          <img src="${qrUrl}" onload="window.print();window.close()" />
+                          <h2>${selectedQrTable.number}</h2>
+                          <p>Sector: ${selectedQrTable.sector}</p>
+                        </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-white text-brand-dark border border-brand-secondary font-bold text-xs hover:bg-brand-secondary/30 transition-colors shadow-soft flex items-center justify-center gap-2"
+              >
+                Imprimir QR
+              </button>
+              
+              <button
+                onClick={() => {
+                  window.open(`/menu?table=${selectedQrTable.id}`, '_blank');
+                  setSelectedQrTable(null);
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft flex items-center justify-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4 text-brand-yellow" />
+                Abrir menú asociado a esta mesa
+              </button>
+            </div>
           </div>
         </div>
       )}

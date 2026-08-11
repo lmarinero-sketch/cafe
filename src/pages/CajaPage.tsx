@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Wallet, Plus, ArrowDownToLine, ArrowUpFromLine, Search, History, Banknote, CreditCard, Send, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { formatCurrency, formatDate } from '../utils/currency';
+import { formatCurrency, formatDate, formatShortDate } from '../utils/currency';
 import { CashRegister, CashTransaction, PaymentMethod } from '../types';
 
 export const CajaPage: React.FC = () => {
@@ -10,6 +10,7 @@ export const CajaPage: React.FC = () => {
   const [isOpeningModal, setIsOpeningModal] = useState(false);
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [isTxModal, setIsTxModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'actual' | 'historial'>('actual');
 
   const [openedBy, setOpenedBy] = useState('');
   const [initialBalance, setInitialBalance] = useState(0);
@@ -120,7 +121,32 @@ export const CajaPage: React.FC = () => {
         )}
       </div>
 
-      {activeRegister ? (
+      {/* Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto bg-brand-card p-3 rounded-2xl border border-brand-secondary shadow-soft">
+        <button
+          onClick={() => setActiveTab('actual')}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'actual'
+              ? 'bg-brand-brown text-brand-card shadow-soft'
+              : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
+          }`}
+        >
+          Turno Actual
+        </button>
+        <button
+          onClick={() => setActiveTab('historial')}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'historial'
+              ? 'bg-brand-brown text-brand-card shadow-soft'
+              : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
+          }`}
+        >
+          Historial de Cajas
+        </button>
+      </div>
+
+      {activeTab === 'actual' ? (
+        activeRegister ? (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="bg-brand-card p-5 rounded-2xl border border-brand-secondary shadow-soft space-y-2">
@@ -192,6 +218,32 @@ export const CajaPage: React.FC = () => {
           >
             Abrir Caja Ahora
           </button>
+        </div>
+        )
+      ) : (
+        <div className="bg-brand-card rounded-2xl border border-brand-secondary shadow-soft overflow-hidden">
+          <div className="p-4 border-b border-brand-secondary">
+            <h3 className="font-bold text-brand-dark flex items-center gap-2">
+              <History className="w-5 h-5" /> Historial de Turnos de Caja
+            </h3>
+          </div>
+          <div className="divide-y divide-brand-secondary/40">
+            {cashRegisters.filter(r => r.status === 'cerrada').sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime()).map(reg => (
+              <div key={reg.id} className="p-4 flex items-center justify-between hover:bg-brand-bg transition-colors">
+                <div>
+                  <p className="font-bold text-brand-dark">Caja #{reg.id.slice(-4)}</p>
+                  <p className="text-xs text-brand-brown/80 capitalize">Abierta por: {reg.openedBy} • {formatShortDate(reg.openedAt)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-brand-dark">Fondo Inicial: {formatCurrency(reg.initialBalance)}</p>
+                  <p className="text-xs font-bold text-brand-green">Saldo Final: {formatCurrency(reg.finalBalance || 0)}</p>
+                </div>
+              </div>
+            ))}
+            {cashRegisters.filter(r => r.status === 'cerrada').length === 0 && (
+              <div className="p-8 text-center text-sm text-brand-brown/60">No hay registros de cajas pasadas.</div>
+            )}
+          </div>
         </div>
       )}
 

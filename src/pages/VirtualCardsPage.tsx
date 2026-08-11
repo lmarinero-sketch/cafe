@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, QrCode, Share2, Wallet, Gift, Award, Sparkles } from 'lucide-react';
+import { CreditCard, QrCode, Share2, Wallet, Gift, Award, Sparkles, Send, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 
@@ -7,6 +7,8 @@ export const VirtualCardsPage: React.FC = () => {
   const { customers } = useApp();
   const { showToast } = useToast();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(customers[0]?.id || '');
+  const [isGiftcardModalOpen, setIsGiftcardModalOpen] = useState(false);
+  const [giftcardData, setGiftcardData] = useState({ amount: 5000, recipientEmail: '', message: '' });
 
   const customer = customers.find((c) => c.id === selectedCustomerId) || customers[0];
 
@@ -45,7 +47,7 @@ export const VirtualCardsPage: React.FC = () => {
       </div>
 
       {/* Main Virtual Card Mobile Display */}
-      {customer && (
+      {customer ? (
         <div className="max-w-md mx-auto space-y-6">
           {/* DIGITAL CARD GRAPHIC CONTAINER */}
           <div className="bg-gradient-to-br from-[#1A2E1E] via-[#2F5233] to-[#1A2E1E] rounded-3xl p-6 text-brand-card shadow-soft-lg border-2 border-brand-yellow/40 space-y-6 relative overflow-hidden transform hover:scale-[1.01] transition-transform">
@@ -142,7 +144,86 @@ export const VirtualCardsPage: React.FC = () => {
               <Share2 className="w-4 h-4 text-brand-brown" />
               Compartir tarjeta
             </button>
+            
+            <button
+              onClick={() => setIsGiftcardModalOpen(true)}
+              className="col-span-2 py-3 px-4 rounded-2xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 shadow-soft flex items-center justify-center gap-2 transition-all mt-2"
+            >
+              <Send className="w-4 h-4 text-emerald-200" />
+              Regalar Giftcard Virtual
+            </button>
           </div>
+
+          {/* Modal Giftcard */}
+          {isGiftcardModalOpen && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
+              <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 max-w-sm w-full shadow-soft-lg space-y-4">
+                <div className="flex items-center justify-between border-b border-brand-secondary pb-3">
+                  <h3 className="text-base font-bold text-brand-dark flex items-center gap-2">
+                    <Gift className="w-5 h-5 text-emerald-600" /> Regalar Giftcard
+                  </h3>
+                  <button
+                    onClick={() => setIsGiftcardModalOpen(false)}
+                    className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block font-bold text-brand-dark mb-1">Monto a regalar ($)</label>
+                    <select 
+                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg font-bold"
+                      value={giftcardData.amount}
+                      onChange={e => setGiftcardData({...giftcardData, amount: Number(e.target.value)})}
+                    >
+                      <option value={5000}>$ 5.000</option>
+                      <option value={10000}>$ 10.000</option>
+                      <option value={15000}>$ 15.000</option>
+                      <option value={20000}>$ 20.000</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-brand-dark mb-1">Email del destinatario</label>
+                    <input 
+                      type="email" 
+                      placeholder="amigo@email.com"
+                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg"
+                      value={giftcardData.recipientEmail}
+                      onChange={e => setGiftcardData({...giftcardData, recipientEmail: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-brand-dark mb-1">Mensaje (opcional)</label>
+                    <textarea 
+                      placeholder="¡Feliz cumpleaños!"
+                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg resize-none h-16"
+                      value={giftcardData.message}
+                      onChange={e => setGiftcardData({...giftcardData, message: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if(!giftcardData.recipientEmail) return showToast('Error', 'Ingresa un email', 'error');
+                    setIsGiftcardModalOpen(false);
+                    setGiftcardData({ amount: 5000, recipientEmail: '', message: '' });
+                    showToast('Giftcard Enviada', 'Se ha enviado la giftcard virtual al destinatario con éxito.', 'success');
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-colors shadow-soft flex items-center justify-center gap-2 mt-4"
+                >
+                  <Send className="w-4 h-4 text-emerald-200" />
+                  Enviar Giftcard
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-center py-10 text-brand-brown">
+          No hay clientes registrados para mostrar la tarjeta virtual.
         </div>
       )}
     </div>

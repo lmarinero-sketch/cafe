@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
 import { 
   Store, MapPin, Phone, Clock, Plus, Trash2, Edit3, Save, X, 
-  ShieldCheck, Instagram, MessageCircle, CheckCircle2, Tag, Sparkles,
+  ShieldCheck, Instagram, MessageCircle, CheckCircle2, Tag, Sparkles, User, Users
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth, getBonificationDaysRemaining, getBonificationProgress } from '../context/AuthContext';
-import { Branch } from '../types';
+import { Branch, StaffUser } from '../types';
 import { formatCurrency } from '../utils/currency';
 
 const EMPTY_BRANCH: Omit<Branch, 'id' | 'createdAt'> = {
   name: '', address: '', zone: '', phone: '', whatsapp: '', instagram: '',
-  hours: '', badge: '', features: [], mapQuery: '', isActive: true,
+  hours: '', badge: '', features: [], mapQuery: '', mapUrl: '', isActive: true,
 };
 
 export const SettingsPage: React.FC = () => {
-  const { plan, branches, isLoadingBranches, addBranch, updateBranchData, deleteBranchData } = useApp();
+  const { plan, branches, isLoadingBranches, addBranch, updateBranchData, deleteBranchData, staffUsers, addStaffUser, updateStaffUser, deleteStaffUser } = useApp();
   const { user } = useAuth();
   const sub = user?.subscription;
 
@@ -23,6 +23,25 @@ export const SettingsPage: React.FC = () => {
   const [form, setForm] = useState<Omit<Branch, 'id' | 'createdAt'>>(EMPTY_BRANCH);
   const [newFeature, setNewFeature] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Staff Users State
+  const [showStaffForm, setShowStaffForm] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [staffForm, setStaffForm] = useState<Omit<StaffUser, 'id'>>({ name: '', role: 'cajero', email: '', status: 'active' });
+  const [staffDeleteConfirm, setStaffDeleteConfirm] = useState<string | null>(null);
+
+  // Business Data State
+  const [isEditingBusiness, setIsEditingBusiness] = useState(false);
+  const [businessData, setBusinessData] = useState({
+    name: user?.businessName || 'Hilos de Amor',
+    currency: 'Peso Argentino ($ ARS)',
+    email: user?.email || '',
+  });
+
+  const handleSaveBusiness = () => {
+    // Here we'd save to backend
+    setIsEditingBusiness(false);
+  };
 
   const daysRemaining = sub ? getBonificationDaysRemaining(sub) : 0;
   const progress = sub ? getBonificationProgress(sub) : 0;
@@ -33,7 +52,7 @@ export const SettingsPage: React.FC = () => {
       name: branch.name, address: branch.address, zone: branch.zone,
       phone: branch.phone, whatsapp: branch.whatsapp, instagram: branch.instagram,
       hours: branch.hours, badge: branch.badge, features: [...branch.features],
-      mapQuery: branch.mapQuery, isActive: branch.isActive,
+      mapQuery: branch.mapQuery, mapUrl: branch.mapUrl || '', isActive: branch.isActive,
     });
     setShowAddForm(false);
   };
@@ -71,7 +90,31 @@ export const SettingsPage: React.FC = () => {
     setForm((f) => ({ ...f, features: f.features.filter((_, i) => i !== idx) }));
   };
 
+  const handleStaffSave = () => {
+    if (!staffForm.name.trim() || !staffForm.email.trim()) return;
+    if (editingStaffId) {
+      updateStaffUser(editingStaffId, staffForm);
+    } else {
+      addStaffUser(staffForm);
+    }
+    setShowStaffForm(false);
+    setEditingStaffId(null);
+    setStaffForm({ name: '', role: 'cajero', email: '', status: 'active' });
+  };
+
+  const handleStaffEdit = (u: StaffUser) => {
+    setEditingStaffId(u.id);
+    setStaffForm({ name: u.name, role: u.role, email: u.email, status: u.status });
+    setShowStaffForm(true);
+  };
+
+  const handleStaffDelete = (id: string) => {
+    deleteStaffUser(id);
+    setStaffDeleteConfirm(null);
+  };
+
   const isEditing = editingId !== null || showAddForm;
+  const isEditingStaff = editingStaffId !== null || showStaffForm;
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
@@ -131,34 +174,133 @@ export const SettingsPage: React.FC = () => {
         {/* DATOS DEL COMERCIO */}
         {/* ============================================================ */}
         <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4">
-          <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
-            <Store className="w-4 h-4 text-brand-brown" /> Datos del Comercio
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
+              <Store className="w-4 h-4 text-brand-brown" /> Datos del Comercio
+            </h3>
+            {isEditingBusiness ? (
+              <button onClick={handleSaveBusiness} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-brand-brown text-brand-card hover:bg-brand-dark flex items-center gap-1.5">
+                <Save className="w-3.5 h-3.5" /> Guardar
+              </button>
+            ) : (
+              <button onClick={() => setIsEditingBusiness(true)} className="text-xs font-bold px-3 py-1.5 rounded-lg border border-brand-secondary text-brand-dark hover:bg-brand-secondary/40 flex items-center gap-1.5">
+                <Edit3 className="w-3.5 h-3.5" /> Editar
+              </button>
+            )}
+          </div>
 
           <div className="space-y-3 text-xs">
             <div>
               <label className="block font-bold text-brand-dark mb-1">Nombre Comercial</label>
               <input
-                type="text" disabled
-                value={user?.businessName || 'Hilos de Amor'}
-                className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-brown font-bold"
+                type="text" disabled={!isEditingBusiness}
+                value={businessData.name}
+                onChange={e => setBusinessData({ ...businessData, name: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold disabled:text-brand-brown/70"
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label className="block font-bold text-brand-dark mb-1">Moneda del Sistema</label>
-                <input type="text" disabled value="Peso Argentino ($ ARS)"
-                  className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-brown font-bold"
+                <input type="text" disabled={!isEditingBusiness} value={businessData.currency}
+                  onChange={e => setBusinessData({ ...businessData, currency: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold disabled:text-brand-brown/70"
                 />
               </div>
               <div>
                 <label className="block font-bold text-brand-dark mb-1">Email de contacto</label>
-                <input type="text" disabled value={user?.email || ''}
-                  className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-brown font-bold"
+                <input type="text" disabled={!isEditingBusiness} value={businessData.email}
+                  onChange={e => setBusinessData({ ...businessData, email: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold disabled:text-brand-brown/70"
                 />
               </div>
             </div>
           </div>
+        </div>
+
+        {/* ============================================================ */}
+        {/* PERSONAL Y ROLES */}
+        {/* ============================================================ */}
+        <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
+              <Users className="w-4 h-4 text-brand-brown" /> Personal y Roles ({staffUsers.length})
+            </h3>
+            {!isEditingStaff && (
+              <button
+                onClick={() => { setShowStaffForm(true); setStaffForm({ name: '', role: 'cajero', email: '', status: 'active' }); setEditingStaffId(null); }}
+                className="py-1.5 px-3 rounded-lg bg-brand-brown text-brand-card font-bold text-xs flex items-center gap-1.5 hover:bg-brand-dark transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" /> Agregar Usuario
+              </button>
+            )}
+          </div>
+
+          {showStaffForm && (
+            <div className="bg-brand-bg rounded-xl border border-brand-secondary p-5 space-y-4 animate-fade-in">
+              <h4 className="font-bold text-brand-dark text-sm border-b border-brand-secondary/60 pb-2">
+                {editingStaffId ? 'Editar Usuario' : 'Nuevo Usuario'}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-brand-dark mb-1">Nombre Completo</label>
+                  <input type="text" value={staffForm.name} onChange={e => setStaffForm({...staffForm, name: e.target.value})} className="w-full px-3 py-2 text-xs rounded-xl border border-brand-secondary bg-brand-card" placeholder="Ej. Juan Pérez" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-brand-dark mb-1">Email (Acceso)</label>
+                  <input type="email" value={staffForm.email} onChange={e => setStaffForm({...staffForm, email: e.target.value})} className="w-full px-3 py-2 text-xs rounded-xl border border-brand-secondary bg-brand-card" placeholder="juan@ejemplo.com" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-brand-dark mb-1">Rol</label>
+                  <select value={staffForm.role} onChange={e => setStaffForm({...staffForm, role: e.target.value as any})} className="w-full px-3 py-2 text-xs rounded-xl border border-brand-secondary bg-brand-card font-bold">
+                    <option value="admin">Administrador</option>
+                    <option value="cajero">Cajero</option>
+                    <option value="mozo">Mozo</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button onClick={() => { setShowStaffForm(false); setEditingStaffId(null); }} className="px-4 py-2 text-xs font-bold text-brand-brown hover:bg-brand-secondary/50 rounded-xl transition-colors">Cancelar</button>
+                <button onClick={handleStaffSave} className="px-4 py-2 text-xs font-bold bg-brand-brown text-brand-card rounded-xl hover:bg-brand-dark transition-colors shadow-xs">Guardar Usuario</button>
+              </div>
+            </div>
+          )}
+
+          {!showStaffForm && (
+            <div className="grid grid-cols-1 gap-2">
+              {staffUsers.map(u => (
+                <div key={u.id} className="bg-brand-bg rounded-xl border border-brand-secondary p-3 flex items-center justify-between hover:border-brand-brown/30 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-brand-secondary/50 flex items-center justify-center shrink-0">
+                      <User className="w-4 h-4 text-brand-brown" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-brand-dark flex items-center gap-2">
+                        {u.name}
+                        <span className="px-1.5 py-0.5 rounded uppercase text-[9px] font-bold bg-brand-card border border-brand-secondary/50 text-brand-brown">
+                          {u.role}
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-brand-brown/80">{u.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => handleStaffEdit(u)} className="p-1.5 rounded-lg hover:bg-brand-secondary text-brand-brown transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
+                    {staffDeleteConfirm === u.id ? (
+                       <div className="flex items-center gap-1">
+                         <button onClick={() => handleStaffDelete(u.id)} className="p-1.5 rounded-lg bg-red-100 text-red-700 text-[10px] font-bold">Sí</button>
+                         <button onClick={() => setStaffDeleteConfirm(null)} className="p-1.5 rounded-lg bg-brand-secondary text-brand-brown text-[10px] font-bold">No</button>
+                       </div>
+                    ) : (
+                      <button onClick={() => setStaffDeleteConfirm(u.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-brand-brown hover:text-red-700 transition-colors" disabled={u.role === 'admin' && staffUsers.filter(x => x.role === 'admin').length === 1}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ============================================================ */}
@@ -258,6 +400,22 @@ export const SettingsPage: React.FC = () => {
                         ))}
                       </div>
                     )}
+                    
+                    {branch.mapUrl && (
+                      <div className="mt-3 rounded-xl overflow-hidden border border-brand-secondary h-32 relative">
+                        <iframe 
+                          src={branch.mapUrl} 
+                          width="100%" 
+                          height="100%" 
+                          style={{ border: 0 }} 
+                          allowFullScreen 
+                          loading="lazy" 
+                          referrerPolicy="no-referrer-when-downgrade"
+                          title={`Mapa de ${branch.name}`}
+                          className="absolute inset-0"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -331,6 +489,13 @@ export const SettingsPage: React.FC = () => {
                       <input value={form.mapQuery} onChange={(e) => setForm((f) => ({ ...f, mapQuery: e.target.value }))}
                         placeholder="Nombre de la sucursal + ciudad para buscar en Google Maps"
                         className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-white text-brand-dark font-medium focus:ring-2 focus:ring-brand-brown/30 focus:outline-none"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block font-bold text-brand-dark mb-1">URL Iframe Google Maps (Opcional)</label>
+                      <input value={form.mapUrl} onChange={(e) => setForm((f) => ({ ...f, mapUrl: e.target.value }))}
+                        placeholder="Pega el src='...' del iframe de Google Maps aquí"
+                        className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-white text-brand-dark font-medium focus:ring-2 focus:ring-brand-brown/30 focus:outline-none text-xs font-mono"
                       />
                     </div>
                   </div>

@@ -75,13 +75,22 @@ export const WebsiteEditorPage: React.FC = () => {
   };
 
   const handleImageUpload = async (key: string, file: File) => {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      showToast('Formato no soportado', 'Sube una imagen en formato JPG, PNG o WEBP para que se procese correctamente.', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Archivo muy grande', 'La imagen supera los 5MB. Te recomendamos usar archivos de imagen JPG, PNG o WEBP de menos de 2MB.', 'error');
+      return;
+    }
     setIsUploading((prev) => ({ ...prev, [key]: true }));
     const url = await uploadImage('website-images', file);
     if (url) {
       handleFieldChange(key, url);
-      showToast('Imagen subida', 'La imagen se subió correctamente a Supabase.', 'success');
+      showToast('Imagen subida', 'La imagen se subió correctamente.', 'success');
     } else {
-      showToast('Error', 'Hubo un error al subir la imagen. Verifica que hayas corrido el script SQL y que el archivo sea una imagen válida.', 'error');
+      showToast('Error de Carga', 'Hubo un error al subir la imagen. Verifica que sea una imagen válida en formato JPG, PNG o WEBP.', 'error');
     }
     setIsUploading((prev) => ({ ...prev, [key]: false }));
   };
@@ -167,27 +176,27 @@ export const WebsiteEditorPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] overflow-hidden bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-2xl">
+    <div className="flex flex-col h-[calc(100vh-80px)] overflow-hidden bg-brand-bg text-brand-dark rounded-2xl border border-brand-secondary shadow-2xl">
       {/* ============================================================ */}
       {/* TOP EDITOR TOOLBAR */}
       {/* ============================================================ */}
-      <div className="h-16 bg-slate-950 border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0">
+      <div className="h-16 bg-brand-card border-b border-brand-secondary px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/dashboard')}
-            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors"
+            className="p-2 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 text-brand-brown transition-colors"
             title="Volver al Dashboard"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h2 className="text-sm sm:text-base font-extrabold flex items-center gap-2 text-white font-serif">
-              <Pencil className="w-4 h-4 text-emerald-400" /> Editor Visual de Sitio Web
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            <h2 className="text-sm sm:text-base font-extrabold flex items-center gap-2 text-brand-dark font-serif">
+              <Pencil className="w-4 h-4 text-emerald-600" /> Editor Visual de Sitio Web
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                 Vista Previa en Vivo
               </span>
             </h2>
-            <p className="text-[11px] text-slate-400 hidden sm:block">
+            <p className="text-[11px] text-brand-brown/80 hidden sm:block">
               Modificá ofertas, promociones, textos e imágenes. Los cambios se reflejan en vivo.
             </p>
           </div>
@@ -199,18 +208,18 @@ export const WebsiteEditorPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={handleReset}
-            className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700"
+            className="py-2 px-3 rounded-xl bg-brand-bg hover:bg-brand-secondary/50 text-brand-brown text-xs font-semibold flex items-center gap-1.5 transition-all border border-brand-secondary"
             title="Restablecer predeterminados"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+            <RefreshCw className="w-3.5 h-3.5 text-brand-brown/70" />
             <span className="hidden sm:inline">Restablecer</span>
           </button>
 
           <button
             onClick={() => window.open('/sitio-promocional', '_blank')}
-            className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700"
+            className="py-2 px-3 rounded-xl bg-brand-bg hover:bg-brand-secondary/50 text-brand-brown text-xs font-semibold flex items-center gap-1.5 transition-all border border-brand-secondary"
           >
-            <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+            <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
             <span className="hidden sm:inline">Ver Sitio Público</span>
           </button>
 
@@ -241,17 +250,17 @@ export const WebsiteEditorPage: React.FC = () => {
       {/* ============================================================ */}
       <div className="flex-1 flex overflow-hidden">
         {/* FORM FIELDS */}
-        <div className="w-full bg-slate-950 flex flex-col overflow-hidden max-w-4xl mx-auto border-x border-slate-800">
+        <div className="w-full bg-brand-bg flex flex-col overflow-hidden max-w-4xl mx-auto border-x border-brand-secondary">
           {/* Section Navigation Tabs */}
-          <div className="p-3 border-b border-slate-800 bg-slate-900/60 overflow-x-auto flex items-center gap-1.5 scrollbar-none">
+          <div className="p-3 border-b border-brand-secondary bg-brand-card overflow-x-auto flex items-center gap-1.5 scrollbar-none">
             {SECTION_TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
                   activeTab === tab.id
-                    ? 'bg-[#2F5233] text-white shadow-xs border border-emerald-500/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    ? 'bg-brand-brown text-brand-card shadow-xs border border-brand-brown'
+                    : 'text-brand-brown/70 hover:text-brand-dark hover:bg-brand-secondary/40'
                 }`}
               >
                 {tab.icon}
@@ -262,11 +271,11 @@ export const WebsiteEditorPage: React.FC = () => {
 
           {/* Form Fields List */}
           <div className="flex-1 p-5 overflow-y-auto space-y-5 custom-scrollbar">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+            <div className="flex items-center justify-between pb-2 border-b border-brand-secondary">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" /> {SECTION_TABS.find((t) => t.id === activeTab)?.label}
               </span>
-              <span className="text-[10px] text-slate-500">Edición en directo</span>
+              <span className="text-[10px] text-brand-brown/70">Edición en directo</span>
             </div>
 
             {/* PRODUCT PICKER DROPDOWN IF APPLICABLE */}
@@ -299,22 +308,22 @@ export const WebsiteEditorPage: React.FC = () => {
 
             {/* FIELD INPUTS */}
             {currentTabItems.map((item) => (
-              <div key={item.key} className="space-y-1.5 bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 hover:border-slate-700 transition-all">
-                <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+              <div key={item.key} className="space-y-1.5 bg-brand-card p-3.5 rounded-xl border border-brand-secondary hover:border-brand-brown/40 transition-all">
+                <label className="text-xs font-bold text-brand-dark flex items-center justify-between">
                   <span>{item.label}</span>
-                  <span className="text-[10px] font-mono text-slate-500">{item.key}</span>
+                  <span className="text-[10px] font-mono text-brand-brown/70">{item.key}</span>
                 </label>
 
                 {item.type === 'image_url' || item.key.includes('image') ? (
                   <div className="space-y-2">
                     {/* Image Preview & Upload */}
                     {editedValues[item.key] && (
-                      <div className="w-full h-32 rounded-lg overflow-hidden border border-slate-700 relative">
+                      <div className="w-full h-32 rounded-lg overflow-hidden border border-brand-secondary relative">
                         <img src={editedValues[item.key]} alt="Preview" className="w-full h-full object-cover" />
                       </div>
                     )}
                     <div className="flex gap-2 items-center">
-                      <label className="flex-1 cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg border border-slate-700 text-xs font-semibold text-center transition-colors">
+                      <label className="flex-1 cursor-pointer bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark px-3 py-2 rounded-lg border border-brand-secondary text-xs font-semibold text-center transition-colors">
                         {isUploading[item.key] ? (
                           <span className="flex items-center justify-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Subiendo...</span>
                         ) : (
@@ -337,23 +346,24 @@ export const WebsiteEditorPage: React.FC = () => {
                         value={editedValues[item.key] ?? item.value}
                         onChange={(e) => handleFieldChange(item.key, e.target.value)}
                         placeholder="O ingresa URL (https://...)"
-                        className="flex-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs font-medium text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                        className="flex-1 px-3 py-2 rounded-lg bg-brand-bg border border-brand-secondary text-xs font-medium text-brand-dark placeholder:text-brand-brown/50 focus:outline-none focus:border-brand-brown focus:ring-1 focus:ring-brand-brown transition-all"
                       />
                     </div>
+                    <p className="text-[9px] text-brand-brown/70 italic">* Recomendado: jpg, jpeg, png, webp (Tamaño máximo: 2MB)</p>
                   </div>
                 ) : item.key.includes('desc') || item.key.includes('subtitle') || item.key.includes('pillar') ? (
                   <textarea
                     rows={3}
                     value={editedValues[item.key] ?? item.value}
                     onChange={(e) => handleFieldChange(item.key, e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs font-medium text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                    className="w-full px-3 py-2 rounded-lg bg-brand-bg border border-brand-secondary text-xs font-medium text-brand-dark placeholder:text-brand-brown/50 focus:outline-none focus:border-brand-brown focus:ring-1 focus:ring-brand-brown transition-all"
                   />
                 ) : (
                   <input
                     type="text"
                     value={editedValues[item.key] ?? item.value}
                     onChange={(e) => handleFieldChange(item.key, e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-medium text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                    className="w-full px-3 py-2.5 rounded-lg bg-brand-bg border border-brand-secondary text-xs font-medium text-brand-dark placeholder:text-brand-brown/50 focus:outline-none focus:border-brand-brown focus:ring-1 focus:ring-brand-brown transition-all"
                   />
                 )}
               </div>

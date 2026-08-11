@@ -5,6 +5,7 @@ export interface Category {
   name: string;
   slug: string;
   icon?: string;
+  image?: string;
 }
 
 export type Channel = 'salon' | 'retiro' | 'delivery';
@@ -286,6 +287,7 @@ export interface Branch {
   badge: string;
   features: string[];
   mapQuery: string;
+  mapUrl?: string; // Para el iframe de Google Maps
   isActive: boolean;
   createdAt?: string;
 }

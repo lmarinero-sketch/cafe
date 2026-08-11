@@ -324,49 +324,6 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Actions Shortcuts */}
-          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-brand-brown">
-              Accesos Rápido
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => navigate('/productos')}
-                className="p-3 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 border border-brand-secondary text-left transition-colors"
-              >
-                <Utensils className="w-4 h-4 text-brand-brown mb-1" />
-                <span className="text-xs font-bold text-brand-dark block">Productos</span>
-                <span className="text-[10px] text-brand-brown/70 block">Gestión de carta</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/mesas')}
-                className="p-3 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 border border-brand-secondary text-left transition-colors"
-              >
-                <SquareCheckBig className="w-4 h-4 text-brand-brown mb-1" />
-                <span className="text-xs font-bold text-brand-dark block">Mesas QR</span>
-                <span className="text-[10px] text-brand-brown/70 block">Ver sectores</span>
-              </button>
-
-              <button
-                onClick={() => checkPlanAccess('gestion', 'Recetas y Costos') && navigate('/recetas')}
-                className="p-3 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 border border-brand-secondary text-left transition-colors"
-              >
-                <Sparkles className="w-4 h-4 text-brand-brown mb-1" />
-                <span className="text-xs font-bold text-brand-dark block">Costos</span>
-                <span className="text-[10px] text-brand-brown/70 block">Plan Gestión</span>
-              </button>
-
-              <button
-                onClick={() => checkPlanAccess('fidelizacion', 'WhatsApp') && navigate('/whatsapp')}
-                className="p-3 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 border border-brand-secondary text-left transition-colors"
-              >
-                <Truck className="w-4 h-4 text-brand-brown mb-1" />
-                <span className="text-xs font-bold text-brand-dark block">WhatsApp</span>
-                <span className="text-[10px] text-brand-brown/70 block">Plan Fidelización</span>
-              </button>
-            </div>
-          </div>
 
       {/* Insights Section */}
       <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4">

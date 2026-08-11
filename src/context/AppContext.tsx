@@ -449,7 +449,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const id = crypto.randomUUID();
     const codeNumber = Math.floor(1000 + Math.random() * 9000);
     const code = `ORD-${codeNumber}`;
-    const pointsEarned = Math.round(orderData.total * 0.05);
+    const pointsEarned = Math.floor(orderData.total / 1000);
 
     const newOrder: Order = {
       ...orderData,
@@ -1064,6 +1064,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       product.price
     );
   };
+
 
   return (
     <AppContext.Provider

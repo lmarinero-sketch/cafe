@@ -70,7 +70,7 @@ export async function createCustomer(
     email: customerData.email || '',
     birth_date: customerData.birthDate || '',
     marketing_consent: customerData.marketingConsent ?? true,
-    points: 150, // Welcome bonus
+    points: 10, // Welcome bonus
     level: 'Inicial',
     purchase_count: 0,
     total_spent: 0,

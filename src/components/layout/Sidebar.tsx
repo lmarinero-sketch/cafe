@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -38,7 +39,9 @@ interface SidebarItem {
 
 export const Sidebar: React.FC = () => {
   const { plan, checkPlanAccess } = useApp();
+  const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -54,11 +57,11 @@ export const Sidebar: React.FC = () => {
     { name: 'Delivery', path: '/delivery', icon: <Truck className="w-4 h-4" />, requiredPlan: 'esencial' },
     
     // Plan Gestión (Tesorería & Costos)
-    { name: 'Caja', path: '/caja', icon: <Wallet className="w-4 h-4" />, requiredPlan: 'gestion' },
-    { name: 'Métricas', path: '/metricas', icon: <BarChart3 className="w-4 h-4" />, requiredPlan: 'gestion' },
-    { name: 'Insights', path: '/insights', icon: <Lightbulb className="w-4 h-4" />, requiredPlan: 'gestion' },
-    { name: 'Ingredientes', path: '/ingredientes', icon: <Apple className="w-4 h-4" />, requiredPlan: 'gestion' },
-    { name: 'Recetas y Costos', path: '/recetas', icon: <Calculator className="w-4 h-4" />, requiredPlan: 'gestion' },
+    { name: 'Caja', path: '/caja', icon: <Wallet className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
+    { name: 'Ingredientes', path: '/ingredientes', icon: <Apple className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
+    { name: 'Recetas y Costos', path: '/recetas', icon: <Calculator className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
+    { name: 'Métricas', path: '/metricas', icon: <BarChart3 className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
+    { name: 'Insights', path: '/insights', icon: <Lightbulb className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
     
     // Plan Fidelización & Marketing
     { name: 'Sitio Promocional', path: '/sitio-promocional', icon: <Globe className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
@@ -66,8 +69,7 @@ export const Sidebar: React.FC = () => {
     { name: 'Clientes', path: '/clientes', icon: <Users className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
     { name: 'Puntos y Recompensas', path: '/puntos', icon: <Award className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
     { name: 'Tarjetas Virtuales', path: '/tarjetas', icon: <CreditCard className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
-    { name: 'WhatsApp', path: '/whatsapp', icon: <MessageSquare className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
-    { name: 'Automatizaciones', path: '/automatizaciones', icon: <Zap className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
+
     
     // Standard
     { name: 'Manuales', path: '/manuales', icon: <BookOpen className="w-4 h-4" />, requiredPlan: 'esencial' },
@@ -116,12 +118,47 @@ export const Sidebar: React.FC = () => {
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed lg:static top-0 left-0 bottom-0 z-50 w-64 bg-brand-card border-r border-brand-secondary/80 flex flex-col justify-between transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:static top-0 left-0 bottom-0 z-50 ${isCollapsed ? 'w-20' : 'w-64'} bg-brand-card border-r border-brand-secondary/80 flex flex-col justify-between transition-all duration-300 ease-in-out ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-          {/* Header Link to Public Landing */}
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 overflow-x-hidden">
+          {/* Logo & Collapse Toggle */}
+          <div className="flex items-center justify-between px-2 mb-6">
+            <div
+              onClick={() => navigate('/dashboard')}
+              className={`flex items-center gap-3 cursor-pointer group ${isCollapsed ? 'justify-center w-full' : ''}`}
+            >
+              <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shadow-sm group-hover:scale-105 transition-transform bg-white shrink-0">
+                <img src="/logo_hilos_de_amor.jpg" alt="Hilos de Amor" className="w-full h-full object-cover" />
+              </div>
+              {!isCollapsed && (
+                <div className="min-w-0 transition-opacity duration-300">
+                  <h1 className="text-base font-bold text-slate-900 leading-tight font-serif group-hover:text-[#2F5233] transition-colors truncate">
+                    {user?.name || 'Hilos de Amor'}
+                  </h1>
+                  <span className="text-xs text-slate-500 font-medium truncate block">Pastelería & Encordado</span>
+                </div>
+              )}
+            </div>
+            {!isCollapsed && (
+              <button 
+                onClick={() => setIsCollapsed(true)}
+                className="hidden lg:flex p-1.5 rounded-lg hover:bg-brand-secondary/50 text-brand-dark/60 hover:text-brand-dark transition-colors shrink-0"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+            )}
+            {isCollapsed && (
+              <button 
+                onClick={() => setIsCollapsed(false)}
+                className="hidden lg:flex absolute top-4 -right-3 p-1 rounded-full bg-brand-card border border-brand-secondary shadow-soft hover:bg-brand-secondary/50 text-brand-dark/60 hover:text-brand-dark transition-colors z-50"
+              >
+                <Menu className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          {/* Header Link to Public Landing 
           <div
             onClick={() => {
               navigate('/planes');
@@ -139,11 +176,12 @@ export const Sidebar: React.FC = () => {
             </div>
             <Store className="w-4 h-4 text-brand-brown shrink-0" />
           </div>
+          */}
 
           {/* Navigation Sections */}
           <div className="space-y-1">
-            <p className="px-3 text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-2">
-              Gestión Operativa (Esencial)
+            <p className={`px-3 text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>
+              Gestión Operativa
             </p>
             {navItems.slice(0, 7).map((item) => {
               const locked = isPlanLocked(item.requiredPlan);
@@ -153,7 +191,8 @@ export const Sidebar: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   onClick={(e) => handleNavClick(e, item)}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
+                  title={isCollapsed ? item.name : undefined}
+                  className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
                     isActive
                       ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
                       : 'text-brand-dark/80 hover:bg-brand-secondary/40 hover:text-brand-dark'
@@ -161,9 +200,9 @@ export const Sidebar: React.FC = () => {
                 >
                   <div className="flex items-center gap-2.5">
                     {item.icon}
-                    <span>{item.name}</span>
+                    {!isCollapsed && <span>{item.name}</span>}
                   </div>
-                  {locked && <Lock className="w-3.5 h-3.5 text-brand-brown/50" />}
+                  {!isCollapsed && locked && <Lock className="w-3.5 h-3.5 text-brand-brown/50 shrink-0" />}
                 </NavLink>
               );
             })}
@@ -171,7 +210,7 @@ export const Sidebar: React.FC = () => {
 
           {/* Plan Gestión - Tesorería Section */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between px-3 mb-2">
+            <div className={`flex items-center justify-between px-3 mb-2 ${isCollapsed ? 'hidden' : 'flex'}`}>
               <p className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider">
                 Tesorería & Ingresos
               </p>
@@ -181,7 +220,7 @@ export const Sidebar: React.FC = () => {
                 </span>
               )}
             </div>
-            {navItems.slice(8, 11).map((item) => {
+            {navItems.slice(8, 9).map((item) => {
               const locked = isPlanLocked(item.requiredPlan);
               const isActive = location.pathname === item.path;
               return (
@@ -189,7 +228,8 @@ export const Sidebar: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   onClick={(e) => handleNavClick(e, item)}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
+                  title={isCollapsed ? item.name : undefined}
+                  className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
                     isActive
                       ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
                       : locked
@@ -199,17 +239,17 @@ export const Sidebar: React.FC = () => {
                 >
                   <div className="flex items-center gap-2.5">
                     {item.icon}
-                    <span>{item.name}</span>
+                    {!isCollapsed && <span>{item.name}</span>}
                   </div>
-                  {locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70" />}
+                  {!isCollapsed && locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70 shrink-0" />}
                 </NavLink>
               );
             })}
           </div>
 
-          {/* Plan Gestión - Costos e Inventario */}
+          {/* Plan Gestión - Costos e Inteligencia */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between px-3 mb-2">
+            <div className={`flex items-center justify-between px-3 mb-2 ${isCollapsed ? 'hidden' : 'flex'}`}>
               <p className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider">
                 Costos & Inteligencia
               </p>
@@ -219,7 +259,7 @@ export const Sidebar: React.FC = () => {
                 </span>
               )}
             </div>
-            {navItems.slice(11, 13).map((item) => {
+            {navItems.slice(9, 13).map((item) => {
               const locked = isPlanLocked(item.requiredPlan);
               const isActive = location.pathname === item.path;
               return (
@@ -227,7 +267,8 @@ export const Sidebar: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   onClick={(e) => handleNavClick(e, item)}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
+                  title={isCollapsed ? item.name : undefined}
+                  className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
                     isActive
                       ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
                       : locked
@@ -237,9 +278,9 @@ export const Sidebar: React.FC = () => {
                 >
                   <div className="flex items-center gap-2.5">
                     {item.icon}
-                    <span>{item.name}</span>
+                    {!isCollapsed && <span>{item.name}</span>}
                   </div>
-                  {locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70" />}
+                  {!isCollapsed && locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70 shrink-0" />}
                 </NavLink>
               );
             })}
@@ -247,7 +288,7 @@ export const Sidebar: React.FC = () => {
 
           {/* Plan Fidelización Section */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between px-3 mb-2">
+            <div className={`flex items-center justify-between px-3 mb-2 ${isCollapsed ? 'hidden' : 'flex'}`}>
               <p className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider">
                 Fidelización & Marketing
               </p>
@@ -265,7 +306,8 @@ export const Sidebar: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   onClick={(e) => handleNavClick(e, item)}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
+                  title={isCollapsed ? item.name : undefined}
+                  className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
                     isActive
                       ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
                       : locked
@@ -275,16 +317,16 @@ export const Sidebar: React.FC = () => {
                 >
                   <div className="flex items-center gap-2.5">
                     {item.icon}
-                    <span>{item.name}</span>
+                    {!isCollapsed && <span>{item.name}</span>}
                   </div>
-                  {locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70" />}
+                  {!isCollapsed && locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70 shrink-0" />}
                 </NavLink>
               );
             })}
           </div>
 
           {/* Standard Section */}
-          <div className="space-y-1 pt-2 border-t border-brand-secondary/60">
+          <div className={`space-y-1 pt-2 border-t border-brand-secondary/60 ${isCollapsed ? 'mt-4' : ''}`}>
             {navItems.slice(18).map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -292,7 +334,8 @@ export const Sidebar: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   onClick={(e) => handleNavClick(e, item)}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
+                  title={isCollapsed ? item.name : undefined}
+                  className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
                     isActive
                       ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
                       : 'text-brand-dark/80 hover:bg-brand-secondary/40 hover:text-brand-dark'
@@ -300,7 +343,7 @@ export const Sidebar: React.FC = () => {
                 >
                   <div className="flex items-center gap-2.5">
                     {item.icon}
-                    <span>{item.name}</span>
+                    {!isCollapsed && <span>{item.name}</span>}
                   </div>
                 </NavLink>
               );

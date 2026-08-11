@@ -4,19 +4,24 @@ import { useApp } from '../context/AppContext';
 import { Category, Product } from '../types';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 import { formatCurrency } from '../utils/currency';
+import { uploadImage } from '../services/storage.service';
+import { useToast } from '../context/ToastContext';
 
 export const CategoriesPage: React.FC = () => {
-  const { categories, products } = useApp();
+  const { categories, products, updateProduct } = useApp();
+  const { showToast } = useToast();
 
   const [categoryList, setCategoryList] = useState<Category[]>(categories);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [viewingCategory, setViewingCategory] = useState<Category | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
     icon: 'Coffee',
+    image: '',
   });
 
   const getProductCountForCategory = (catId: string) => {
@@ -25,7 +30,7 @@ export const CategoriesPage: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     setEditingCategory(null);
-    setFormData({ name: '', slug: '', icon: 'Coffee' });
+    setFormData({ name: '', slug: '', icon: 'Coffee', image: '' });
     setIsModalOpen(true);
   };
 
@@ -35,8 +40,30 @@ export const CategoriesPage: React.FC = () => {
       name: cat.name,
       slug: cat.slug,
       icon: cat.icon || 'Coffee',
+      image: cat.image || '',
     });
     setIsModalOpen(true);
+  };
+
+  const handleImageUpload = async (file: File) => {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      showToast('Formato no soportado', 'Por favor sube una imagen en formato JPG, PNG o WEBP para evitar errores.', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Archivo muy grande', 'La imagen supera los 5MB. Te recomendamos usar imágenes optimizadas (JPG, PNG o WEBP de menos de 2MB).', 'error');
+      return;
+    }
+    setIsUploading(true);
+    const url = await uploadImage('website-images', file);
+    if (url) {
+      setFormData(prev => ({ ...prev, image: url }));
+      showToast('Imagen subida', 'La imagen de la categoría se cargó correctamente.', 'success');
+    } else {
+      showToast('Error al subir imagen', 'No se pudo procesar la imagen. Asegúrate de usar un formato válido (JPG, PNG, WEBP).', 'error');
+    }
+    setIsUploading(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -47,7 +74,7 @@ export const CategoriesPage: React.FC = () => {
       setCategoryList((prev) =>
         prev.map((c) =>
           c.id === editingCategory.id
-            ? { ...c, name: formData.name, slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-') }
+            ? { ...c, name: formData.name, slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'), image: formData.image }
             : c
         )
       );
@@ -57,6 +84,7 @@ export const CategoriesPage: React.FC = () => {
         name: formData.name,
         slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
         icon: formData.icon,
+        image: formData.image,
       };
       setCategoryList((prev) => [...prev, newCat]);
     }
@@ -113,8 +141,12 @@ export const CategoriesPage: React.FC = () => {
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-brand-cream text-brand-brown flex items-center justify-center border border-brand-secondary font-bold text-lg shadow-xs">
-                    🧁
+                  <div className="w-12 h-12 rounded-xl bg-brand-cream border border-brand-secondary overflow-hidden flex items-center justify-center shadow-xs">
+                    {cat.image ? (
+                      <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xl">🧁</span>
+                    )}
                   </div>
                   <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300">
                     Visible en QR
@@ -191,6 +223,34 @@ export const CategoriesPage: React.FC = () => {
                 />
               </div>
 
+              <div>
+                <label className="block font-bold text-brand-dark mb-1">Imagen de la Categoría</label>
+                <div className="flex items-center gap-3">
+                  {formData.image && (
+                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-brand-secondary shrink-0">
+                      <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <label className="flex-1 cursor-pointer bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark px-3 py-2 rounded-lg border border-brand-secondary text-xs font-semibold text-center transition-colors">
+                    {isUploading ? 'Subiendo...' : 'Subir Imagen'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleImageUpload(e.target.files[0]);
+                        }
+                      }}
+                      disabled={isUploading}
+                    />
+                  </label>
+                </div>
+                <p className="text-[10px] text-brand-brown/70 mt-1.5 italic">
+                  * Formatos recomendados: .jpg, .png o .webp (máximo 2MB)
+                </p>
+              </div>
+
               <div className="pt-2 flex items-center gap-2">
                 <button
                   type="submit"
@@ -229,6 +289,26 @@ export const CategoriesPage: React.FC = () => {
             </div>
             
             <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+              {/* Selector para asociar producto */}
+              <div className="bg-brand-bg p-3 rounded-xl border border-brand-secondary/60 mb-4 flex items-center gap-2">
+                <select
+                  className="flex-1 px-3 py-2 rounded-lg text-xs font-bold border border-brand-secondary bg-brand-card focus:outline-none focus:ring-1 focus:ring-brand-brown"
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    if (selectedId) {
+                      updateProduct(selectedId, { categoryId: viewingCategory.id, categoryName: viewingCategory.name });
+                      showToast('Producto Asociado', 'El producto se agregó a la categoría.', 'success');
+                      e.target.value = '';
+                    }
+                  }}
+                >
+                  <option value="">+ Asociar producto existente...</option>
+                  {products.filter(p => p.categoryId !== viewingCategory.id).map(p => (
+                    <option key={p.id} value={p.id}>{p.name} (Actual: {p.categoryName || 'Ninguna'})</option>
+                  ))}
+                </select>
+              </div>
+
               {products.filter(p => p.categoryId === viewingCategory.id).length === 0 ? (
                 <p className="text-center text-brand-brown/60 text-xs py-4">No hay productos en esta categoría.</p>
               ) : (
@@ -238,9 +318,18 @@ export const CategoriesPage: React.FC = () => {
                       <span className="text-sm font-bold text-brand-dark">{prod.name}</span>
                       <span className="text-xs text-brand-brown/80">{formatCurrency(prod.price)}</span>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${prod.isAvailable ? 'bg-brand-green/20 text-emerald-900' : 'bg-red-100 text-red-900'}`}>
-                      {prod.isAvailable ? 'Disponible' : 'Agotado'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${prod.isAvailable ? 'bg-brand-green/20 text-emerald-900' : 'bg-red-100 text-red-900'}`}>
+                        {prod.isAvailable ? 'Disponible' : 'Agotado'}
+                      </span>
+                      <button
+                        onClick={() => updateProduct(prod.id, { categoryId: 'uncategorized', categoryName: 'Sin Categoría' })}
+                        className="text-[10px] text-red-600 hover:bg-red-50 p-1 rounded transition-colors"
+                        title="Quitar de categoría"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

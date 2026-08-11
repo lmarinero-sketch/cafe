@@ -28,43 +28,8 @@ export const HeaderPlanSwitcher: React.FC = () => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-2.5 shadow-xs">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Brand Logo & Info */}
-        <div className="flex items-center gap-3.5 w-full md:w-auto justify-between md:justify-start">
-          <div
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-3 cursor-pointer group"
-          >
-            <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shadow-sm group-hover:scale-105 transition-transform bg-white shrink-0">
-              <img src="/logo_hilos_de_amor.jpg" alt="Hilos de Amor" className="w-full h-full object-cover" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-slate-900 leading-tight font-serif group-hover:text-[#2F5233] transition-colors">
-                  {user?.name || 'Hilos de Amor'}
-                </h1>
-              </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-slate-500 font-medium">Pastelería & Encordado</span>
-                <span className="text-slate-300">•</span>
-                <a
-                  href="https://www.growlabs.lat"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100/90 hover:bg-emerald-50 hover:border-emerald-200 border border-slate-200/80 text-[10px] font-medium text-slate-600 hover:text-emerald-800 transition-all"
-                >
-                  <img src="/logogrow.png" alt="Grow Labs" className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />
-                  <span>Diseñado por <strong className="font-extrabold text-emerald-800">Grow Labs</strong></span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile Plan Badge */}
-          <div className="md:hidden">
-            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-              {planLabels[plan] || 'Fidelización'}
-            </span>
-          </div>
+        <div className="md:hidden">
+          {/* Mobile Plan Badge placeholder if needed */}
         </div>
 
         {/* Plan Contratado + Countdown (Desktop) */}
@@ -104,31 +69,6 @@ export const HeaderPlanSwitcher: React.FC = () => {
 
         {/* Header Right Actions */}
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => navigate('/editor-web')}
-            className="hidden sm:flex py-2 px-3.5 rounded-xl bg-[#2F5233] hover:bg-[#223d26] text-white font-bold text-xs items-center gap-1.5 transition-all shadow-xs border border-[#1b311e]"
-          >
-            <SquarePen className="w-3.5 h-3.5 text-emerald-200" />
-            Editor Web
-          </button>
-
-          <button
-            onClick={() => window.open('/sitio-promocional', '_blank')}
-            className="hidden sm:flex py-2 px-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200/90 font-semibold text-xs items-center gap-1.5 transition-all shadow-xs"
-          >
-            <Globe className="w-3.5 h-3.5 text-slate-500" />
-            Ver Sitio Web
-          </button>
-
-          <button
-            onClick={() => window.open('/menu', '_blank')}
-            className="hidden sm:flex py-2 px-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200/90 font-semibold text-xs items-center gap-1.5 transition-all shadow-xs"
-          >
-            <Smartphone className="w-3.5 h-3.5 text-slate-500" />
-            Menú Digital
-          </button>
-
-          <div className="h-4 w-[1px] bg-slate-200 mx-0.5 hidden sm:block" />
 
           <button
             onClick={handleLogout}

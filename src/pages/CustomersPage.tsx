@@ -179,12 +179,12 @@ export const CustomersPage: React.FC = () => {
                 </div>
               </div>
 
-              <button
+              {/* <button
                 onClick={() => setSelectedActionCustomer({ customer: c, actionType: 'Voucher 20% Desc.' })}
                 className="w-full py-1.5 px-3 rounded-lg bg-brand-brown text-brand-card font-bold text-[11px] hover:bg-brand-dark transition-colors flex items-center justify-center gap-1.5 shadow-xs"
               >
                 <Gift className="w-3.5 h-3.5 text-brand-yellow" /> Ofrecer Atención
-              </button>
+              </button> */}
             </div>
           ))}
         </div>
