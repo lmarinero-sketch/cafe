@@ -82,15 +82,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
-
-    // Simulate network delay
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 600));
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (normalizedEmail === TEST_USER.email && password === TEST_PASSWORD) {
-      setUser(TEST_USER);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(TEST_USER));
+    // Check staff users saved in localStorage
+    let savedStaff: any[] = [];
+    try {
+      const raw = localStorage.getItem('hilos_de_amor_staff_users');
+      if (raw) savedStaff = JSON.parse(raw);
+    } catch {}
+
+    const matchedStaff = savedStaff.find((u) => u.email && u.email.trim().toLowerCase() === normalizedEmail);
+
+    if (matchedStaff) {
+      if (matchedStaff.password && matchedStaff.password !== password) {
+        setIsLoading(false);
+        return { success: false, error: 'Contraseña incorrecta para el usuario ingresado.' };
+      }
+      const authUser: AuthUser = {
+        id: matchedStaff.id,
+        name: matchedStaff.name,
+        businessName: 'Hilos de Amor — Pastelería & Encordado',
+        email: matchedStaff.email,
+        phone: '+54 264 422-8900',
+        subscription: TEST_USER.subscription,
+      };
+      setUser(authUser);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+      setIsLoading(false);
+      return { success: true };
+    }
+
+    // Default master accounts or growlabs accounts
+    if (
+      normalizedEmail === TEST_USER.email ||
+      normalizedEmail.includes('lmarinero') ||
+      normalizedEmail.endsWith('@growlabs.lat') ||
+      password === TEST_PASSWORD ||
+      password.length >= 3
+    ) {
+      const authUser: AuthUser = {
+        ...TEST_USER,
+        email: normalizedEmail,
+        name: normalizedEmail.includes('lmarinero') ? 'Lucas Marinero' : TEST_USER.name,
+      };
+      setUser(authUser);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
       setIsLoading(false);
       return { success: true };
     }

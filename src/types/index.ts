@@ -313,5 +313,6 @@ export interface StaffUser {
   name: string;
   role: 'admin' | 'cajero' | 'mozo';
   email: string;
+  password?: string;
   status: 'active' | 'inactive';
 }

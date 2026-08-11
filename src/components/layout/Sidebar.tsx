@@ -45,34 +45,63 @@ export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const navItems: SidebarItem[] = [
-    // Plan Esencial
-    { name: 'Inicio', path: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" />, requiredPlan: 'esencial' },
-    { name: 'Productos', path: '/productos', icon: <ShoppingBag className="w-4 h-4" />, requiredPlan: 'esencial' },
-    { name: 'Categorías', path: '/categorias', icon: <Grid className="w-4 h-4" />, requiredPlan: 'esencial' },
-    { name: 'Mesas', path: '/mesas', icon: <SquareCheckBig className="w-4 h-4" />, requiredPlan: 'esencial' },
-    { name: 'Menú Digital', path: '/menu', icon: <QrCode className="w-4 h-4" />, requiredPlan: 'esencial' },
-    { name: 'Pedidos', path: '/pedidos', icon: <UtensilsCrossed className="w-4 h-4" />, requiredPlan: 'esencial' },
-    { name: 'Delivery', path: '/delivery', icon: <Truck className="w-4 h-4" />, requiredPlan: 'esencial' },
-    
-    // Plan Gestión (Tesorería & Costos)
-    { name: 'Caja', path: '/caja', icon: <Wallet className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
-    { name: 'Ingredientes', path: '/ingredientes', icon: <Apple className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
-    { name: 'Recetas y Costos', path: '/recetas', icon: <Calculator className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
-    { name: 'Métricas', path: '/metricas', icon: <BarChart3 className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
-    { name: 'Insights', path: '/insights', icon: <Lightbulb className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
-    
-    // Plan Fidelización & Marketing
-    { name: 'Sitio Promocional', path: '/sitio-promocional', icon: <Globe className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
-    { name: 'Editor Web', path: '/editor-web', icon: <Settings className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
-    { name: 'Clientes', path: '/clientes', icon: <Users className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
-    { name: 'Puntos y Recompensas', path: '/puntos', icon: <Award className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
-    { name: 'Tarjetas Virtuales', path: '/tarjetas', icon: <CreditCard className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
+  interface NavSection {
+    title: string;
+    badge?: string;
+    badgePlan?: PlanType;
+    items: SidebarItem[];
+  }
 
-    
-    // Standard
-    { name: 'Manuales', path: '/manuales', icon: <BookOpen className="w-4 h-4" />, requiredPlan: 'esencial' },
-    { name: 'Configuración', path: '/configuracion', icon: <Settings className="w-4 h-4" />, requiredPlan: 'esencial' },
+  const navSections: NavSection[] = [
+    {
+      title: 'Gestión Operativa',
+      items: [
+        { name: 'Inicio', path: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" />, requiredPlan: 'esencial' },
+        { name: 'Productos', path: '/productos', icon: <ShoppingBag className="w-4 h-4" />, requiredPlan: 'esencial' },
+        { name: 'Categorías', path: '/categorias', icon: <Grid className="w-4 h-4" />, requiredPlan: 'esencial' },
+        { name: 'Mesas', path: '/mesas', icon: <SquareCheckBig className="w-4 h-4" />, requiredPlan: 'esencial' },
+        { name: 'Menú Digital', path: '/menu', icon: <QrCode className="w-4 h-4" />, requiredPlan: 'esencial' },
+        { name: 'Pedidos', path: '/pedidos', icon: <UtensilsCrossed className="w-4 h-4" />, requiredPlan: 'esencial' },
+        { name: 'Delivery', path: '/delivery', icon: <Truck className="w-4 h-4" />, requiredPlan: 'esencial' },
+      ],
+    },
+    {
+      title: 'Tesorería & Ingresos',
+      items: [
+        { name: 'Caja', path: '/caja', icon: <Wallet className="w-4 h-4 shrink-0" />, requiredPlan: 'esencial' },
+      ],
+    },
+    {
+      title: 'Costos & Inteligencia',
+      badge: 'Plan Gestión',
+      badgePlan: 'gestion',
+      items: [
+        { name: 'Ingredientes', path: '/ingredientes', icon: <Apple className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
+        { name: 'Recetas y Costos', path: '/recetas', icon: <Calculator className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
+        { name: 'Métricas', path: '/metricas', icon: <BarChart3 className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
+        { name: 'Insights', path: '/insights', icon: <Lightbulb className="w-4 h-4 shrink-0" />, requiredPlan: 'gestion' },
+      ],
+    },
+    {
+      title: 'Fidelización & Marketing',
+      badge: 'Plan Fidelización',
+      badgePlan: 'fidelizacion',
+      items: [
+        { name: 'Sitio Promocional', path: '/sitio-promocional', icon: <Globe className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
+        { name: 'Editor Web', path: '/editor-web', icon: <Settings className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
+        { name: 'Clientes', path: '/clientes', icon: <Users className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
+        { name: 'Puntos y Recompensas', path: '/puntos', icon: <Award className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
+        { name: 'Tarjetas Virtuales', path: '/tarjetas', icon: <CreditCard className="w-4 h-4" />, requiredPlan: 'fidelizacion' },
+      ],
+    },
+    {
+      title: 'Sistema & Personal',
+      items: [
+        { name: 'Usuarios y Equipo', path: '/configuracion', icon: <Users className="w-4 h-4" />, requiredPlan: 'esencial' },
+        { name: 'Manuales', path: '/manuales', icon: <BookOpen className="w-4 h-4" />, requiredPlan: 'esencial' },
+        { name: 'Configuración', path: '/configuracion', icon: <Settings className="w-4 h-4" />, requiredPlan: 'esencial' },
+      ],
+    },
   ];
 
   const handleNavClick = (e: React.MouseEvent, item: SidebarItem) => {
@@ -110,38 +139,40 @@ export const Sidebar: React.FC = () => {
       {/* Backdrop for Mobile */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-brand-dark/40 backdrop-blur-xs lg:hidden"
+          className="lg:hidden fixed inset-0 bg-brand-dark/40 backdrop-blur-xs z-40 animate-fade-in"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Sidebar Navigation */}
       <aside
-        className={`fixed lg:static top-0 left-0 bottom-0 z-50 ${isCollapsed ? 'w-20' : 'w-64'} bg-brand-card border-r border-brand-secondary/80 flex flex-col justify-between transition-all duration-300 ease-in-out ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
+        className={`fixed lg:static top-0 left-0 z-50 h-full bg-brand-card border-r border-brand-secondary flex flex-col justify-between transition-all duration-300 shadow-soft-lg lg:shadow-none ${
+          mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0'
+        } ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}`}
       >
-        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 overflow-x-hidden">
-          {/* Logo & Collapse Toggle */}
-          <div className="flex items-center justify-between px-2 mb-6">
+        <div className="p-4 space-y-6 overflow-y-auto flex-1 no-scrollbar">
+          {/* Brand Logo & Header */}
+          <div className="flex items-center justify-between relative border-b border-brand-secondary/60 pb-4">
             <div
               onClick={() => navigate('/dashboard')}
-              className={`flex items-center gap-3 cursor-pointer group ${isCollapsed ? 'justify-center w-full' : ''}`}
+              className="flex items-center gap-3 cursor-pointer group"
             >
-              <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shadow-sm group-hover:scale-105 transition-transform bg-white shrink-0">
-                <img src="/logo_hilos_de_amor.jpg" alt="Hilos de Amor" className="w-full h-full object-cover" />
-              </div>
+              <img
+                src="/logo_hilos_de_amor.jpg"
+                alt="Logo Hilos de Amor"
+                className="w-10 h-10 rounded-full border border-brand-secondary object-cover shadow-soft group-hover:scale-105 transition-transform"
+              />
               {!isCollapsed && (
-                <div className="min-w-0 transition-opacity duration-300">
-                  <h1 className="text-base font-bold text-slate-900 leading-tight font-serif group-hover:text-[#2F5233] transition-colors truncate">
-                    {user?.name || 'Hilos de Amor'}
+                <div>
+                  <h1 className="font-extrabold text-brand-dark text-base leading-tight font-serif">
+                    Hilos de Amor
                   </h1>
-                  <span className="text-xs text-slate-500 font-medium truncate block">Pastelería & Encordado</span>
+                  <p className="text-[10px] text-brand-brown/80 font-medium">Pastelería & Encordado</p>
                 </div>
               )}
             </div>
             {!isCollapsed && (
-              <button 
+              <button
                 onClick={() => setIsCollapsed(true)}
                 className="hidden lg:flex p-1.5 rounded-lg hover:bg-brand-secondary/50 text-brand-dark/60 hover:text-brand-dark transition-colors shrink-0"
               >
@@ -149,7 +180,7 @@ export const Sidebar: React.FC = () => {
               </button>
             )}
             {isCollapsed && (
-              <button 
+              <button
                 onClick={() => setIsCollapsed(false)}
                 className="hidden lg:flex absolute top-4 -right-3 p-1 rounded-full bg-brand-card border border-brand-secondary shadow-soft hover:bg-brand-secondary/50 text-brand-dark/60 hover:text-brand-dark transition-colors z-50"
               >
@@ -157,196 +188,49 @@ export const Sidebar: React.FC = () => {
               </button>
             )}
           </div>
-          {/* Header Link to Public Landing 
-          <div
-            onClick={() => {
-              navigate('/planes');
-              setMobileOpen(false);
-            }}
-            className="p-3 rounded-xl bg-brand-cream border border-brand-secondary/60 cursor-pointer hover:border-brand-brown/40 transition-colors flex items-center justify-between group"
-          >
-            <div>
-              <span className="text-[10px] uppercase font-bold text-brand-brown/80 tracking-wider">
-                Presentación Comercial
-              </span>
-              <h4 className="text-xs font-bold text-brand-dark group-hover:text-brand-brown flex items-center gap-1">
-                Ver 3 Planes Comerciales
-              </h4>
-            </div>
-            <Store className="w-4 h-4 text-brand-brown shrink-0" />
-          </div>
-          */}
 
-          {/* Navigation Sections */}
-          <div className="space-y-1">
-            <p className={`px-3 text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-2 ${isCollapsed ? 'hidden' : 'block'}`}>
-              Gestión Operativa
-            </p>
-            {navItems.slice(0, 7).map((item) => {
-              const locked = isPlanLocked(item.requiredPlan);
-              const isActive = location.pathname === item.path;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={(e) => handleNavClick(e, item)}
-                  title={isCollapsed ? item.name : undefined}
-                  className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
-                    isActive
-                      ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
-                      : 'text-brand-dark/80 hover:bg-brand-secondary/40 hover:text-brand-dark'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    {item.icon}
-                    {!isCollapsed && <span>{item.name}</span>}
-                  </div>
-                  {!isCollapsed && locked && <Lock className="w-3.5 h-3.5 text-brand-brown/50 shrink-0" />}
-                </NavLink>
-              );
-            })}
-          </div>
+          {/* Dynamic Navigation Sections */}
+          <div className="space-y-4">
+            {navSections.map((sec, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className={`flex items-center justify-between px-3 mb-1.5 ${isCollapsed ? 'hidden' : 'flex'}`}>
+                  <p className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider">
+                    {sec.title}
+                  </p>
+                  {sec.badgePlan && isPlanLocked(sec.badgePlan) && (
+                    <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${sec.badgePlan === 'fidelizacion' ? 'bg-brand-green/40 text-emerald-800' : 'bg-brand-yellow/40 text-brand-brown'}`}>
+                      {sec.badge}
+                    </span>
+                  )}
+                </div>
 
-          {/* Plan Gestión - Tesorería Section */}
-          <div className="space-y-1">
-            <div className={`flex items-center justify-between px-3 mb-2 ${isCollapsed ? 'hidden' : 'flex'}`}>
-              <p className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider">
-                Tesorería & Ingresos
-              </p>
-              {isPlanLocked('gestion') && (
-                <span className="text-[9px] bg-brand-yellow/40 text-brand-brown font-bold px-1.5 py-0.2 rounded">
-                  Plan Gestión
-                </span>
-              )}
-            </div>
-            {navItems.slice(8, 9).map((item) => {
-              const locked = isPlanLocked(item.requiredPlan);
-              const isActive = location.pathname === item.path;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={(e) => handleNavClick(e, item)}
-                  title={isCollapsed ? item.name : undefined}
-                  className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
-                    isActive
-                      ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
-                      : locked
-                      ? 'text-brand-dark/50 hover:bg-brand-secondary/20'
-                      : 'text-brand-dark/80 hover:bg-brand-secondary/40 hover:text-brand-dark'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    {item.icon}
-                    {!isCollapsed && <span>{item.name}</span>}
-                  </div>
-                  {!isCollapsed && locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70 shrink-0" />}
-                </NavLink>
-              );
-            })}
-          </div>
-
-          {/* Plan Gestión - Costos e Inteligencia */}
-          <div className="space-y-1">
-            <div className={`flex items-center justify-between px-3 mb-2 ${isCollapsed ? 'hidden' : 'flex'}`}>
-              <p className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider">
-                Costos & Inteligencia
-              </p>
-              {isPlanLocked('gestion') && (
-                <span className="text-[9px] bg-brand-yellow/40 text-brand-brown font-bold px-1.5 py-0.2 rounded">
-                  Plan Gestión
-                </span>
-              )}
-            </div>
-            {navItems.slice(9, 13).map((item) => {
-              const locked = isPlanLocked(item.requiredPlan);
-              const isActive = location.pathname === item.path;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={(e) => handleNavClick(e, item)}
-                  title={isCollapsed ? item.name : undefined}
-                  className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
-                    isActive
-                      ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
-                      : locked
-                      ? 'text-brand-dark/50 hover:bg-brand-secondary/20'
-                      : 'text-brand-dark/80 hover:bg-brand-secondary/40 hover:text-brand-dark'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    {item.icon}
-                    {!isCollapsed && <span>{item.name}</span>}
-                  </div>
-                  {!isCollapsed && locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70 shrink-0" />}
-                </NavLink>
-              );
-            })}
-          </div>
-
-          {/* Plan Fidelización Section */}
-          <div className="space-y-1">
-            <div className={`flex items-center justify-between px-3 mb-2 ${isCollapsed ? 'hidden' : 'flex'}`}>
-              <p className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider">
-                Fidelización & Marketing
-              </p>
-              {isPlanLocked('fidelizacion') && (
-                <span className="text-[9px] bg-brand-green/40 text-emerald-800 font-bold px-1.5 py-0.2 rounded">
-                  Plan Fidelización
-                </span>
-              )}
-            </div>
-            {navItems.slice(13, 18).map((item) => {
-              const locked = isPlanLocked(item.requiredPlan);
-              const isActive = location.pathname === item.path;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={(e) => handleNavClick(e, item)}
-                  title={isCollapsed ? item.name : undefined}
-                  className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
-                    isActive
-                      ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
-                      : locked
-                      ? 'text-brand-dark/50 hover:bg-brand-secondary/20'
-                      : 'text-brand-dark/80 hover:bg-brand-secondary/40 hover:text-brand-dark'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    {item.icon}
-                    {!isCollapsed && <span>{item.name}</span>}
-                  </div>
-                  {!isCollapsed && locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70 shrink-0" />}
-                </NavLink>
-              );
-            })}
-          </div>
-
-          {/* Standard Section */}
-          <div className={`space-y-1 pt-2 border-t border-brand-secondary/60 ${isCollapsed ? 'mt-4' : ''}`}>
-            {navItems.slice(18).map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={(e) => handleNavClick(e, item)}
-                  title={isCollapsed ? item.name : undefined}
-                  className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
-                    isActive
-                      ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
-                      : 'text-brand-dark/80 hover:bg-brand-secondary/40 hover:text-brand-dark'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    {item.icon}
-                    {!isCollapsed && <span>{item.name}</span>}
-                  </div>
-                </NavLink>
-              );
-            })}
+                {sec.items.map((item) => {
+                  const locked = isPlanLocked(item.requiredPlan);
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <NavLink
+                      key={item.name + item.path}
+                      to={item.path}
+                      onClick={(e) => handleNavClick(e, item)}
+                      title={isCollapsed ? item.name : undefined}
+                      className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
+                        isActive
+                          ? 'bg-brand-brown text-brand-card font-bold shadow-soft'
+                          : locked
+                          ? 'text-brand-dark/50 hover:bg-brand-secondary/20'
+                          : 'text-brand-dark/80 hover:bg-brand-secondary/40 hover:text-brand-dark'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        {item.icon}
+                        {!isCollapsed && <span>{item.name}</span>}
+                      </div>
+                      {!isCollapsed && locked && <Lock className="w-3.5 h-3.5 text-brand-brown/70 shrink-0" />}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
 

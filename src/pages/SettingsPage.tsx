@@ -99,12 +99,12 @@ export const SettingsPage: React.FC = () => {
     }
     setShowStaffForm(false);
     setEditingStaffId(null);
-    setStaffForm({ name: '', role: 'cajero', email: '', status: 'active' });
+    setStaffForm({ name: '', role: 'cajero', email: '', password: '', status: 'active' });
   };
 
   const handleStaffEdit = (u: StaffUser) => {
     setEditingStaffId(u.id);
-    setStaffForm({ name: u.name, role: u.role, email: u.email, status: u.status });
+    setStaffForm({ name: u.name, role: u.role, email: u.email, password: u.password || '', status: u.status });
     setShowStaffForm(true);
   };
 
@@ -241,7 +241,7 @@ export const SettingsPage: React.FC = () => {
               <h4 className="font-bold text-brand-dark text-sm border-b border-brand-secondary/60 pb-2">
                 {editingStaffId ? 'Editar Usuario' : 'Nuevo Usuario'}
               </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-brand-dark mb-1">Nombre Completo</label>
                   <input type="text" value={staffForm.name} onChange={e => setStaffForm({...staffForm, name: e.target.value})} className="w-full px-3 py-2 text-xs rounded-xl border border-brand-secondary bg-brand-card" placeholder="Ej. Juan Pérez" />
@@ -249,6 +249,10 @@ export const SettingsPage: React.FC = () => {
                 <div>
                   <label className="block text-xs font-bold text-brand-dark mb-1">Email (Acceso)</label>
                   <input type="email" value={staffForm.email} onChange={e => setStaffForm({...staffForm, email: e.target.value})} className="w-full px-3 py-2 text-xs rounded-xl border border-brand-secondary bg-brand-card" placeholder="juan@ejemplo.com" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-brand-dark mb-1">Contraseña de Acceso</label>
+                  <input type="password" value={staffForm.password || ''} onChange={e => setStaffForm({...staffForm, password: e.target.value})} className="w-full px-3 py-2 text-xs rounded-xl border border-brand-secondary bg-brand-card" placeholder="••••••••" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-brand-dark mb-1">Rol</label>
