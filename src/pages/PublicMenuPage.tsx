@@ -138,60 +138,62 @@ export const PublicMenuPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-dark pb-24 max-w-md mx-auto relative border-x border-brand-secondary/60 shadow-soft-lg">
-      {/* Mobile Top Header Banner */}
-      <div className="bg-brand-card p-4 border-b border-brand-secondary sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden border border-brand-brown shadow-soft bg-white shrink-0">
+    <div className="min-h-screen bg-brand-bg text-brand-dark pb-24 max-w-6xl mx-auto relative border-x border-brand-secondary/60 shadow-soft-lg">
+      {/* Top Header Banner */}
+      <div className="bg-brand-card p-4 sm:p-6 border-b border-brand-secondary sticky top-0 z-30 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border border-brand-brown shadow-soft bg-white shrink-0">
               <img src="/logo_hilos_de_amor.jpg" alt="Hilos de Amor" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h2 className="text-base font-extrabold text-brand-dark leading-tight font-serif">Hilos de Amor</h2>
+              <h2 className="text-base sm:text-lg font-extrabold text-brand-dark leading-tight font-serif">Hilos de Amor</h2>
               {selectedTableObj ? (
-                <span className="text-[11px] font-bold text-brand-brown bg-brand-yellow/40 px-2 py-0.5 rounded-full inline-block mt-0.5">
+                <span className="text-[11px] sm:text-xs font-bold text-brand-brown bg-brand-yellow/40 px-2.5 py-0.5 rounded-full inline-block mt-0.5 border border-brand-yellow/80">
                   📍 {selectedTableObj.number} ({selectedTableObj.sector})
                 </span>
               ) : (
-                <p className="text-[11px] text-brand-brown/80 font-semibold">Pastelería y Encordado</p>
+                <p className="text-[11px] sm:text-xs text-brand-brown/80 font-semibold">Pastelería y Encordado</p>
               )}
             </div>
           </div>
 
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="relative p-2.5 rounded-xl bg-brand-brown text-brand-card hover:bg-brand-dark transition-colors shadow-soft"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            {cart.length > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-brand-yellow text-brand-dark font-extrabold text-[10px] flex items-center justify-center border-2 border-brand-card">
-                {cart.reduce((s, i) => s + i.quantity, 0)}
-              </span>
-            )}
-          </button>
-        </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="relative flex-1 sm:w-64 md:w-80">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-brand-brown/60" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar cafés, medialunas, tartas..."
+                className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand-brown/40"
+              />
+            </div>
 
-        {/* Search Bar */}
-        <div className="relative mb-2.5">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-brand-brown/60" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar cafés, medialunas, tartas..."
-            className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand-brown/40"
-          />
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2.5 sm:px-4 sm:py-2 rounded-xl bg-brand-brown text-brand-card hover:bg-brand-dark transition-colors shadow-soft flex items-center gap-2 font-bold text-xs shrink-0"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              <span className="hidden sm:inline">Ver Pedido</span>
+              {cart.length > 0 && (
+                <span className="bg-brand-yellow text-brand-dark font-extrabold text-[10px] px-1.5 py-0.5 rounded-full border border-brand-card">
+                  {cart.reduce((s, i) => s + i.quantity, 0)}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Autogestión & Cash Impact Callout Banner */}
         <div className="bg-brand-yellow/30 border border-brand-yellow/80 rounded-xl p-3 text-xs text-brand-dark flex items-start gap-2.5 shadow-xs">
           <span className="text-base shrink-0">📱</span>
           <div>
-            <h4 className="font-extrabold text-brand-dark text-[11px] leading-tight">
+            <h4 className="font-extrabold text-brand-dark text-[11px] sm:text-xs leading-tight">
               Experiencia de Autogestión del Cliente
             </h4>
-            <p className="text-[10px] text-brand-brown/90 mt-0.5 leading-relaxed">
-              El cliente realiza todo el pedido de forma autónoma desde su celular. Al confirmar, <span className="font-bold text-brand-dark">impacta directamente en la caja</span> del comercio y en la comanda de cocina en tiempo real.
+            <p className="text-[10px] sm:text-xs text-brand-brown/90 mt-0.5 leading-relaxed">
+              El cliente realiza todo el pedido de forma autónoma desde su celular o PC. Al confirmar, <span className="font-bold text-brand-dark">impacta directamente en la caja</span> del comercio y en la comanda de cocina en tiempo real.
             </p>
           </div>
         </div>
@@ -230,7 +232,7 @@ export const PublicMenuPage: React.FC = () => {
           <h3 className="text-xs font-bold uppercase tracking-wider text-brand-brown flex items-center gap-1">
             <Star className="w-3.5 h-3.5 fill-brand-yellow text-brand-brown" /> Productos Destacados
           </h3>
-          <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pb-2">
             {featuredProducts.map((p) => (
               <div
                 key={p.id}
@@ -239,17 +241,19 @@ export const PublicMenuPage: React.FC = () => {
                   setProductQty(1);
                   setProductNotes('');
                 }}
-                className="w-40 shrink-0 bg-brand-card rounded-2xl border border-brand-secondary p-3 shadow-xs hover:border-brand-brown/50 cursor-pointer transition-all"
+                className="bg-brand-card rounded-2xl border border-brand-secondary p-3 shadow-xs hover:border-brand-brown/50 cursor-pointer transition-all flex flex-col justify-between"
               >
                 <img
                   src={p.image}
                   alt={p.name}
-                  className="w-full h-24 rounded-xl object-cover bg-brand-bg mb-2"
+                  className="w-full h-28 rounded-xl object-cover bg-brand-bg mb-2"
                 />
-                <h4 className="text-xs font-bold text-brand-dark truncate">{p.name}</h4>
-                <p className="text-xs font-extrabold text-brand-brown mt-0.5">
-                  {formatCurrency(p.price)}
-                </p>
+                <div>
+                  <h4 className="text-xs font-bold text-brand-dark truncate">{p.name}</h4>
+                  <p className="text-xs font-extrabold text-brand-brown mt-0.5">
+                    {formatCurrency(p.price)}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -262,7 +266,7 @@ export const PublicMenuPage: React.FC = () => {
           Nuestra Carta ({filteredProducts.length})
         </h3>
 
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProducts.map((p) => {
             const isOutOfStock = !p.isAvailable;
             return (
@@ -424,8 +428,8 @@ export const PublicMenuPage: React.FC = () => {
 
       {/* Cart Drawer */}
       {isCartOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-brand-card rounded-t-3xl border-t border-brand-secondary p-5 max-w-md w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-soft-lg">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-t-3xl sm:rounded-2xl border border-brand-secondary p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-soft-lg">
             <div className="flex items-center justify-between border-b border-brand-secondary pb-3">
               <h3 className="text-base font-bold text-brand-dark flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-brand-brown" /> Tu Pedido
