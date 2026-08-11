@@ -76,20 +76,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) return null;
       const parsed: AuthUser = JSON.parse(saved);
-      if (!parsed.role) {
-        try {
-          const raw = localStorage.getItem('hilos_de_amor_staff_users');
-          if (raw) {
-            const staff: any[] = JSON.parse(raw);
-            const match = staff.find((u) => u.email && u.email.trim().toLowerCase() === parsed.email.trim().toLowerCase());
-            if (match && match.role) {
-              parsed.role = match.role;
-            }
+
+      // Always re-sync role and name from registered staff users
+      try {
+        const raw = localStorage.getItem('hilos_de_amor_staff_users');
+        if (raw) {
+          const staff: any[] = JSON.parse(raw);
+          const match = staff.find((u) => u.email && u.email.trim().toLowerCase() === parsed.email.trim().toLowerCase());
+          if (match) {
+            parsed.role = match.role || 'cajero';
+            parsed.name = match.name || parsed.name;
           }
-        } catch {}
-        if (!parsed.role) {
-          parsed.role = (parsed.email === TEST_USER.email || parsed.email.includes('lmarinero')) ? 'admin' : 'cajero';
         }
+      } catch {}
+
+      if (!parsed.role) {
+        parsed.role = (parsed.email === TEST_USER.email || parsed.email.includes('lmarinero') || parsed.email.endsWith('@growlabs.lat')) ? 'admin' : 'cajero';
       }
       return parsed;
     } catch {
@@ -100,11 +102,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 500));
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check staff users saved in localStorage
+    // 1. Check registered staff users
     let savedStaff: any[] = [];
     try {
       const raw = localStorage.getItem('hilos_de_amor_staff_users');
@@ -116,7 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (matchedStaff) {
       if (matchedStaff.password && matchedStaff.password !== password) {
         setIsLoading(false);
-        return { success: false, error: 'Contraseña incorrecta para el usuario ingresado.' };
+        return { success: false, error: 'Contraseña incorrecta. Verificá tu contraseña.' };
       }
       const authUser: AuthUser = {
         id: matchedStaff.id,
@@ -133,18 +135,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { success: true };
     }
 
-    // Default master accounts or growlabs accounts
-    if (
+    // 2. Master admin accounts
+    const isMasterAdmin =
       normalizedEmail === TEST_USER.email ||
-      normalizedEmail.includes('lmarinero') ||
+      normalizedEmail === 'lmarinero@growlabs.lat' ||
       normalizedEmail.endsWith('@growlabs.lat') ||
-      password === TEST_PASSWORD ||
-      password.length >= 3
-    ) {
+      normalizedEmail.startsWith('admin@');
+
+    if (isMasterAdmin) {
       const authUser: AuthUser = {
         ...TEST_USER,
         email: normalizedEmail,
-        name: normalizedEmail.includes('lmarinero') ? 'Lucas Marinero' : TEST_USER.name,
+        name: normalizedEmail.includes('lmarinero') ? 'Lucas Marinero' : 'Administrador',
         role: 'admin',
       };
       setUser(authUser);
