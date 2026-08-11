@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, ArrowRight, CheckCircle2, Clock, Truck, XCircle, MapPin, Phone, Banknote, RotateCcw, AlertTriangle } from 'lucide-react';
+import { ShoppingBag, ArrowRight, ArrowLeft, CheckCircle2, Clock, Truck, XCircle, MapPin, Phone, Banknote, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Order, OrderStatus, PaymentMethod } from '../types';
 import { formatCurrency, formatDate } from '../utils/currency';
@@ -21,6 +21,23 @@ export const OrdersPage: React.FC = () => {
     { status: 'entregado', title: 'Entregado', color: 'bg-gray-100 text-gray-800 border-gray-300' },
     { status: 'cancelado', title: 'Cancelados', color: 'bg-rose-100 text-rose-950 border-rose-300' },
   ];
+
+  const getPreviousStatus = (current: OrderStatus): OrderStatus | null => {
+    switch (current) {
+      case 'confirmado':
+        return 'nuevo';
+      case 'en_preparacion':
+        return 'confirmado';
+      case 'listo':
+        return 'en_preparacion';
+      case 'en_camino':
+        return 'listo';
+      case 'entregado':
+        return 'en_camino';
+      default:
+        return null;
+    }
+  };
 
   const getNextStatus = (current: OrderStatus): OrderStatus | null => {
     switch (current) {
@@ -93,6 +110,7 @@ export const OrdersPage: React.FC = () => {
                 ) : (
                   colOrders.map((ord) => {
                     const next = getNextStatus(ord.status);
+                    const prev = getPreviousStatus(ord.status);
                     return (
                       <div
                         key={ord.id}
@@ -138,6 +156,15 @@ export const OrdersPage: React.FC = () => {
                               </button>
                             ) : (
                               <>
+                                {prev && (
+                                  <button
+                                    onClick={() => updateOrderStatus(ord.id, prev)}
+                                    className="p-1.5 rounded-lg bg-brand-bg hover:bg-brand-secondary/40 text-brand-brown border border-brand-secondary/80 transition-colors"
+                                    title="Retroceder estado"
+                                  >
+                                    <ArrowLeft className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                                 {next && (
                                   <button
                                     onClick={() => {

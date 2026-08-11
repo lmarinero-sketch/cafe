@@ -1,17 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed, Receipt, ShoppingBag, ArrowRight, Clock, AlertCircle, CheckCircle2, RotateCcw, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed, Receipt, ShoppingBag, ArrowRight, ArrowLeft, Clock, AlertCircle, CheckCircle2, RotateCcw, AlertTriangle, RefreshCw, Banknote } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Table, TableStatus, OrderStatus, Order } from '../types';
+import { Table, TableStatus, OrderStatus, Order, PaymentMethod } from '../types';
 import { formatCurrency, formatDate } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 
 export const TablesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { tables, tableSectors, addTable, updateTableStatus, updateOrderStatus, orders } = useApp();
+  const { tables, tableSectors, addTable, updateTableStatus, updateOrderStatus, orders, addTransaction, cashRegisters } = useApp();
   const [selectedHistoryTable, setSelectedHistoryTable] = useState<Table | null>(null);
   const [cancelledAlertOrder, setCancelledAlertOrder] = useState<Order | null>(null);
   const [lastCancelledCount, setLastCancelledCount] = useState<number>(0);
+
+  const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('efectivo');
+
+  const activeRegister = cashRegisters.find((r) => r.status === 'abierta');
+
+  const handleChargeTableOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chargingOrder || !activeRegister) return;
+
+    addTransaction({
+      registerId: activeRegister.id,
+      orderId: chargingOrder.id,
+      type: 'ingreso',
+      amount: chargingOrder.total,
+      paymentMethod: selectedPayment,
+      description: `Cobro Pedido ${chargingOrder.code}`,
+    });
+
+    updateOrderStatus(chargingOrder.id, 'entregado');
+
+    if (chargingOrder.tableId) {
+      const otherUnpaid = orders.filter(
+        (o) => o.tableId === chargingOrder.tableId && o.id !== chargingOrder.id && o.status !== 'entregado' && o.status !== 'cancelado'
+      );
+      if (otherUnpaid.length === 0) {
+        updateTableStatus(chargingOrder.tableId, 'disponible');
+      }
+    }
+
+    setChargingOrder(null);
+  };
 
   // Monitor canceled orders for centered popup alert
   useEffect(() => {
@@ -391,6 +423,40 @@ export const TablesPage: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  const getPreviousStatus = (current: OrderStatus): OrderStatus | null => {
+    switch (current) {
+      case 'confirmado':
+        return 'nuevo';
+      case 'en_preparacion':
+        return 'confirmado';
+      case 'listo':
+        return 'en_preparacion';
+      case 'en_camino':
+        return 'listo';
+      case 'entregado':
+        return 'en_camino';
+      default:
+        return null;
+    }
+  };
+
+  const getNextStatus = (current: OrderStatus): OrderStatus | null => {
+    switch (current) {
+      case 'nuevo':
+        return 'confirmado';
+      case 'confirmado':
+        return 'en_preparacion';
+      case 'en_preparacion':
+        return 'listo';
+      case 'listo':
+        return 'en_camino';
+      case 'en_camino':
+        return 'entregado';
+      default:
+        return null;
+    }
+  };
+
   const getKanbanBadge = (status: OrderStatus) => {
     switch (status) {
       case 'nuevo':
@@ -585,15 +651,54 @@ export const TablesPage: React.FC = () => {
                     </span>
                     {pendingOrders.map((po) => {
                       const kb = getKanbanBadge(po.status);
+                      const prevSt = getPreviousStatus(po.status);
+                      const nextSt = getNextStatus(po.status);
                       return (
                         <div
                           key={po.id}
                           className="flex items-center justify-between text-xs bg-brand-bg p-2 rounded-xl border border-brand-secondary/80 shadow-xs"
                         >
                           <span className="font-mono font-extrabold text-brand-dark">{po.code}</span>
-                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${kb.color}`}>
-                            {kb.text}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            {prevSt && (
+                              <button
+                                onClick={() => updateOrderStatus(po.id, prevSt)}
+                                className="p-1 rounded-lg bg-brand-bg hover:bg-brand-secondary/40 text-brand-brown border border-brand-secondary/80 transition-colors"
+                                title="Retroceder estado"
+                              >
+                                <ArrowLeft className="w-3 h-3" />
+                              </button>
+                            )}
+                            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${kb.color}`}>
+                              {kb.text}
+                            </span>
+                            {nextSt && (
+                              <button
+                                onClick={() => {
+                                  if (nextSt === 'entregado') {
+                                    setChargingOrder(po);
+                                    setSelectedPayment(po.paymentMethod);
+                                  } else {
+                                    updateOrderStatus(po.id, nextSt);
+                                  }
+                                }}
+                                className="p-1 rounded-lg bg-brand-brown hover:bg-brand-dark text-white transition-colors"
+                                title="Avanzar estado"
+                              >
+                                <ArrowRight className="w-3 h-3 text-brand-yellow" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setChargingOrder(po);
+                                setSelectedPayment(po.paymentMethod);
+                              }}
+                              className="py-1 px-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[10px] shadow-xs flex items-center gap-1 transition-all shrink-0"
+                              title="Cobrar este pedido"
+                            >
+                              <Banknote className="w-3 h-3 text-brand-yellow" /> Cobrar
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -603,6 +708,22 @@ export const TablesPage: React.FC = () => {
 
             {/* Actions & QR Trigger */}
             <div className="pt-3 border-t border-brand-secondary/60 space-y-3">
+              {hasPendingPayment && (
+                <button
+                  onClick={() => {
+                    const firstPending = pendingOrders[0];
+                    if (firstPending) {
+                      setChargingOrder(firstPending);
+                      setSelectedPayment(firstPending.paymentMethod);
+                    }
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 transition-all"
+                >
+                  <Banknote className="w-4 h-4 text-brand-yellow" />
+                  Cobrar Mesa ({formatCurrency(pendingTotal)})
+                </button>
+              )}
+
               <div className="grid grid-cols-3 gap-1.5">
                 <button
                   onClick={() => updateTableStatus(t.id, 'disponible')}
@@ -889,6 +1010,80 @@ export const TablesPage: React.FC = () => {
             >
               Entendido / Aceptar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cobrar Pedido de Mesa */}
+      {chargingOrder && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border-2 border-emerald-600 p-6 w-full max-w-md shadow-soft-lg space-y-4">
+            <div className="flex items-center justify-between border-b border-brand-secondary pb-3">
+              <div className="flex items-center gap-2">
+                <Banknote className="w-5 h-5 text-emerald-700" />
+                <h3 className="text-base font-extrabold text-brand-dark font-serif">Cobrar Pedido {chargingOrder.code}</h3>
+              </div>
+              <button onClick={() => setChargingOrder(null)} className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-brand-cream p-4 rounded-xl border border-brand-secondary/80 text-xs space-y-2">
+              <div className="flex justify-between text-brand-brown">
+                <span>Mesa / Cliente:</span>
+                <strong>{chargingOrder.tableName || 'Mesa'} • {chargingOrder.customerName}</strong>
+              </div>
+              <div className="space-y-1 py-2 border-t border-b border-brand-secondary/60">
+                {chargingOrder.items.map((it, idx) => (
+                  <div key={idx} className="flex justify-between text-brand-dark">
+                    <span>{it.quantity}x {it.productName}</span>
+                    <span className="font-bold">{formatCurrency(it.unitPrice * it.quantity)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between text-sm font-extrabold text-brand-dark pt-1">
+                <span>Total a cobrar:</span>
+                <span className="text-emerald-800 text-base">{formatCurrency(chargingOrder.total)}</span>
+              </div>
+            </div>
+
+            {!activeRegister ? (
+              <div className="text-xs text-red-700 bg-red-50 border border-red-200 p-3 rounded-xl font-bold">
+                ⚠️ No hay una caja abierta en Tesorería. Abrí un turno antes de cobrar.
+              </div>
+            ) : (
+              <form onSubmit={handleChargeTableOrder} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-extrabold text-brand-dark mb-1">Método de Pago</label>
+                  <select
+                    value={selectedPayment}
+                    onChange={(e) => setSelectedPayment(e.target.value as PaymentMethod)}
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs font-bold text-brand-dark focus:outline-none capitalize"
+                  >
+                    <option value="efectivo">💵 Efectivo</option>
+                    <option value="transferencia">🏦 Transferencia</option>
+                    <option value="mercadopago">📲 MercadoPago</option>
+                    <option value="debito">💳 Débito</option>
+                    <option value="credito">💳 Crédito</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setChargingOrder(null)}
+                    className="flex-1 py-2.5 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-emerald-700 text-white font-extrabold text-xs hover:bg-emerald-800 transition shadow-soft flex items-center justify-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-4 h-4" /> Confirmar Pago
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
