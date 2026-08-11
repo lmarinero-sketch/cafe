@@ -148,32 +148,62 @@ export const RecipeCostsPage: React.FC = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* KPI Cards Breakdown */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-brand-card p-4 rounded-2xl border border-brand-secondary shadow-soft">
-                <span className="text-[11px] font-bold text-brand-brown/80">Costo Total Calculado</span>
-                <h3 className="text-2xl font-extrabold text-brand-dark mt-1">
-                  {formatCurrency(recipeCost.totalCost)}
-                </h3>
-                <p className="text-[10px] text-brand-brown/70 mt-1">Materia prima + empaque</p>
+              <div className="bg-brand-card p-4 rounded-2xl border border-brand-secondary shadow-soft flex flex-col justify-between">
+                <div>
+                  <span className="text-[11px] font-bold text-brand-brown/80">Costo Total Calculado</span>
+                  <h3 className="text-2xl font-extrabold text-brand-dark mt-1">
+                    {formatCurrency(recipeCost.totalCost)}
+                  </h3>
+                  <p className="text-[10px] text-brand-brown/70 mt-1">Materia prima + empaque</p>
+                </div>
               </div>
 
-              <div className="bg-brand-card p-4 rounded-2xl border border-brand-secondary shadow-soft">
-                <span className="text-[11px] font-bold text-brand-brown/80">Precio Actual en Menú</span>
-                <h3 className="text-2xl font-extrabold text-brand-dark mt-1">
-                  {formatCurrency(recipeCost.currentPrice)}
-                </h3>
-                <p className="text-[10px] text-emerald-800 font-semibold mt-1">
-                  Margen bruto: {recipeCost.grossMargin}%
-                </p>
+              <div className="bg-brand-card p-4 rounded-2xl border border-brand-secondary shadow-soft flex flex-col justify-between space-y-3">
+                <div>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[11px] font-bold text-brand-brown/80">Precio Actual en Menú</span>
+                    <span className="text-[9px] font-extrabold text-emerald-800 bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded">
+                      ✓ Vinc. Productos
+                    </span>
+                  </div>
+                  <h3 className="text-2xl font-extrabold text-brand-dark mt-1">
+                    {formatCurrency(selectedProduct.price)}
+                  </h3>
+                  <p className="text-[10px] text-emerald-800 font-semibold mt-1">
+                    Margen bruto: {recipeCost.grossMargin}%
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const input = prompt(`Modificar precio de "${selectedProduct.name}" para la sección Productos ($):`, selectedProduct.price.toString());
+                    if (input && !isNaN(Number(input)) && Number(input) >= 0) {
+                      updateProduct(selectedProduct.id, { price: Number(input) });
+                    }
+                  }}
+                  className="w-full py-2 px-2.5 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark font-bold text-[11px] border border-brand-secondary flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-brand-brown shrink-0" /> Cambiar Precio en Productos
+                </button>
               </div>
 
-              <div className="bg-brand-card p-4 rounded-2xl border-2 border-brand-yellow shadow-soft">
-                <span className="text-[11px] font-bold text-brand-brown">Precio Sugerido (60% margen)</span>
-                <h3 className="text-2xl font-extrabold text-brand-brown mt-1">
-                  {formatCurrency(recipeCost.suggestedPrice)}
-                </h3>
-                <p className="text-[10px] text-brand-brown font-bold mt-1">
-                  Dif: {formatCurrency(recipeCost.priceDiff)}
-                </p>
+              <div className="bg-brand-card p-4 rounded-2xl border-2 border-brand-yellow shadow-soft flex flex-col justify-between space-y-3">
+                <div>
+                  <span className="text-[11px] font-bold text-brand-brown">Precio Sugerido (60% margen)</span>
+                  <h3 className="text-2xl font-extrabold text-brand-brown mt-1">
+                    {formatCurrency(recipeCost.suggestedPrice)}
+                  </h3>
+                  <p className="text-[10px] text-brand-brown font-bold mt-1">
+                    Dif: {formatCurrency(recipeCost.priceDiff)}
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleApplySuggestedPrice}
+                  className="w-full py-2 px-2.5 rounded-xl bg-brand-brown text-brand-card hover:bg-brand-dark font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors shadow-soft"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-brand-yellow shrink-0" /> Aplicar Sugerido a Productos
+                </button>
               </div>
             </div>
 
