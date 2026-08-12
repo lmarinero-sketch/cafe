@@ -80,21 +80,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!saved) return null;
       const parsed: AuthUser = JSON.parse(saved);
 
-      // Always re-sync role and name from registered staff users
-      try {
-        const raw = localStorage.getItem('hilos_de_amor_staff_users');
-        if (raw) {
-          const staff: any[] = JSON.parse(raw);
-          const match = staff.find((u) => u.email && u.email.trim().toLowerCase() === parsed.email.trim().toLowerCase());
-          if (match) {
-            parsed.role = match.role || 'cajero';
-            parsed.name = match.name || parsed.name;
+      // Enforce official user details
+      const cleanEmail = parsed.email.trim().toLowerCase();
+      if (cleanEmail === 'admin@growlabs.lat') {
+        parsed.role = 'admin';
+        parsed.name = 'Administrador';
+      } else if (cleanEmail === 'cajero@growlabs.lat') {
+        parsed.role = 'cajero';
+        parsed.name = 'Cajero';
+      } else if (cleanEmail === 'mozo@growlabs.lat') {
+        parsed.role = 'mozo';
+        parsed.name = 'Mozo';
+      } else {
+        // Re-sync role and name from registered staff users if not official
+        try {
+          const raw = localStorage.getItem('hilos_de_amor_staff_users');
+          if (raw) {
+            const staff: any[] = JSON.parse(raw);
+            const match = staff.find((u) => u.email && u.email.trim().toLowerCase() === cleanEmail);
+            if (match) {
+              parsed.role = match.role || 'cajero';
+              parsed.name = match.name || parsed.name;
+            }
           }
-        }
-      } catch {}
+        } catch {}
 
-      if (!parsed.role) {
-        parsed.role = (parsed.email === TEST_USER.email || parsed.email.includes('lmarinero') || parsed.email.endsWith('@growlabs.lat')) ? 'admin' : 'cajero';
+        if (!parsed.role) {
+          parsed.role = (cleanEmail === TEST_USER.email || cleanEmail.includes('lmarinero')) ? 'admin' : 'cajero';
+        }
       }
       return parsed;
     } catch {
