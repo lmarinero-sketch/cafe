@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed, Receipt, ShoppingBag, ArrowRight, ArrowLeft, Clock, AlertCircle, CheckCircle2, RotateCcw, AlertTriangle, RefreshCw, Banknote } from 'lucide-react';
+import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed, Receipt, ShoppingBag, ArrowRight, ArrowLeft, Clock, AlertCircle, CheckCircle2, RotateCcw, AlertTriangle, RefreshCw, Banknote, Edit3, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { Table, TableStatus, OrderStatus, Order, PaymentMethod } from '../types';
 import { formatCurrency, formatDate } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 
 export const TablesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { tables, tableSectors, addTable, updateTableStatus, updateOrderStatus, orders, addTransaction, cashRegisters } = useApp();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const { tables, tableSectors, addTable, updateTable, deleteTable, updateTableStatus, updateOrderStatus, orders, addTransaction, cashRegisters } = useApp();
   const [selectedHistoryTable, setSelectedHistoryTable] = useState<Table | null>(null);
   const [cancelledAlertOrder, setCancelledAlertOrder] = useState<Order | null>(null);
   const [lastCancelledCount, setLastCancelledCount] = useState<number>(0);
@@ -405,12 +408,67 @@ export const TablesPage: React.FC = () => {
     }
   };
 
+  const getNextTableNumber = () => {
+    let maxNum = 0;
+    tables.forEach((t) => {
+      const match = t.number.match(/\d+/);
+      if (match) {
+        const val = parseInt(match[0], 10);
+        if (val > maxNum) maxNum = val;
+      }
+    });
+    return `Mesa ${maxNum + 1}`;
+  };
+
   const [formData, setFormData] = useState({
-    number: 'Mesa 13',
+    number: 'Mesa 1',
     capacity: 4,
     sector: 'terraza',
     status: 'disponible' as TableStatus,
   });
+
+  const [editingTable, setEditingTable] = useState<Table | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    number: '',
+    capacity: 4,
+    sector: 'salon',
+  });
+  const [tableToDelete, setTableToDelete] = useState<Table | null>(null);
+
+  const handleOpenEditModal = (t: Table) => {
+    setEditingTable(t);
+    setEditFormData({
+      number: t.number,
+      capacity: t.capacity,
+      sector: t.sector,
+    });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTable || !editFormData.number.trim()) return;
+    const success = updateTable(editingTable.id, editFormData);
+    if (success) {
+      setEditingTable(null);
+    }
+  };
+
+  const handleDeleteConfirm = () => {
+    if (tableToDelete) {
+      deleteTable(tableToDelete.id);
+      setTableToDelete(null);
+    }
+  };
+
+  const handleOpenAddModal = () => {
+    setFormData({
+      number: getNextTableNumber(),
+      capacity: 4,
+      sector: selectedSector !== 'all' ? selectedSector : 'salon',
+      status: 'disponible',
+    });
+    setIsModalOpen(true);
+  };
 
   const filteredTables = tables.filter(
     (t) => selectedSector === 'all' || t.sector === selectedSector
@@ -418,9 +476,11 @@ export const TablesPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.number) return;
-    addTable(formData);
-    setIsModalOpen(false);
+    if (!formData.number.trim()) return;
+    const success = addTable(formData);
+    if (success) {
+      setIsModalOpen(false);
+    }
   };
 
   const getPreviousStatus = (current: OrderStatus): OrderStatus | null => {
@@ -505,21 +565,23 @@ export const TablesPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex-1 sm:flex-initial py-2.5 px-3 sm:px-4 rounded-xl border-2 border-brand-brown text-brand-brown font-bold text-xs hover:bg-brand-brown/10 transition-all duration-200 flex items-center justify-center gap-2"
-          >
-            Administrar Sectores
-          </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex-1 sm:flex-initial py-2.5 px-3 sm:px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all duration-200 shadow-soft flex items-center justify-center gap-2"
-          >
-            <Plus className="w-4 h-4 text-brand-yellow shrink-0" />
-            <span className="whitespace-nowrap">Agregar mesa</span>
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex-1 sm:flex-initial py-2.5 px-3 sm:px-4 rounded-xl border-2 border-brand-brown text-brand-brown font-bold text-xs hover:bg-brand-brown/10 transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              Administrar Sectores
+            </button>
+            <button
+              onClick={handleOpenAddModal}
+              className="flex-1 sm:flex-initial py-2.5 px-3 sm:px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all duration-200 shadow-soft flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4 text-brand-yellow shrink-0" />
+              <span className="whitespace-nowrap">Agregar mesa</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Banner Advertencia de Caja Cerrada */}
@@ -612,6 +674,26 @@ export const TablesPage: React.FC = () => {
                         Pedidos anteriores
                       </span>
                     </button>
+
+                    {/* Acciones de Edición & Eliminación (Solo Admin) */}
+                    {isAdmin && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleOpenEditModal(t)}
+                          className="p-1 rounded-lg hover:bg-brand-secondary/60 text-brand-brown transition-colors"
+                          title="Editar mesa"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setTableToDelete(t)}
+                          className="p-1 rounded-lg hover:bg-rose-100 text-rose-700 transition-colors"
+                          title="Eliminar mesa"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <span
@@ -1202,6 +1284,112 @@ export const TablesPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Mesa (Solo Admin) */}
+      {editingTable && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 max-w-md w-full shadow-soft-lg space-y-4">
+            <div className="flex items-center justify-between border-b border-brand-secondary pb-2">
+              <h3 className="text-base font-bold text-brand-dark flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-brand-brown" /> Editar Mesa: {editingTable.number}
+              </h3>
+              <button
+                onClick={() => setEditingTable(null)}
+                className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-brand-dark mb-1">Nombre / Número de Mesa</label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.number}
+                  onChange={(e) => setEditFormData({ ...editFormData, number: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-brand-dark mb-1">Capacidad (personas)</label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    value={editFormData.capacity}
+                    onChange={(e) => setEditFormData({ ...editFormData, capacity: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-brand-dark mb-1">Sector</label>
+                  <select
+                    value={editFormData.sector}
+                    onChange={(e) => setEditFormData({ ...editFormData, sector: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                  >
+                    {tableSectors.map((sec) => (
+                      <option key={sec.id} value={sec.id}>{sec.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-3">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold hover:bg-brand-dark transition-colors shadow-soft"
+                >
+                  Guardar Cambios
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingTable(null)}
+                  className="py-2.5 px-4 rounded-xl border border-brand-secondary font-bold text-brand-dark hover:bg-brand-secondary/30"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Eliminación de Mesa (Solo Admin) */}
+      {tableToDelete && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border-2 border-rose-300 p-6 max-w-sm w-full shadow-soft-lg text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto shrink-0">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-brand-dark">¿Eliminar {tableToDelete.number}?</h3>
+              <p className="text-xs text-brand-brown/80 mt-1">
+                Esta acción eliminará la mesa y su código QR asignado del sector <span className="font-bold">{tableToDelete.sector}</span>.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-extrabold text-xs shadow-soft transition-colors"
+              >
+                Sí, eliminar
+              </button>
+              <button
+                onClick={() => setTableToDelete(null)}
+                className="py-2.5 px-4 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}

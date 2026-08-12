@@ -91,9 +91,10 @@ interface AppContextType {
   updateProduct: (id: string, product: Partial<Product>) => void;
   toggleProductStatus: (id: string) => void;
   
-  addTable: (table: Omit<Table, 'id' | 'qrCode'>) => void;
-  updateTable: (id: string, table: Partial<Table>) => void;
+  addTable: (table: Omit<Table, 'id' | 'qrCode'>) => boolean;
+  updateTable: (id: string, table: Partial<Table>) => boolean;
   updateTableStatus: (id: string, status: Table['status']) => void;
+  deleteTable: (id: string) => boolean;
 
   createOrder: (order: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>) => Order | null;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
@@ -227,7 +228,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TABLES);
       const parsed = saved ? JSON.parse(saved) : null;
-      return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialTables;
+      const list: Table[] = Array.isArray(parsed) && parsed.length > 0 ? parsed : initialTables;
+
+      const uniqueTables: Table[] = [];
+      const seenNumbers = new Set<string>();
+      const seenIds = new Set<string>();
+
+      list.forEach((t, idx) => {
+        let numStr = t.number?.trim() || `Mesa ${idx + 1}`;
+        let lowerNum = numStr.toLowerCase();
+        let counter = 1;
+
+        while (seenNumbers.has(lowerNum)) {
+          const matchNumber = numStr.match(/\d+/);
+          const baseName = numStr.replace(/\d+$/, '').trim() || 'Mesa';
+          const nextVal = matchNumber ? parseInt(matchNumber[0], 10) + counter : idx + 1 + counter;
+          numStr = `${baseName} ${nextVal}`;
+          lowerNum = numStr.toLowerCase();
+          counter++;
+        }
+
+        let tableId = t.id && !seenIds.has(t.id) ? t.id : `tbl-auto-${idx + 1}-${Date.now()}`;
+        seenNumbers.add(lowerNum);
+        seenIds.add(tableId);
+
+        uniqueTables.push({
+          ...t,
+          id: tableId,
+          number: numStr,
+          qrCode: t.qrCode || `QR-TBL-${tableId.slice(-6)}`,
+        });
+      });
+
+      localStorage.setItem(STORAGE_KEYS.TABLES, JSON.stringify(uniqueTables));
+      return uniqueTables;
     } catch {
       return initialTables;
     }
@@ -514,21 +548,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // ============================================================
   // TABLES (LocalStorage - unchanged)
   // ============================================================
-  const addTable = (tableData: Omit<Table, 'id' | 'qrCode'>) => {
-    const id = crypto.randomUUID();
-    const num = tableData.number.replace(/\D/g, '') || '99';
+  const addTable = (tableData: Omit<Table, 'id' | 'qrCode'>): boolean => {
+    const cleanNumber = tableData.number.trim();
+    const existing = tables.find(
+      (t) => t.number.trim().toLowerCase() === cleanNumber.toLowerCase()
+    );
+    if (existing) {
+      showToast(
+        'Nombre de Mesa en uso',
+        `Ya existe una mesa con el nombre "${cleanNumber}". Cada mesa debe tener un nombre o número único.`,
+        'error'
+      );
+      return false;
+    }
+
+    const id = `tbl-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const num = cleanNumber.replace(/\D/g, '') || id.slice(-4);
     const newTable: Table = {
       ...tableData,
+      number: cleanNumber,
       id,
       qrCode: `QR-TBL-${num}`,
     };
     setTables((prev) => [...prev, newTable]);
     showToast('Mesa creada', `${newTable.number} agregada al sector ${newTable.sector}.`, 'success');
+    return true;
   };
 
-  const updateTable = (id: string, tableData: Partial<Table>) => {
+  const updateTable = (id: string, tableData: Partial<Table>): boolean => {
+    if (tableData.number) {
+      const cleanNumber = tableData.number.trim();
+      const existing = tables.find(
+        (t) => t.id !== id && t.number.trim().toLowerCase() === cleanNumber.toLowerCase()
+      );
+      if (existing) {
+        showToast(
+          'Nombre de Mesa en uso',
+          `Ya existe otra mesa registrada como "${cleanNumber}". Elegí un nombre o número único.`,
+          'error'
+        );
+        return false;
+      }
+    }
     setTables((prev) => prev.map((t) => (t.id === id ? { ...t, ...tableData } : t)));
     showToast('Mesa actualizada', 'Los datos de la mesa fueron guardados.', 'success');
+    return true;
   };
 
   const updateTableStatus = (id: string, status: Table['status']) => {
@@ -541,6 +605,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return t;
       })
     );
+  };
+
+  const deleteTable = (id: string): boolean => {
+    const target = tables.find((t) => t.id === id);
+    if (!target) return false;
+    setTables((prev) => prev.filter((t) => t.id !== id));
+    showToast('Mesa eliminada', `${target.number} fue eliminada del sistema.`, 'info');
+    return true;
   };
 
   // ============================================================
@@ -1261,6 +1333,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addTable,
         updateTable,
         updateTableStatus,
+        deleteTable,
         createOrder,
         updateOrderStatus,
         addIngredient,
