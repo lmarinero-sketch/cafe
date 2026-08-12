@@ -289,10 +289,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.STAFF_USERS);
-    return saved ? JSON.parse(saved) : [
-      { id: 'usr-admin-1', name: 'Administrador', role: 'admin', email: 'admin@cafe.com', status: 'active' }
+    const OFFICIAL_USERS: StaffUser[] = [
+      { id: 'usr-admin-grow', name: 'Administrador', role: 'admin', email: 'admin@growlabs.lat', status: 'active' },
+      { id: 'usr-cajero-grow', name: 'Cajero', role: 'cajero', email: 'cajero@growlabs.lat', status: 'active' },
+      { id: 'usr-mozo-grow', name: 'Mozo', role: 'mozo', email: 'mozo@growlabs.lat', status: 'active' },
     ];
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.STAFF_USERS);
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const updated = OFFICIAL_USERS.map((off) => {
+          const match = parsed.find((p: StaffUser) => p.email?.trim().toLowerCase() === off.email);
+          return match ? { ...match, ...off } : off;
+        });
+        const extra = parsed.filter((p: StaffUser) => !OFFICIAL_USERS.some((off) => off.email === p.email?.trim().toLowerCase()));
+        const merged = [...updated, ...extra];
+        localStorage.setItem(STORAGE_KEYS.STAFF_USERS, JSON.stringify(merged));
+        return merged;
+      }
+      return OFFICIAL_USERS;
+    } catch {
+      return OFFICIAL_USERS;
+    }
   });
 
   const [tableSectors, setTableSectors] = useState<Sector[]>(() => {

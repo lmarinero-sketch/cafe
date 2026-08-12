@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth, getBonificationDaysRemaining, getBonificationProgress } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Branch, StaffUser } from '../types';
 import { formatCurrency } from '../utils/currency';
 
@@ -16,6 +17,7 @@ const EMPTY_BRANCH: Omit<Branch, 'id' | 'createdAt'> = {
 export const SettingsPage: React.FC = () => {
   const { plan, branches, isLoadingBranches, addBranch, updateBranchData, deleteBranchData, staffUsers, addStaffUser, updateStaffUser, deleteStaffUser } = useApp();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const sub = user?.subscription;
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -90,6 +92,12 @@ export const SettingsPage: React.FC = () => {
     setForm((f) => ({ ...f, features: f.features.filter((_, i) => i !== idx) }));
   };
 
+  const isOfficialUser = (email?: string) => {
+    if (!email) return false;
+    const clean = email.trim().toLowerCase();
+    return clean === 'admin@growlabs.lat' || clean === 'cajero@growlabs.lat' || clean === 'mozo@growlabs.lat';
+  };
+
   const handleStaffSave = () => {
     if (!staffForm.name.trim() || !staffForm.email.trim()) return;
     if (editingStaffId) {
@@ -103,12 +111,22 @@ export const SettingsPage: React.FC = () => {
   };
 
   const handleStaffEdit = (u: StaffUser) => {
+    if (isOfficialUser(u.email)) {
+      showToast('Usuario Protegido', 'Los usuarios oficiales habilitados en Supabase Auth no pueden ser editados.', 'info');
+      return;
+    }
     setEditingStaffId(u.id);
     setStaffForm({ name: u.name, role: u.role, email: u.email, password: u.password || '', status: u.status });
     setShowStaffForm(true);
   };
 
   const handleStaffDelete = (id: string) => {
+    const target = staffUsers.find((u) => u.id === id);
+    if (target && isOfficialUser(target.email)) {
+      showToast('Usuario Protegido', 'Los usuarios oficiales habilitados en Supabase Auth no pueden ser eliminados.', 'error');
+      setStaffDeleteConfirm(null);
+      return;
+    }
     deleteStaffUser(id);
     setStaffDeleteConfirm(null);
   };
@@ -273,37 +291,77 @@ export const SettingsPage: React.FC = () => {
 
           {!showStaffForm && (
             <div className="grid grid-cols-1 gap-2">
-              {staffUsers.map(u => (
-                <div key={u.id} className="bg-brand-bg rounded-xl border border-brand-secondary p-3 flex items-center justify-between hover:border-brand-brown/30 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-brand-secondary/50 flex items-center justify-center shrink-0">
-                      <User className="w-4 h-4 text-brand-brown" />
+              {staffUsers.map((u) => {
+                const official = isOfficialUser(u.email);
+                return (
+                  <div
+                    key={u.id}
+                    className={`bg-brand-bg rounded-xl border p-3 flex items-center justify-between transition-colors ${
+                      official ? 'border-emerald-300/80 bg-emerald-50/20' : 'border-brand-secondary hover:border-brand-brown/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-brand-secondary/50 flex items-center justify-center shrink-0">
+                        <User className="w-4 h-4 text-brand-brown" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-extrabold text-brand-dark flex items-center gap-2">
+                          {u.name}
+                          <span className="px-1.5 py-0.5 rounded uppercase text-[9px] font-bold bg-brand-card border border-brand-secondary/50 text-brand-brown">
+                            {u.role}
+                          </span>
+                          {official && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                              🔒 Oficial Supabase Auth
+                            </span>
+                          )}
+                        </h4>
+                        <p className="text-[11px] text-brand-brown/80">{u.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-xs font-extrabold text-brand-dark flex items-center gap-2">
-                        {u.name}
-                        <span className="px-1.5 py-0.5 rounded uppercase text-[9px] font-bold bg-brand-card border border-brand-secondary/50 text-brand-brown">
-                          {u.role}
+                    <div className="flex items-center gap-1.5">
+                      {official ? (
+                        <span className="text-[10px] font-bold text-emerald-800/80 italic bg-white/80 px-2.5 py-1 rounded-lg border border-emerald-200 shadow-xs">
+                          Usuario Protegido
                         </span>
-                      </h4>
-                      <p className="text-[11px] text-brand-brown/80">{u.email}</p>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleStaffEdit(u)}
+                            className="p-1.5 rounded-lg hover:bg-brand-secondary text-brand-brown transition-colors"
+                            title="Editar usuario"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          {staffDeleteConfirm === u.id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleStaffDelete(u.id)}
+                                className="p-1.5 rounded-lg bg-red-100 text-red-700 text-[10px] font-bold"
+                              >
+                                Sí
+                              </button>
+                              <button
+                                onClick={() => setStaffDeleteConfirm(null)}
+                                className="p-1.5 rounded-lg bg-brand-secondary text-brand-brown text-[10px] font-bold"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setStaffDeleteConfirm(u.id)}
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-brand-brown hover:text-red-700 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <button onClick={() => handleStaffEdit(u)} className="p-1.5 rounded-lg hover:bg-brand-secondary text-brand-brown transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
-                    {staffDeleteConfirm === u.id ? (
-                       <div className="flex items-center gap-1">
-                         <button onClick={() => handleStaffDelete(u.id)} className="p-1.5 rounded-lg bg-red-100 text-red-700 text-[10px] font-bold">Sí</button>
-                         <button onClick={() => setStaffDeleteConfirm(null)} className="p-1.5 rounded-lg bg-brand-secondary text-brand-brown text-[10px] font-bold">No</button>
-                       </div>
-                    ) : (
-                      <button onClick={() => setStaffDeleteConfirm(u.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-brand-brown hover:text-red-700 transition-colors" disabled={u.role === 'admin' && staffUsers.filter(x => x.role === 'admin').length === 1}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -109,6 +109,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const normalizedEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
+    // Helper function to resolve role and name for official users
+    const getOfficialDetails = (emailStr: string) => {
+      if (emailStr === 'admin@growlabs.lat') return { role: 'admin' as const, name: 'Administrador' };
+      if (emailStr === 'cajero@growlabs.lat') return { role: 'cajero' as const, name: 'Cajero' };
+      if (emailStr === 'mozo@growlabs.lat') return { role: 'mozo' as const, name: 'Mozo' };
+      return null;
+    };
+
     // 1. Try Supabase Auth First
     if (isSupabaseConfigured && supabase) {
       try {
@@ -118,15 +126,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         if (authData?.user && !authErr) {
-          // Fetch role and details from staff_users table
-          const { data: staffRow } = await supabase
-            .from('staff_users')
-            .select('*')
-            .eq('email', normalizedEmail)
-            .maybeSingle();
+          const official = getOfficialDetails(normalizedEmail);
 
-          const role = staffRow?.role || authData.user.user_metadata?.role || 'cajero';
-          const name = staffRow?.name || authData.user.user_metadata?.name || normalizedEmail.split('@')[0];
+          // Fetch role and details from staff_users table if not official
+          let role: 'admin' | 'cajero' | 'mozo' | 'cocina' = official?.role || 'cajero';
+          let name = official?.name || authData.user.user_metadata?.name || normalizedEmail.split('@')[0];
+
+          if (!official) {
+            const { data: staffRow } = await supabase
+              .from('staff_users')
+              .select('*')
+              .eq('email', normalizedEmail)
+              .maybeSingle();
+
+            if (staffRow?.role) role = staffRow.role;
+            if (staffRow?.name) name = staffRow.name;
+          }
 
           const authUser: AuthUser = {
             id: authData.user.id,
@@ -171,13 +186,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsLoading(false);
         return { success: false, error: 'Contraseña incorrecta. Verificá tu contraseña.' };
       }
+      const official = getOfficialDetails(normalizedEmail);
       const authUser: AuthUser = {
         id: matchedStaff.id,
-        name: matchedStaff.name,
+        name: official?.name || matchedStaff.name,
         businessName: 'Hilos de Amor — Pastelería & Encordado',
         email: matchedStaff.email,
         phone: '+54 264 422-8900',
-        role: matchedStaff.role || 'cajero',
+        role: official?.role || matchedStaff.role || 'cajero',
         subscription: TEST_USER.subscription,
       };
       setUser(authUser);
@@ -186,8 +202,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { success: true };
     }
 
-    // 3. Master admin accounts
+    // 3. Official Grow Labs users & Master admin fallback
+    const official = getOfficialDetails(normalizedEmail);
     const isMasterAdmin =
+      official !== null ||
       normalizedEmail === TEST_USER.email ||
       normalizedEmail === 'lmarinero@growlabs.lat' ||
       normalizedEmail.endsWith('@growlabs.lat') ||
@@ -197,8 +215,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const authUser: AuthUser = {
         ...TEST_USER,
         email: normalizedEmail,
-        name: normalizedEmail.includes('lmarinero') ? 'Lucas Marinero' : 'Administrador',
-        role: 'admin',
+        name: official?.name || (normalizedEmail.includes('lmarinero') ? 'Lucas Marinero' : 'Administrador'),
+        role: official?.role || 'admin',
       };
       setUser(authUser);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
