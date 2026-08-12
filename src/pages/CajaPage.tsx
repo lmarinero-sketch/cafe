@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Wallet, Plus, ArrowDownToLine, ArrowUpFromLine, History, CreditCard, Send, Check, Printer, FileText, AlertTriangle, ShieldCheck, FileSpreadsheet, User, Clock, MessageSquare, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -31,22 +31,49 @@ export const CajaPage: React.FC = () => {
 
   const activeRegister = cashRegisters.find(r => r.status === 'abierta');
 
-  const activeTransactions = activeRegister 
-    ? cashTransactions.filter(tx => tx.registerId === activeRegister.id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    : [];
+  const liveMovementItems = useMemo(() => {
+    if (!activeRegister) return [];
 
-  const activeOrders = activeRegister
-    ? orders.filter(o => o.status === 'entregado' && new Date(o.createdAt).getTime() >= new Date(activeRegister.openedAt).getTime())
-    : [];
+    const txList = cashTransactions.filter((tx) => tx.registerId === activeRegister.id);
+    const recordedOrderIds = new Set(txList.map((tx) => tx.orderId).filter(Boolean));
 
-  const calcTotals = (registerId?: string, regOpenedAt?: string, regClosedAt?: string) => {
-    let targetTxs = activeTransactions;
+    const autoOrderTxs = orders
+      .filter((o) => {
+        if (o.status === 'cancelado') return false;
+        if (o.registerId === activeRegister.id) return !recordedOrderIds.has(o.id);
+        return (
+          new Date(o.createdAt).getTime() >= new Date(activeRegister.openedAt).getTime() &&
+          !recordedOrderIds.has(o.id)
+        );
+      })
+      .map((o) => ({
+        id: `auto-tx-${o.id}`,
+        registerId: activeRegister.id,
+        orderId: o.id,
+        type: 'ingreso' as const,
+        amount: o.total,
+        paymentMethod: o.paymentMethod || 'efectivo',
+        description: `Cobro Pedido ${o.code} (${o.tableId ? 'Mesa' : o.type || 'QR'})`,
+        timestamp: o.createdAt,
+      }));
+
+    const combined = [...txList, ...autoOrderTxs];
+    return combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [activeRegister, cashTransactions, orders]);
+
+  const calcTotals = (registerId?: string) => {
+    let targetTxs = liveMovementItems;
     if (registerId && registerId !== activeRegister?.id) {
-      targetTxs = cashTransactions.filter(tx => tx.registerId === registerId);
+      targetTxs = cashTransactions.filter((tx) => tx.registerId === registerId);
     }
 
-    let efectivo = 0, mercadopago = 0, tarjetas = 0, transferencias = 0, egresos = 0;
-    targetTxs.forEach(tx => {
+    let efectivo = 0,
+      mercadopago = 0,
+      tarjetas = 0,
+      transferencias = 0,
+      egresos = 0;
+
+    targetTxs.forEach((tx) => {
       if (tx.type === 'egreso') {
         egresos += tx.amount;
         if (tx.paymentMethod === 'efectivo') efectivo -= tx.amount;
@@ -57,13 +84,14 @@ export const CajaPage: React.FC = () => {
         else if (tx.paymentMethod === 'credito' || tx.paymentMethod === 'debito') tarjetas += tx.amount;
       }
     });
-    return { 
-      efectivo, 
-      mercadopago, 
-      tarjetas, 
-      transferencias, 
+
+    return {
+      efectivo,
+      mercadopago,
+      tarjetas,
+      transferencias,
       egresos,
-      totalVentas: efectivo + mercadopago + tarjetas + transferencias + egresos
+      totalVentas: efectivo + mercadopago + tarjetas + transferencias - egresos,
     };
   };
 
@@ -127,7 +155,7 @@ export const CajaPage: React.FC = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const regTotals = calcTotals(register.id, register.openedAt, register.closedAt);
+    const regTotals = calcTotals(register.id);
     const regOrders = orders.filter(o => new Date(o.createdAt).getTime() >= new Date(register.openedAt).getTime() && (register.closedAt ? new Date(o.createdAt).getTime() <= new Date(register.closedAt).getTime() : true));
 
     const htmlContent = `
@@ -427,7 +455,13 @@ export const CajaPage: React.FC = () => {
                 <Clock className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-extrabold text-brand-yellow uppercase tracking-wider">Caja Abierta</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-extrabold text-brand-yellow uppercase tracking-wider">Caja Abierta</p>
+                  <span className="inline-flex items-center gap-1 bg-emerald-800/90 text-emerald-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-600/60">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                    EN VIVO
+                  </span>
+                </div>
                 <p className="text-sm font-bold text-white">Apertura: {formatDate(activeRegister.openedAt)} hs</p>
                 <p className="text-xs text-emerald-200">Responsable: <strong className="text-white">{activeRegister.openedBy}</strong></p>
               </div>
@@ -464,18 +498,24 @@ export const CajaPage: React.FC = () => {
           </div>
 
           <div className="bg-brand-card rounded-2xl border border-brand-secondary shadow-soft overflow-hidden">
-            <div className="p-4 border-b border-brand-secondary flex items-center justify-between">
-              <h3 className="font-bold text-brand-dark flex items-center gap-2">
-                <History className="w-4 h-4" /> Movimientos del Turno
-              </h3>
+            <div className="p-4 border-b border-brand-secondary flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-brand-dark flex items-center gap-2">
+                  <History className="w-4 h-4" /> Movimientos del Turno
+                </h3>
+                <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-950 font-extrabold text-[10px] px-2.5 py-0.5 rounded-full border border-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                  Live Sync ({liveMovementItems.length})
+                </span>
+              </div>
               <span className="text-xs text-brand-brown/80">Total Recaudado: <strong className="text-brand-dark">{formatCurrency(totals.totalVentas)}</strong></span>
             </div>
             
             <div className="divide-y divide-brand-secondary/40 max-h-[450px] overflow-y-auto">
-              {activeTransactions.length === 0 ? (
+              {liveMovementItems.length === 0 ? (
                 <div className="p-8 text-center text-sm text-brand-brown/60">No hay movimientos registrados en este turno.</div>
               ) : (
-                activeTransactions.map(tx => (
+                liveMovementItems.map((tx) => (
                   <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-brand-bg transition-colors">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-xl border ${tx.type === 'ingreso' ? 'bg-brand-green/20 border-brand-green text-emerald-800' : 'bg-red-100 border-red-200 text-red-800'}`}>
