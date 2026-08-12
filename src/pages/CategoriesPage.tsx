@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Grid, Edit, Eye, EyeOff, Tag, Coffee, Utensils, Check, X, Layers, List } from 'lucide-react';
+import { Plus, Grid, Edit, Eye, EyeOff, Tag, Coffee, Utensils, Check, X, Layers, List, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Category, Product } from '../types';
+import { initialProducts } from '../data/seeds/products.seed';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 import { formatCurrency } from '../utils/currency';
 import { uploadImage } from '../services/storage.service';
@@ -26,6 +27,13 @@ export const CategoriesPage: React.FC = () => {
 
   const getProductCountForCategory = (catId: string) => {
     return products.filter((p) => p.categoryId === catId).length;
+  };
+
+  const handleSyncCategories = () => {
+    initialProducts.forEach((sp) => {
+      updateProduct(sp.id, { categoryId: sp.categoryId, categoryName: sp.categoryName });
+    });
+    showToast('Categorías Sincronizadas', 'Los productos fueron organizados en sus categorías correspondientes.', 'success');
   };
 
   const handleOpenCreateModal = () => {
@@ -120,13 +128,23 @@ export const CategoriesPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreateModal}
-          className="py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all shadow-soft flex items-center justify-center gap-2"
-        >
-          <Plus className="w-4 h-4 text-brand-yellow" />
-          Nueva Categoría
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleSyncCategories}
+            title="Asignar automáticamente cada producto a su categoría oficial"
+            className="py-2.5 px-4 rounded-xl border-2 border-brand-brown text-brand-brown font-bold text-xs hover:bg-brand-brown/10 transition-all flex items-center justify-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4 text-brand-brown" />
+            Sincronizar Categorías
+          </button>
+          <button
+            onClick={handleOpenCreateModal}
+            className="py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all shadow-soft flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4 text-brand-yellow" />
+            Nueva Categoría
+          </button>
+        </div>
       </div>
 
       {/* Categories Grid */}

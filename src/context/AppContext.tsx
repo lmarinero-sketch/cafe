@@ -194,12 +194,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
       const parsed = saved ? JSON.parse(saved) : null;
-      if (
-        Array.isArray(parsed) &&
-        parsed.length > 0 &&
-        parsed.some((p) => p.id.startsWith('prod-cafe-') || p.id.startsWith('prod-latte-') || p.id.startsWith('prod-lemon-pie'))
-      ) {
-        return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Actualizar items almacenados con sus categorías oficiales según initialProducts
+        const synced = parsed.map((p: Product) => {
+          const seedMatch = initialProducts.find((sp) => sp.id === p.id);
+          if (seedMatch) {
+            return {
+              ...p,
+              categoryId: seedMatch.categoryId,
+              categoryName: seedMatch.categoryName,
+            };
+          }
+          return p;
+        });
+
+        // Incorporar cualquier producto del seed que no estuviera guardado previamente
+        const missingSeedItems = initialProducts.filter(
+          (sp) => !synced.some((p: Product) => p.id === sp.id)
+        );
+
+        const merged = [...synced, ...missingSeedItems];
+        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(merged));
+        return merged;
       }
       return initialProducts;
     } catch {
