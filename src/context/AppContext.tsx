@@ -95,7 +95,7 @@ interface AppContextType {
   updateTable: (id: string, table: Partial<Table>) => void;
   updateTableStatus: (id: string, status: Table['status']) => void;
 
-  createOrder: (order: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>) => Order;
+  createOrder: (order: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>) => Order | null;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
 
   addIngredient: (ingredient: Omit<Ingredient, 'id' | 'updatedAt' | 'normalizedCost'>) => void;
@@ -512,7 +512,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // ============================================================
   // ORDERS (LocalStorage - unchanged)
   // ============================================================
-  const createOrder = (orderData: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>): Order => {
+  const createOrder = (orderData: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>): Order | null => {
+    const activeRegister = cashRegisters.find((r) => r.status === 'abierta');
+
+    if (!activeRegister) {
+      showToast('Caja Cerrada', 'No se pueden ingresar pedidos porque la caja se encuentra cerrada.', 'error');
+      return null;
+    }
+
     const id = crypto.randomUUID();
     const codeNumber = Math.floor(1000 + Math.random() * 9000);
     const code = `ORD-${codeNumber}`;
@@ -522,6 +529,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       ...orderData,
       id,
       code,
+      registerId: activeRegister.id,
       createdAt: new Date().toISOString(),
       status: 'nuevo',
       pointsEarned,

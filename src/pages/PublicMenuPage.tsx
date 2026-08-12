@@ -21,7 +21,8 @@ import { Product, OrderItem, PaymentMethod, OrderType } from '../types';
 import { formatCurrency } from '../utils/currency';
 
 export const PublicMenuPage: React.FC = () => {
-  const { products, categories, tables, createOrder, customers } = useApp();
+  const { products, categories, tables, createOrder, customers, cashRegisters } = useApp();
+  const activeRegister = cashRegisters.find((r) => r.status === 'abierta');
   const [searchParams] = useSearchParams();
 
   // URL table param (e.g. /menu?table=tbl-2)
@@ -107,6 +108,53 @@ export const PublicMenuPage: React.FC = () => {
   const deliveryFee = orderType === 'delivery' ? 1500 : 0;
   const total = subtotal + deliveryFee;
 
+  // ── Componente interno reutilizable para cada tarjeta de producto ──
+  const ProductCard = ({ p, onSelect, onExpand }: { p: Product; onSelect: () => void; onExpand: () => void }) => {
+    const isOutOfStock = !p.isAvailable;
+    return (
+      <div
+        onClick={() => { if (!isOutOfStock) onSelect(); }}
+        className={`bg-brand-card rounded-2xl border p-3 shadow-xs transition-all flex items-center gap-3.5 ${
+          isOutOfStock
+            ? 'border-brand-red/50 bg-brand-bg/60 opacity-80 cursor-not-allowed'
+            : 'border-brand-secondary hover:border-brand-brown/40 cursor-pointer'
+        }`}
+      >
+        <div className="relative shrink-0 group cursor-pointer" onClick={(e) => { e.stopPropagation(); onExpand(); }}>
+          <img src={p.image} alt={p.name} className={`w-20 h-20 rounded-xl object-cover bg-brand-bg border border-brand-secondary/60 ${isOutOfStock ? 'grayscale opacity-75' : ''}`} />
+          <div className="absolute top-1 right-1 p-1 rounded-full bg-brand-dark/70 text-[#E5C378] opacity-90 group-hover:scale-110 transition-all shadow-xs">
+            <Maximize2 className="w-3 h-3" />
+          </div>
+          {isOutOfStock && (
+            <span className="absolute inset-0 m-auto w-max h-max bg-brand-red/90 text-rose-950 font-extrabold text-[9px] uppercase px-1.5 py-0.5 rounded shadow-xs">Agotado</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <h4 className="text-xs font-bold text-brand-dark truncate">{p.name}</h4>
+            {p.isFeatured && !isOutOfStock && (
+              <span className="text-[9px] bg-brand-yellow/50 text-brand-brown font-bold px-1.5 py-0.5 rounded shrink-0">★ Destacado</span>
+            )}
+            {isOutOfStock && (
+              <span className="text-[9px] bg-brand-red/30 text-rose-900 font-extrabold px-1.5 py-0.5 rounded shrink-0">Sin Stock</span>
+            )}
+          </div>
+          <p className="text-[11px] text-brand-brown/80 line-clamp-2 mt-0.5 leading-relaxed">{p.description}</p>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-xs font-extrabold text-brand-brown">{formatCurrency(p.price)}</span>
+            {isOutOfStock ? (
+              <span className="py-1 px-2.5 rounded-lg bg-brand-secondary/50 text-brand-brown/70 text-[11px] font-bold">Sin stock</span>
+            ) : (
+              <button className="py-1 px-2.5 rounded-lg bg-brand-brown text-brand-card text-[11px] font-bold hover:bg-brand-dark transition-colors flex items-center gap-1">
+                <Plus className="w-3 h-3" /> Agregar
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
@@ -134,15 +182,30 @@ export const PublicMenuPage: React.FC = () => {
       customerId: matchedCustomer ? matchedCustomer.id : undefined,
     });
 
-    setCart([]);
-    setIsCartOpen(false);
-    setOrderSuccessCode(newOrder.code);
+    if (newOrder) {
+      setCart([]);
+      setIsCartOpen(false);
+      setOrderSuccessCode(newOrder.code);
+    }
   };
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-dark pb-24 max-w-6xl mx-auto relative border-x border-brand-secondary/60 shadow-soft-lg">
       {/* Top Header Banner */}
       <div className="bg-brand-card p-4 sm:p-6 border-b border-brand-secondary sticky top-0 z-30 shadow-xs">
+        {/* Banner de Estado de Caja Cerrada */}
+        {!activeRegister ? (
+          <div className="mb-4 bg-rose-50 border-2 border-rose-400 p-3.5 rounded-2xl text-rose-950 flex items-center gap-3 shadow-soft animate-pulse">
+            <span className="text-xl shrink-0">🔴</span>
+            <div>
+              <h4 className="font-extrabold text-xs sm:text-sm">El Local se encuentra cerrado</h4>
+              <p className="text-[11px] sm:text-xs text-rose-900 mt-0.5">
+                No se pueden realizar ni confirmar pedidos en este momento porque la caja está cerrada.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border border-brand-brown shadow-soft bg-white shrink-0">
@@ -274,90 +337,53 @@ export const PublicMenuPage: React.FC = () => {
         </div>
       )}
 
-      {/* Products Grid / List */}
-      <div className="p-4 space-y-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-brand-brown/80">
-          Nuestra Carta ({filteredProducts.length})
-        </h3>
+      {/* Products Grid / List — agrupado por categoría */}
+      <div className="p-4 space-y-8">
+        {selectedCategory === 'all' ? (
+          // Vista completa: secciones por categoría
+          categories.map((cat) => {
+            const catProducts = filteredProducts.filter((p) => p.categoryId === cat.id);
+            if (catProducts.length === 0) return null;
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProducts.map((p) => {
-            const isOutOfStock = !p.isAvailable;
+            const catIcons: Record<string, string> = {
+              'cat-1': '☕',
+              'cat-2': '🍰',
+              'cat-3': '🥐',
+              'cat-4': '🍞',
+              'cat-5': '🧊',
+              'cat-6': '➕',
+            };
+
             return (
-              <div
-                key={p.id}
-                onClick={() => {
-                  if (isOutOfStock) return;
-                  setSelectedProduct(p);
-                  setProductQty(1);
-                  setProductNotes('');
-                }}
-                className={`bg-brand-card rounded-2xl border p-3 shadow-xs transition-all flex items-center gap-3.5 ${
-                  isOutOfStock
-                    ? 'border-brand-red/50 bg-brand-bg/60 opacity-80 cursor-not-allowed'
-                    : 'border-brand-secondary hover:border-brand-brown/40 cursor-pointer'
-                }`}
-              >
-                <div
-                  className="relative shrink-0 group cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpandedImageProduct(p);
-                  }}
-                >
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    className={`w-20 h-20 rounded-xl object-cover bg-brand-bg border border-brand-secondary/60 ${
-                      isOutOfStock ? 'grayscale opacity-75' : ''
-                    }`}
-                  />
-                  <div className="absolute top-1 right-1 p-1 rounded-full bg-brand-dark/70 text-[#E5C378] opacity-90 group-hover:scale-110 transition-all shadow-xs">
-                    <Maximize2 className="w-3 h-3" />
-                  </div>
-                  {isOutOfStock && (
-                    <span className="absolute inset-0 m-auto w-max h-max bg-brand-red/90 text-rose-950 font-extrabold text-[9px] uppercase px-1.5 py-0.5 rounded shadow-xs">
-                      Agotado
-                    </span>
-                  )}
+              <div key={cat.id} className="space-y-3">
+                {/* Category Section Header */}
+                <div className="flex items-center gap-2 pb-1 border-b-2 border-brand-secondary">
+                  <span className="text-lg">{catIcons[cat.id] ?? '🍽️'}</span>
+                  <h3 className="text-sm font-extrabold text-brand-dark tracking-tight">
+                    {cat.name}
+                  </h3>
+                  <span className="ml-auto text-[11px] font-bold text-brand-brown/60 bg-brand-cream px-2 py-0.5 rounded-full border border-brand-secondary/60">
+                    {catProducts.length} items
+                  </span>
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
-                    <h4 className="text-xs font-bold text-brand-dark truncate">{p.name}</h4>
-                    {p.isFeatured && !isOutOfStock && (
-                      <span className="text-[9px] bg-brand-yellow/50 text-brand-brown font-bold px-1.5 py-0.2 rounded shrink-0">
-                        ★ Destacado
-                      </span>
-                    )}
-                    {isOutOfStock && (
-                      <span className="text-[9px] bg-brand-red/30 text-rose-900 font-extrabold px-1.5 py-0.2 rounded shrink-0">
-                        Sin Stock
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-brand-brown/80 line-clamp-2 mt-0.5 leading-relaxed">
-                    {p.description}
-                  </p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs font-extrabold text-brand-brown">
-                      {formatCurrency(p.price)}
-                    </span>
-                    {isOutOfStock ? (
-                      <span className="py-1 px-2.5 rounded-lg bg-brand-secondary/50 text-brand-brown/70 text-[11px] font-bold">
-                        Sin stock
-                      </span>
-                    ) : (
-                      <button className="py-1 px-2.5 rounded-lg bg-brand-brown text-brand-card text-[11px] font-bold hover:bg-brand-dark transition-colors flex items-center gap-1">
-                        <Plus className="w-3 h-3" /> Agregar
-                      </button>
-                    )}
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {catProducts.map((p) => <ProductCard key={p.id} p={p} onSelect={() => { setSelectedProduct(p); setProductQty(1); setProductNotes(''); }} onExpand={() => setExpandedImageProduct(p)} />)}
                 </div>
               </div>
             );
-          })}
-        </div>
+          })
+        ) : (
+          // Vista filtrada: grilla plana de la categoría seleccionada
+          <>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-brand-brown/80">
+              {categories.find(c => c.id === selectedCategory)?.name ?? 'Categoría'} ({filteredProducts.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredProducts.map((p) => <ProductCard key={p.id} p={p} onSelect={() => { setSelectedProduct(p); setProductQty(1); setProductNotes(''); }} onExpand={() => setExpandedImageProduct(p)} />)}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Item Detail Modal */}
@@ -652,12 +678,19 @@ export const PublicMenuPage: React.FC = () => {
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-3 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft"
-                >
-                  Confirmar pedido • {formatCurrency(total)}
-                </button>
+                {!activeRegister ? (
+                  <div className="bg-rose-100 border border-rose-300 text-rose-950 p-3 rounded-xl text-xs font-bold flex flex-col gap-1 text-center">
+                    <span>⚠️ Local Cerrado (Caja cerrada)</span>
+                    <span className="font-normal text-[11px]">No se pueden procesar ni recibir pedidos en este momento.</span>
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    className="w-full py-3 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft"
+                  >
+                    Confirmar pedido • {formatCurrency(total)}
+                  </button>
+                )}
               </form>
             )}
           </div>

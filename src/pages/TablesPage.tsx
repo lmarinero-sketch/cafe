@@ -522,6 +522,27 @@ export const TablesPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Banner Advertencia de Caja Cerrada */}
+      {!activeRegister && (
+        <div className="bg-amber-50 border-2 border-amber-400 p-4 rounded-2xl text-amber-950 flex items-center justify-between gap-4 shadow-soft">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-amber-700 shrink-0" />
+            <div>
+              <h4 className="font-extrabold text-sm text-amber-950">⚠️ Caja Cerrada</h4>
+              <p className="text-xs text-amber-900 mt-0.5">
+                La caja del sistema está cerrada. Abrí la caja en Tesorería para habilitar el registro de nuevos pedidos y cobros.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/caja')}
+            className="px-4 py-2 rounded-xl bg-amber-800 text-white font-extrabold text-xs hover:bg-amber-900 transition shrink-0 shadow-xs"
+          >
+            Ir a Tesorería
+          </button>
+        </div>
+      )}
+
       {/* Sector Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto bg-brand-card p-3 rounded-2xl border border-brand-secondary shadow-soft">
         <button
@@ -766,8 +787,18 @@ export const TablesPage: React.FC = () => {
                   <span className="whitespace-nowrap">Código QR</span>
                 </button>
                 <button
-                  onClick={() => window.open(`/menu?table=${t.id}&admin=true`, '_blank')}
-                  className="w-full py-2 px-3 rounded-xl bg-brand-brown hover:bg-brand-dark text-brand-card font-bold text-xs shadow-soft flex items-center justify-center gap-1.5 transition-colors"
+                  disabled={!activeRegister}
+                  onClick={() => {
+                    if (activeRegister) {
+                      window.open(`/menu?table=${t.id}&admin=true`, '_blank');
+                    }
+                  }}
+                  title={!activeRegister ? "Caja cerrada: Abrí turno en Tesorería para tomar pedidos" : "Tomar pedido"}
+                  className={`w-full py-2 px-3 rounded-xl font-bold text-xs shadow-soft flex items-center justify-center gap-1.5 transition-colors ${
+                    !activeRegister
+                      ? 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed'
+                      : 'bg-brand-brown hover:bg-brand-dark text-brand-card'
+                  }`}
                 >
                   <UtensilsCrossed className="w-4 h-4 text-brand-yellow shrink-0" />
                   <span className="whitespace-nowrap">Tomar Pedido</span>

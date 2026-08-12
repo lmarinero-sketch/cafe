@@ -109,6 +109,7 @@ export interface Order {
   paymentMethod: PaymentMethod;
   customerId?: string;
   pointsEarned?: number;
+  registerId?: string;
 }
 
 export type IngredientUnit = 

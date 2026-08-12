@@ -86,6 +86,16 @@ export const OrdersPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Banner Advertencia de Caja Cerrada */}
+      {!activeRegister && (
+        <div className="bg-amber-50 border border-amber-300 p-4 rounded-2xl text-amber-950 flex items-center gap-3 shadow-xs">
+          <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0" />
+          <div className="text-xs">
+            <span className="font-extrabold">⚠️ Caja Cerrada:</span> Para registrar el cobro de pedidos entregados es necesario abrir un turno en Tesorería.
+          </div>
+        </div>
+      )}
+
       {/* Kanban Board Columns */}
       <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
         {columns.map((col) => {
