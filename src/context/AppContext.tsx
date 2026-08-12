@@ -631,10 +631,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const code = `ORD-${codeNumber}`;
     const pointsEarned = Math.floor(orderData.total / 1000);
 
+    const resolvedTable = orderData.tableId ? tables.find((t) => t.id === orderData.tableId) : null;
+    const resolvedTableName = orderData.tableName || (resolvedTable ? resolvedTable.number : undefined);
+    const resolvedWaiterName = orderData.waiterName || (user ? `${user.name} (${user.role})` : 'Atención en Salón / QR');
+
     const newOrder: Order = {
       ...orderData,
       id,
       code,
+      tableName: resolvedTableName,
+      waiterName: resolvedWaiterName,
       registerId: activeRegister.id,
       createdAt: new Date().toISOString(),
       status: 'nuevo',

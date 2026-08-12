@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Wallet, Plus, ArrowDownToLine, ArrowUpFromLine, History, CreditCard, Send, Check, Printer, FileText, AlertTriangle, ShieldCheck, FileSpreadsheet, User, Clock, MessageSquare, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Wallet, Plus, ArrowDownToLine, ArrowUpFromLine, History, CreditCard, Send, Check, Printer, FileText, AlertTriangle, ShieldCheck, FileSpreadsheet, User, Clock, MessageSquare, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Utensils, ShoppingBag } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate, formatShortDate } from '../utils/currency';
@@ -14,6 +14,7 @@ export const CajaPage: React.FC = () => {
   const [isTxModal, setIsTxModal] = useState(false);
   const [selectedReceiptRegister, setSelectedReceiptRegister] = useState<CashRegister | null>(null);
   const [activeTab, setActiveTab] = useState<'actual' | 'historial'>('actual');
+  const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
 
   const [openedBy, setOpenedBy] = useState('');
   const [initialBalance, setInitialBalance] = useState(0);
@@ -515,24 +516,187 @@ export const CajaPage: React.FC = () => {
               {liveMovementItems.length === 0 ? (
                 <div className="p-8 text-center text-sm text-brand-brown/60">No hay movimientos registrados en este turno.</div>
               ) : (
-                liveMovementItems.map((tx) => (
-                  <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-brand-bg transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl border ${tx.type === 'ingreso' ? 'bg-brand-green/20 border-brand-green text-emerald-800' : 'bg-red-100 border-red-200 text-red-800'}`}>
-                        {tx.type === 'ingreso' ? <ArrowDownToLine className="w-4 h-4" /> : <ArrowUpFromLine className="w-4 h-4" />}
+                liveMovementItems.map((tx) => {
+                  const isExpanded = expandedTxId === tx.id;
+                  const matchedOrder = tx.orderId
+                    ? orders.find((o) => o.id === tx.orderId)
+                    : orders.find((o) => tx.description.includes(o.code));
+
+                  return (
+                    <div key={tx.id} className="transition-colors border-b border-brand-secondary/30 last:border-0">
+                      {/* Main Clickable Row */}
+                      <div
+                        onClick={() => setExpandedTxId(isExpanded ? null : tx.id)}
+                        className="p-4 flex items-center justify-between hover:bg-brand-bg/60 cursor-pointer select-none group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-xl border ${tx.type === 'ingreso' ? 'bg-brand-green/20 border-brand-green text-emerald-800' : 'bg-red-100 border-red-200 text-red-800'}`}>
+                            {tx.type === 'ingreso' ? <ArrowDownToLine className="w-4 h-4" /> : <ArrowUpFromLine className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-brand-dark text-sm group-hover:text-emerald-950 transition-colors">
+                                {tx.description}
+                              </p>
+                              {matchedOrder?.tableName && (
+                                <span className="text-[10px] font-extrabold px-2 py-0.2 rounded-full bg-brand-cream text-brand-dark border border-brand-secondary">
+                                  {matchedOrder.tableName}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-brand-brown/80 capitalize flex items-center gap-1.5 mt-0.5">
+                              <span>{formatDate(tx.timestamp)} hs</span>
+                              <span>•</span>
+                              <span className="font-semibold">{tx.paymentMethod}</span>
+                              {matchedOrder?.customerName && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-brand-dark font-medium">{matchedOrder.customerName}</span>
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-right">
+                          <div>
+                            <p className={`font-extrabold text-sm ${tx.type === 'ingreso' ? 'text-brand-dark' : 'text-red-700'}`}>
+                              {tx.type === 'ingreso' ? '+' : '-'}{formatCurrency(tx.amount)}
+                            </p>
+                            <span className="text-[10px] text-brand-brown/70 underline group-hover:text-brand-brown font-semibold">
+                              {isExpanded ? 'Ocultar detalles' : 'Ver pedido y mozo'}
+                            </span>
+                          </div>
+                          <div className="p-1 rounded-lg bg-brand-bg text-brand-brown group-hover:bg-brand-secondary/40 transition-colors">
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-brand-dark text-sm">{tx.description}</p>
-                        <p className="text-[11px] text-brand-brown/80 capitalize">{formatDate(tx.timestamp)} hs • {tx.paymentMethod}</p>
-                      </div>
+
+                      {/* Dropdown Panel Desplegable */}
+                      {isExpanded && (
+                        <div className="bg-brand-bg/90 border-t border-brand-secondary/60 p-4 space-y-4 text-xs animate-fade-in">
+                          {/* Grid de 3 Columnas: Pedido, Cliente y Atendido Por */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {/* 1. Pedido y Ubicación */}
+                            <div className="bg-white p-3.5 rounded-xl border border-brand-secondary/60 space-y-2 shadow-xs">
+                              <div className="flex items-center justify-between border-b border-brand-secondary/40 pb-1.5">
+                                <span className="font-extrabold text-brand-dark flex items-center gap-1.5">
+                                  <Utensils className="w-4 h-4 text-brand-brown" />
+                                  {matchedOrder ? `Pedido ${matchedOrder.code}` : tx.description}
+                                </span>
+                                {matchedOrder && (
+                                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand-green/30 text-emerald-950 border border-brand-green/60">
+                                    {matchedOrder.status}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="space-y-1.5 text-brand-dark/90">
+                                <p className="flex items-center justify-between">
+                                  <span className="text-brand-brown font-semibold">Ubicación / Mesa:</span>
+                                  <strong className="text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    {matchedOrder?.tableName || (matchedOrder?.tableId ? `Mesa ${matchedOrder.tableId}` : matchedOrder?.type || 'QR / Carta Digital')}
+                                  </strong>
+                                </p>
+                                <p className="flex items-center justify-between">
+                                  <span className="text-brand-brown font-semibold">Tipo de Pedido:</span>
+                                  <span className="capitalize font-bold">{matchedOrder?.type || 'Salón'}</span>
+                                </p>
+                                <p className="flex items-center justify-between">
+                                  <span className="text-brand-brown font-semibold">Medio de Pago:</span>
+                                  <span className="capitalize font-bold text-brand-brown">{tx.paymentMethod}</span>
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* 2. Datos del Cliente */}
+                            <div className="bg-white p-3.5 rounded-xl border border-brand-secondary/60 space-y-2 shadow-xs">
+                              <div className="flex items-center justify-between border-b border-brand-secondary/40 pb-1.5">
+                                <span className="font-extrabold text-brand-dark flex items-center gap-1.5">
+                                  <User className="w-4 h-4 text-brand-brown" />
+                                  Datos del Cliente
+                                </span>
+                                {matchedOrder?.pointsEarned ? (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                                    +{matchedOrder.pointsEarned} pts
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="space-y-1.5 text-brand-dark/90">
+                                <p className="flex items-center justify-between">
+                                  <span className="text-brand-brown font-semibold">Nombre:</span>
+                                  <strong className="text-brand-dark">{matchedOrder?.customerName || 'Cliente de Salón / QR'}</strong>
+                                </p>
+                                {matchedOrder?.customerPhone && (
+                                  <p className="flex items-center justify-between">
+                                    <span className="text-brand-brown font-semibold">Teléfono:</span>
+                                    <span>{matchedOrder.customerPhone}</span>
+                                  </p>
+                                )}
+                                {matchedOrder?.address && (
+                                  <p className="flex items-center justify-between">
+                                    <span className="text-brand-brown font-semibold">Dirección:</span>
+                                    <span className="truncate max-w-[140px]">{matchedOrder.address}</span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 3. Usuario que Atendió */}
+                            <div className="bg-white p-3.5 rounded-xl border border-brand-secondary/60 space-y-2 shadow-xs">
+                              <div className="flex items-center justify-between border-b border-brand-secondary/40 pb-1.5">
+                                <span className="font-extrabold text-brand-dark flex items-center gap-1.5">
+                                  <ShieldCheck className="w-4 h-4 text-emerald-800" />
+                                  Atendido / Procesado Por
+                                </span>
+                              </div>
+                              <div className="space-y-1.5 text-brand-dark/90">
+                                <p className="flex items-center justify-between">
+                                  <span className="text-brand-brown font-semibold">Usuario Responsable:</span>
+                                  <strong className="text-brand-dark">{matchedOrder?.waiterName || matchedOrder?.waiterId || activeRegister?.openedBy || user?.name || 'Cajero / Mozo de Turno'}</strong>
+                                </p>
+                                <p className="flex items-center justify-between">
+                                  <span className="text-brand-brown font-semibold">Fecha y Hora:</span>
+                                  <span>{formatDate(tx.timestamp)} hs</span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Detalle de Productos del Pedido */}
+                          {matchedOrder && matchedOrder.items && matchedOrder.items.length > 0 && (
+                            <div className="bg-white p-3.5 rounded-xl border border-brand-secondary/60 space-y-2 shadow-xs">
+                              <h4 className="font-bold text-brand-dark flex items-center gap-1.5 text-xs border-b border-brand-secondary/40 pb-1.5">
+                                <ShoppingBag className="w-4 h-4 text-brand-brown" /> Productos Comprados ({matchedOrder.items.length})
+                              </h4>
+                              <div className="divide-y divide-brand-secondary/30">
+                                {matchedOrder.items.map((it, idx) => (
+                                  <div key={idx} className="py-1.5 flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-5 h-5 rounded-md bg-brand-cream text-brand-dark font-extrabold text-[10px] flex items-center justify-center border border-brand-secondary">
+                                        {it.quantity}x
+                                      </span>
+                                      <span className="font-semibold text-brand-dark">{it.productName}</span>
+                                      {it.notes && <span className="text-[10px] text-brand-brown/70 italic">({it.notes})</span>}
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-brand-brown text-[11px] mr-2">{formatCurrency(it.unitPrice)} c/u</span>
+                                      <strong className="text-brand-dark">{formatCurrency(it.unitPrice * it.quantity)}</strong>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="pt-2 border-t border-brand-secondary/60 flex items-center justify-between font-extrabold text-xs">
+                                <span>Total Recaudado:</span>
+                                <span className="text-emerald-900 text-sm">{formatCurrency(matchedOrder.total)}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <p className={`font-extrabold ${tx.type === 'ingreso' ? 'text-brand-dark' : 'text-red-700'}`}>
-                        {tx.type === 'ingreso' ? '+' : '-'}{formatCurrency(tx.amount)}
-                      </p>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
