@@ -42,6 +42,10 @@ import * as automationsService from '../services/automations.service';
 import * as redemptionsService from '../services/redemptions.service';
 import * as branchesService from '../services/branches.service';
 import * as staffService from '../services/staff.service';
+import * as productsService from '../services/products.service';
+import * as tablesService from '../services/tables.service';
+import * as ordersService from '../services/orders.service';
+import * as ingredientsService from '../services/ingredients.service';
 
 interface LockModalState {
   isOpen: boolean;
@@ -415,13 +419,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsLoadingBranches(true);
 
       try {
-        const [dbCustomers, dbRewards, dbCampaigns, dbAutomations, dbBranches, dbStaff] = await Promise.all([
+        const [dbCustomers, dbRewards, dbCampaigns, dbAutomations, dbBranches, dbStaff, dbProducts, dbTables, dbOrders, dbIngredients] = await Promise.all([
           customersService.getCustomers(),
           rewardsService.getRewards(),
           campaignsService.getCampaigns(),
           automationsService.getAutomations(),
           branchesService.getBranches(),
           staffService.getStaffUsers(),
+          productsService.getProducts(),
+          tablesService.getTables(),
+          ordersService.getOrders(),
+          ingredientsService.getIngredients(),
         ]);
 
         setCustomers(dbCustomers);
@@ -429,9 +437,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setCampaigns(dbCampaigns);
         setAutomations(dbAutomations);
         setBranches(dbBranches);
-        if (dbStaff && dbStaff.length > 0) {
-          setStaffUsers(dbStaff);
-        }
+        if (dbStaff && dbStaff.length > 0) setStaffUsers(dbStaff);
+        if (dbProducts && dbProducts.length > 0) setProducts(dbProducts);
+        if (dbTables && dbTables.length > 0) setTables(dbTables);
+        if (dbOrders && dbOrders.length > 0) setOrders(dbOrders);
+        if (dbIngredients && dbIngredients.length > 0) setIngredients(dbIngredients);
       } catch (err) {
         console.error('Error fetching data from Supabase:', err);
       } finally {
@@ -509,22 +519,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // ============================================================
   // PRODUCTS (LocalStorage - unchanged)
   // ============================================================
-  const addProduct = (productData: Omit<Product, 'id'>) => {
-    const id = crypto.randomUUID();
+  const addProduct = async (productData: Omit<Product, 'id'>) => {
     const category = initialCategories.find((c) => c.id === productData.categoryId);
-    const newProduct: Product = {
+    const newProdData = {
       ...productData,
-      id,
       categoryName: category ? category.name : 'General',
     };
-    setProducts((prev) => [newProduct, ...prev]);
-    showToast('Producto creado', `"${newProduct.name}" se agregó correctamente.`, 'success');
+    const created = await productsService.createProduct(newProdData);
+    if (created) {
+      setProducts((prev) => [created, ...prev]);
+      showToast('Producto creado', `"${created.name}" se agregó correctamente.`, 'success');
+    } else {
+      const id = crypto.randomUUID();
+      const fallback: Product = { ...newProdData, id };
+      setProducts((prev) => [fallback, ...prev]);
+      showToast('Producto creado', `"${fallback.name}" se agregó correctamente.`, 'success');
+    }
   };
 
-  const updateProduct = (id: string, productData: Partial<Product>) => {
+  const updateProduct = async (id: string, productData: Partial<Product>) => {
     setProducts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, ...productData } : p))
     );
+    await productsService.updateProduct(id, productData);
     showToast('Producto actualizado', 'Los cambios fueron guardados.', 'success');
   };
 

@@ -1,0 +1,89 @@
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { Order } from '../types';
+
+function mapRowToOrder(row: any): Order {
+  return {
+    id: row.id,
+    code: row.code,
+    type: row.type || 'salon',
+    status: row.status || 'nuevo',
+    items: row.items || [],
+    subtotal: Number(row.subtotal) || 0,
+    deliveryFee: Number(row.delivery_fee) || 0,
+    total: Number(row.total) || 0,
+    paymentMethod: row.payment_method || 'efectivo',
+    tableId: row.table_id || undefined,
+    tableName: row.table_name || undefined,
+    customerId: row.customer_id || undefined,
+    customerName: row.customer_name || 'Cliente de Salón',
+    customerPhone: row.customer_phone || '',
+    address: row.address || undefined,
+    waiterName: row.waiter_name || undefined,
+    registerId: row.register_id || undefined,
+    createdAt: row.created_at,
+    pointsEarned: row.points_earned || 0,
+  };
+}
+
+function mapOrderToRow(order: Partial<Order>): Record<string, any> {
+  const row: Record<string, any> = {};
+  if (order.code !== undefined) row.code = order.code;
+  if (order.type !== undefined) row.type = order.type;
+  if (order.status !== undefined) row.status = order.status;
+  if (order.items !== undefined) row.items = order.items;
+  if (order.subtotal !== undefined) row.subtotal = order.subtotal;
+  if (order.deliveryFee !== undefined) row.delivery_fee = order.deliveryFee;
+  if (order.total !== undefined) row.total = order.total;
+  if (order.paymentMethod !== undefined) row.payment_method = order.paymentMethod;
+  if (order.tableId !== undefined) row.table_id = order.tableId;
+  if (order.tableName !== undefined) row.table_name = order.tableName;
+  if (order.customerId !== undefined) row.customer_id = order.customerId;
+  if (order.customerName !== undefined) row.customer_name = order.customerName;
+  if (order.customerPhone !== undefined) row.customer_phone = order.customerPhone;
+  if (order.address !== undefined) row.address = order.address;
+  if (order.waiterName !== undefined) row.waiter_name = order.waiterName;
+  if (order.registerId !== undefined) row.register_id = order.registerId;
+  if (order.pointsEarned !== undefined) row.points_earned = order.pointsEarned;
+  return row;
+}
+
+export async function getOrders(): Promise<Order[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching orders from Supabase:', error);
+    return [];
+  }
+  return (data || []).map(mapRowToOrder);
+}
+
+export async function createOrderDB(orderData: Partial<Order>): Promise<Order | null> {
+  if (!isSupabaseConfigured) return null;
+  const row = mapOrderToRow(orderData);
+  const { data, error } = await supabase.from('orders').insert(row).select().single();
+  if (error) {
+    console.error('Error creating order in Supabase:', error);
+    return null;
+  }
+  return mapRowToOrder(data);
+}
+
+export async function updateOrderStatusDB(id: string, status: Order['status']): Promise<Order | null> {
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating order status in Supabase:', error);
+    return null;
+  }
+  return mapRowToOrder(data);
+}
