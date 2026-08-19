@@ -56,6 +56,7 @@ export const CajaPage: React.FC = () => {
         paymentMethod: o.paymentMethod || 'efectivo',
         description: `Cobro Pedido ${o.code} (${o.tableId ? 'Mesa' : o.type || 'QR'})`,
         timestamp: o.createdAt,
+        registeredBy: o.waiterName || 'Atención en Salón / QR',
       }));
 
     const combined = [...txList, ...autoOrderTxs];
@@ -339,6 +340,7 @@ export const CajaPage: React.FC = () => {
               <tr>
                 <th>Código</th>
                 <th>Mesa / Tipo</th>
+                <th>Atendido / Cobrado Por</th>
                 <th>Método Pago</th>
                 <th style="text-align:right;">Total</th>
               </tr>
@@ -348,11 +350,12 @@ export const CajaPage: React.FC = () => {
                 <tr>
                   <td><strong>${o.code}</strong></td>
                   <td>${o.tableName || (o.type === 'delivery' ? 'Delivery' : 'Mostrador')}</td>
+                  <td><strong>${o.waiterName || 'Salón / QR'}</strong></td>
                   <td style="text-transform:capitalize;">${o.paymentMethod}</td>
                   <td style="text-align:right; font-weight:800;">${formatCurrency(o.total)}</td>
                 </tr>
               `).join('')}
-              ${regOrders.length === 0 ? '<tr><td colspan="4" style="text-align:center; color:#888;">Sin pedidos registrados en este turno.</td></tr>' : ''}
+              ${regOrders.length === 0 ? '<tr><td colspan="5" style="text-align:center; color:#888;">Sin pedidos registrados en este turno.</td></tr>' : ''}
             </tbody>
           </table>
 
@@ -541,6 +544,11 @@ export const CajaPage: React.FC = () => {
                               {matchedOrder?.tableName && (
                                 <span className="text-[10px] font-extrabold px-2 py-0.2 rounded-full bg-brand-cream text-brand-dark border border-brand-secondary">
                                   {matchedOrder.tableName}
+                                </span>
+                              )}
+                              {(tx.registeredBy || matchedOrder?.waiterName) && (
+                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1 shadow-xs">
+                                  👤 {tx.registeredBy || matchedOrder?.waiterName}
                                 </span>
                               )}
                             </div>

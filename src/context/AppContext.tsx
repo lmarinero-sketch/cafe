@@ -659,6 +659,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       paymentMethod: newOrder.paymentMethod || 'efectivo',
       description: `Cobro Pedido ${code}`,
       timestamp: new Date().toISOString(),
+      registeredBy: resolvedWaiterName,
     };
     setCashTransactions((prev) => [newTx, ...prev]);
 

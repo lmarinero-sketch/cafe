@@ -71,6 +71,8 @@ export interface CashTransaction {
   paymentMethod: PaymentMethod | 'varios';
   description: string;
   timestamp: string;
+  registeredBy?: string;
+  role?: string;
 }
 
 export interface CashRegister {
