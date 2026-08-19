@@ -32,7 +32,17 @@ export const ManualsPage: React.FC = () => {
             Guías interactivas paso a paso para cada perfil y módulo del sistema ({manuals.length} manuales disponibles)
           </p>
         </div>
+        <a
+          href="/Manual_Operativo_Hilos_de_Amor.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          download="Manual_Operativo_Hilos_de_Amor.pdf"
+          className="py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-extrabold text-xs hover:bg-brand-dark transition-all shadow-soft flex items-center gap-2 shrink-0 border border-brand-brown"
+        >
+          <FileText className="w-4 h-4 text-brand-yellow" /> Descargar Manual Ilustrado PDF
+        </a>
       </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Search, Tabs & Manuals List */}
