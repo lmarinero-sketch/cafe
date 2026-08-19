@@ -207,4 +207,100 @@ export const initialManuals: Manual[] = [
       },
     ],
   },
+  {
+    id: 'man-12',
+    category: 'Perfil: Administrador',
+    title: 'Guía Operativa para Administradores',
+    description: 'Manual completo para el rol Administrador: configuración general, control de personal, escandallos, margen bruto y supervisión ejecutiva.',
+    steps: [
+      'Ingresá con tu usuario de Administrador (ej. admin@growlabs.lat o hilosdeamor@growlabs.lat).',
+      'Configuración de Sucursales y Comercio: Accedé a "Configuración" para gestionar las sucursales del negocio, horarios, redes y datos generales.',
+      'Gestión de Personal y Roles: En "Configuración > Personal y Roles", creá o editá usuarios asignando los roles correspondientes (Cajero, Mozo, Cocina, Admin).',
+      'Control de Costos e Insumos: Navegá a "Ingredientes" y "Recetas y Costos" para definir materias primas, mermas y asegurar el margen objetivo del negocio (ej. 60%).',
+      'Supervisión Ejecutiva: Analizá el Dashboard de "Métricas" para evaluar ventas totales, ticket promedio, matriz de rotación e insights automáticos.',
+      'Estrategia de Fidelización: Configurá las reglas de puntos, campañas masivas y automatizaciones en el módulo "Fidelización" y "WhatsApp".',
+    ],
+    faqs: [
+      {
+        question: '¿Qué alcance de permisos tiene el perfil Administrador?',
+        answer: 'Tiene acceso 100% irrestricto a todas las funcionalidades del sistema, incluyendo analítica financiera y gestión de personal.',
+      },
+      {
+        question: '¿Cómo protejo a los usuarios oficiales del personal?',
+        answer: 'Los usuarios institucionales oficiales habilitados en Supabase Auth se encuentran protegidos contra edición o eliminación accidental.',
+      },
+    ],
+  },
+  {
+    id: 'man-13',
+    category: 'Perfil: Cajero',
+    title: 'Guía Operativa para Cajeros y Arqueo de Caja',
+    description: 'Instrucciones diarias para el rol Cajero: apertura de turno, registro de cobros por múltiples medios de pago y arqueo/cierre de caja.',
+    steps: [
+      'Iniciar Sesión: Ingresá con credenciales de Cajero (ej. cajero@growlabs.lat).',
+      'Apertura de Caja: Dirigite al módulo "Caja", hacé clic en "Abrir Caja" e ingresá el saldo inicial en efectivo (fondo de caja).',
+      'Cobro de Pedidos: Los pedidos creados desde Salón, Retiro o Delivery se integran automáticamente en la caja activa.',
+      'Registro de Movimientos Manuales: Si ocurren gastos menores o ingresos extraordinarios en efectivo, usá el botón "Nuevo Movimiento" para mantener el balance actualizado.',
+      'Monitoreo del Balance en Vivo: Verificá el desglose por medio de pago (Efectivo, Transferencia, Tarjeta o Mercado Pago).',
+      'Cierre de Turno y Arqueo: Al finalizar la jornada, presioná "Cerrar Caja", ingresá el recuento físico de billetes y confirmá la diferencia antes de emitir el reporte final.',
+    ],
+    faqs: [
+      {
+        question: '¿Qué sucede si hay diferencia entre el saldo esperado y el físico?',
+        answer: 'El sistema calcula automáticamente la diferencia (sobrante o faltante) y la registra en el historial auditado del cierre de caja.',
+      },
+      {
+        question: '¿Puedo cobrar un pedido si la caja está cerrada?',
+        answer: 'No, el sistema bloquea la creación y cobro de nuevos pedidos hasta que un cajero realice la Apertura de Caja.',
+      },
+    ],
+  },
+  {
+    id: 'man-14',
+    category: 'Perfil: Mozo',
+    title: 'Guía Operativa para Mozos y Atención de Salón',
+    description: 'Procedimiento para el rol Mozo: mapa de salón, toma de comandas, solicitudes por QR y seguimiento de mesas.',
+    steps: [
+      'Iniciar Sesión: Accedé con tu usuario de Mozo (ej. mozo@growlabs.lat).',
+      'Navegación por Sectores: Ingresá a "Mesas" y seleccioná el sector correspondiente (Salón Principal, Patio, Terraza o Vereda).',
+      'Apertura de Mesa: Al sentarse los clientes, hacé clic en la tarjeta de la mesa para cambiar su estado a "Ocupada".',
+      'Toma de Pedido / Comanda: Seleccioná los productos solicitados por los clientes, agregá notas particulares (ej. "sin azúcar", "hielo aparte") y confirmá la comanda.',
+      'Atención mediante QR: Presioná "Ver QR" en la mesa para mostrar el código interactivo y permitir que el cliente ordene desde su smartphone.',
+      'Cierre y Solicitud de Cuenta: Al pedir la cuenta, notificá al Cajero para procesar el pago y cambiá la mesa a "Disponible" una vez desocupada.',
+    ],
+    faqs: [
+      {
+        question: '¿Cómo sé si un cliente envió un pedido por QR desde su mesa?',
+        answer: 'Los pedidos creados por QR ingresan automáticamente vinculados al número de mesa y notifican en el panel de comanda.',
+      },
+      {
+        question: '¿Puedo mover un pedido entre mesas?',
+        answer: 'Sí, podés editar la mesa asignada desde el detalle del pedido antes de que pase al estado final de entregado.',
+      },
+    ],
+  },
+  {
+    id: 'man-15',
+    category: 'Perfil: Cocina',
+    title: 'Guía Operativa para Cocina y Comandera KDS',
+    description: 'Instrucciones para el rol Cocina: recepción de comandas en tiempo real, gestión de estados de preparación y despacho.',
+    steps: [
+      'Acceso a Comandera: Ingresá al módulo "Pedidos" (o vista KDS de Cocina).',
+      'Recepción de Nuevas Comandas: Revisa la columna "Nuevo" donde ingresan los pedidos ordenados por horario de llegada.',
+      'Inicio de Elaboración: Hacé clic en "En preparación" al comenzar a elaborar los productos de la orden.',
+      'Revisión de Observaciones: Verificá atentamente las etiquetas y observaciones especiales (ej. "sin TACC", "té bien caliente", "término medio").',
+      'Finalización y Notificación: Al completar la elaboración, cambiá el estado a "Listo". Esto notifica inmediatamente al mozo o al repartidor de delivery.',
+    ],
+    faqs: [
+      {
+        question: '¿Qué prioridades tienen las comandas de salón vs delivery?',
+        answer: 'Cada tarjeta indica claramente el canal de origen (Salón, Retiro o Delivery) para priorizar según la exigencia del servicio.',
+      },
+      {
+        question: '¿Cómo reportar falta de insumo para un plato?',
+        answer: 'Podés solicitar al Administrador que apague la disponibilidad del producto desde el módulo "Productos" para que se oculte del menú digital.',
+      },
+    ],
+  },
 ];
+
