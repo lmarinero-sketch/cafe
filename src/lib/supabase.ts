@@ -5,7 +5,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
-    '⚠️ Supabase credentials not found in .env. Running in offline/demo mode with LocalStorage fallback.'
+    '⚠️ Supabase credentials not found in .env. Running with LocalStorage fallback.'
   );
 }
 

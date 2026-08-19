@@ -10,16 +10,16 @@ export const initialManuals: Manual[] = [
       'Ingresá al Dashboard general para visualizar las métricas principales del día.',
       'Verificá qué plan tenés activo en la barra superior (Plan Esencial, Gestión o Fidelización).',
       'Accedé al menú digital o creá tus primeras mesas para empezar a tomar pedidos.',
-      'Para reiniciar los datos ficticios en cualquier momento, utilizá el botón "Reiniciar demo" en la barra superior o en Configuración.',
+      'Podés administrar el catálogo y mesas directamente desde los módulos de Productos y Mesas en el panel principal.',
     ],
     faqs: [
       {
-        question: '¿Puedo cambiar de plan durante la demo?',
-        answer: 'Sí, podés alternar libremente entre el Plan Esencial, Plan Gestión y Plan Fidelización mediante el selector superior para evaluar las funcionalidades de cada nivel.',
+        question: '¿Puedo cambiar o actualizar de plan en producción?',
+        answer: 'Sí, podés alternar o actualizar tu plan contratado según los requerimientos operativos y comerciales de tu comercio.',
       },
       {
         question: '¿Los datos se guardan al cerrar el navegador?',
-        answer: 'Sí, la aplicación utiliza LocalStorage para mantener tus modificaciones durante la navegación.',
+        answer: 'Sí, la aplicación almacena y sincroniza tus modificaciones continuamente.',
       },
     ],
   },
@@ -185,25 +185,25 @@ export const initialManuals: Manual[] = [
     ],
     faqs: [
       {
-        question: '¿Esta función envía mensajes reales de WhatsApp?',
-        answer: 'En esta versión demo es una simulación visual 100% interactiva. Queda preparada la arquitectura para conectar la API de WhatsApp en producción.',
+        question: '¿Esta función se conecta con WhatsApp?',
+        answer: 'La plataforma integra la API oficial de WhatsApp Cloud para envíos en tiempo real a tus clientes.',
       },
     ],
   },
   {
     id: 'man-11',
     category: 'Configuración',
-    title: 'Configuración General y Restauración de Demo',
-    description: 'Ajustes del comercio, reglas de redondeo y restauración de fábrica.',
+    title: 'Configuración General y Ajustes del Comercio',
+    description: 'Ajustes del comercio, reglas de moneda, personal y sucursales.',
     steps: [
       'Ingresá al módulo "Configuración".',
       'Personalizá el nombre del comercio (ej. Hilos de Amor), teléfono y moneda.',
-      'Utilizá el botón "Reiniciar toda la demo" para restablecer los productos, pedidos y clientes a los datos seed originales.',
+      'Gestioná tus sucursales físicas con direcciones y mapas interactivos de Google.',
     ],
     faqs: [
       {
-        question: '¿Se pierden las recetas si reinicio la demo?',
-        answer: 'Al reiniciar la demo se vuelven a cargar todos los datos seed predeterminados de la plataforma.',
+        question: '¿Cómo modifico los datos institucionales del local?',
+        answer: 'Los cambios realizados en Configuración se aplican inmediatamente en el encabezado, tickets y comunicaciones del comercio.',
       },
     ],
   },

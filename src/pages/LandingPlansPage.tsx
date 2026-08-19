@@ -295,7 +295,7 @@ export const LandingPlansPage: React.FC = () => {
         <div className="bg-brand-cream rounded-2xl border border-brand-secondary p-6 text-center max-w-3xl mx-auto space-y-3 shadow-xs">
           <h4 className="text-sm font-bold text-brand-dark">¿Buscás una propuesta personalizada para tu comercio?</h4>
           <p className="text-xs text-brand-brown/80">
-            Todos los datos presentados en esta demo son interactivos. El equipo de Grow Labs adapta la plataforma a los requerimientos específicos de tu sucursal.
+            El equipo de Grow Labs adapta la plataforma a los requerimientos específicos de tu sucursal para optimizar tu operación diaria en producción.
           </p>
           <div className="pt-2">
             <a

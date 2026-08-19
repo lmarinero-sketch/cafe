@@ -106,7 +106,7 @@ export const DashboardPage: React.FC = () => {
         steps={[
           'Revisá los KPIs en tiempo real (Ventas del día, Pedidos activos y Mesas ocupadas).',
           'Analizá los dos gráficos interactivos: Evolución semanal y Productos más vendidos.',
-          'Probá la autogestión abriendo el "Menú Digital QR" o restablecé datos con "Reiniciar".',
+          'Probá la autogestión abriendo el "Menú Digital QR" o administrá la carta desde "Productos".',
         ]}
       />
 

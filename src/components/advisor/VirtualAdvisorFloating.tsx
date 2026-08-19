@@ -77,7 +77,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
       if (q.includes('producto') || q.includes('creo un producto')) {
         foundAnswer = 'Para crear un producto: Ingresá a la sección "Productos" en el menú lateral, hacé clic en "Nuevo producto", completá el nombre, categoría, precio, imagen y seleccioná si estará disponible para Salón, Retiro o Delivery.';
       } else if (q.includes('mesa')) {
-        foundAnswer = 'Para crear una mesa: Accedé a "Mesas", hacé clic en "Agregar mesa", seleccioná el número, capacidad y sector (Salón, Patio, Terraza o Vereda). Desde allí podés generar su código QR ficticio.';
+        foundAnswer = 'Para crear una mesa: Accedé a "Mesas", hacé clic en "Agregar mesa", seleccioná el número, capacidad y sector (Salón, Patio, Terraza o Vereda). Desde allí podés generar su código QR interactivo.';
       } else if (q.includes('menú') || q.includes('menu') || q.includes('carta')) {
         foundAnswer = 'Para modificar el menú digital: Todos los cambios que realices en el módulo "Productos" (precios, descripciones, disponibilidad) se reflejan inmediatamente en la carta pública en tiempo real.';
       } else if (q.includes('ingrediente')) {
@@ -441,7 +441,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
                           <option value="Consulta general">Consulta general</option>
                           <option value="Duda sobre recetas y precios">Duda sobre recetas y precios</option>
                           <option value="Problema con el menú digital">Problema con el menú digital</option>
-                          <option value="Solicitud de demo personalizada">Solicitud de demo personalizada</option>
+                          <option value="Solicitud de soporte o extensión de módulo">Solicitud de soporte o extensión de módulo</option>
                         </select>
                       </div>
 
