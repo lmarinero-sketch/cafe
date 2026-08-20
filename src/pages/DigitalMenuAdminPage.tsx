@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { QrCode, ExternalLink, Printer, Link } from 'lucide-react';
+import { QrCode, ExternalLink, Printer, Link, FileText, Download } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
+import { PrintableMenuModal } from '../components/menu/PrintableMenuModal';
 
 export const DigitalMenuAdminPage: React.FC = () => {
   const { tables } = useApp();
   const [copied, setCopied] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   const publicLink = `${window.location.origin}/menu`;
 
@@ -54,12 +56,37 @@ export const DigitalMenuAdminPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in pb-10">
       <ModuleOnboardingBanner
         title="Administración de Menú Digital"
-        subtitle="Gestiona el acceso público a tu carta y genera códigos QR por mesa."
+        subtitle="Gestiona el acceso público a tu carta, imprime 'La Carta' en PDF y genera códigos QR por mesa."
         steps={[
           'Copia el link global para tus redes sociales.',
+          'Descarga e imprime "La Carta" en PDF con diseño artesanal para tu salón.',
           'Genera e imprime el código QR específico para cada mesa de tu local.',
         ]}
       />
+
+      {/* Tarjeta para Descargar / Imprimir La Carta en PDF */}
+      <div className="bg-gradient-to-r from-[#1A2E1E] to-[#2F5233] text-white p-6 rounded-2xl border border-emerald-800 shadow-soft flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="space-y-2 flex-1">
+          <div className="flex items-center gap-2 text-[#D8E4C3]">
+            <FileText className="w-5 h-5" />
+            <span className="text-xs font-bold uppercase tracking-wider">Documento Físico Impreso</span>
+          </div>
+          <h3 className="text-xl font-extrabold text-[#FFFDF8]">
+            Descargar e Imprimir "La Carta" (PDF)
+          </h3>
+          <p className="text-xs text-emerald-100/80 leading-relaxed max-w-2xl">
+            Genera un documento PDF de alta calidad optimizado para hojas A4 con las categorías, productos, precios actualizados, estética institucional e imágenes fotográficas generadas por IA.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setIsPrintModalOpen(true)}
+          className="px-5 py-3 rounded-xl bg-[#FFFDF8] text-[#1A2E1E] hover:bg-emerald-50 font-extrabold text-xs shadow-md transition-all flex items-center gap-2 whitespace-nowrap transform active:scale-95"
+        >
+          <Download className="w-4 h-4 text-[#2F5233]" />
+          Ver e Imprimir Carta PDF
+        </button>
+      </div>
 
       <div className="bg-brand-card p-6 rounded-2xl border border-brand-secondary shadow-soft space-y-4">
         <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2">
@@ -119,6 +146,13 @@ export const DigitalMenuAdminPage: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Modal de Impresión / PDF */}
+      <PrintableMenuModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+      />
     </div>
   );
 };
+

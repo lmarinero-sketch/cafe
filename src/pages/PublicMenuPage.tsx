@@ -15,10 +15,13 @@ import {
   ChevronRight,
   Star,
   Maximize2,
+  FileText,
+  Download,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Product, OrderItem, PaymentMethod, OrderType } from '../types';
 import { formatCurrency } from '../utils/currency';
+import { PrintableMenuModal } from '../components/menu/PrintableMenuModal';
 
 export const PublicMenuPage: React.FC = () => {
   const { products, categories, tables, createOrder, customers, cashRegisters } = useApp();
@@ -35,6 +38,7 @@ export const PublicMenuPage: React.FC = () => {
   const [expandedImageProduct, setExpandedImageProduct] = useState<Product | null>(null);
   const [productQty, setProductQty] = useState(1);
   const [productNotes, setProductNotes] = useState('');
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // Cart Drawer & Checkout Form state
   const [cart, setCart] = useState<OrderItem[]>([]);
@@ -234,6 +238,15 @@ export const PublicMenuPage: React.FC = () => {
                 className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand-brown/40"
               />
             </div>
+
+            <button
+              onClick={() => setIsPrintModalOpen(true)}
+              className="p-2.5 sm:px-3.5 sm:py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark hover:bg-brand-secondary/40 transition-colors shadow-xs flex items-center gap-1.5 font-bold text-xs shrink-0"
+              title="Descargar o Imprimir Carta en PDF"
+            >
+              <Download className="w-4 h-4 text-brand-brown" />
+              <span className="hidden sm:inline">Carta PDF</span>
+            </button>
 
             <button
               onClick={() => setIsCartOpen(true)}
@@ -779,6 +792,12 @@ export const PublicMenuPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Impresión / PDF de La Carta */}
+      <PrintableMenuModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+      />
     </div>
   );
 };

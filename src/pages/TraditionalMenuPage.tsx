@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Coffee, ArrowLeft, Search, Star, Sparkles, BookOpen, Smartphone } from 'lucide-react';
+import { Coffee, ArrowLeft, Search, Star, Sparkles, BookOpen, Smartphone, Download, FileText } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/currency';
+import { PrintableMenuModal } from '../components/menu/PrintableMenuModal';
 
 export const TraditionalMenuPage: React.FC = () => {
   const { products, categories } = useApp();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   const scrollToCategory = (catId: string) => {
     setActiveCategory(catId);
@@ -24,17 +26,20 @@ export const TraditionalMenuPage: React.FC = () => {
     <div className="min-h-screen bg-[#F4F7F3] text-[#1A2E1E] font-sans pb-20 max-w-md mx-auto relative border-x border-[#D2E0D0] shadow-soft-lg selection:bg-[#D2E0D0]">
       {/* Mobile Sticky Header */}
       <header className="sticky top-0 z-40 bg-[#FFFFFF]/95 backdrop-blur-md border-b border-[#D2E0D0] p-4 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <button
             onClick={() => navigate('/menu')}
             className="p-2 rounded-xl bg-[#EBF1EA] text-[#2F5233] hover:bg-[#D2E0D0]/50 transition-colors flex items-center gap-1.5 text-xs font-bold"
           >
-            <ArrowLeft className="w-4 h-4" /> Volver a Pedidos
+            <ArrowLeft className="w-4 h-4" /> Volver
           </button>
 
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#2F5233] bg-[#D8E4C3]/50 px-2.5 py-1 rounded-full border border-[#D8E4C3]">
-            📖 Carta Tradicional
-          </span>
+          <button
+            onClick={() => setIsPrintModalOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-[#2F5233] text-[#FFFDF8] hover:bg-[#1A2E1E] transition-colors flex items-center gap-1.5 text-xs font-bold shadow-xs"
+          >
+            <Download className="w-3.5 h-3.5" /> Descargar Carta PDF
+          </button>
         </div>
 
         {/* Traditional Menu Brand Header */}
@@ -175,14 +180,22 @@ export const TraditionalMenuPage: React.FC = () => {
         <footer className="bg-[#EBF1EA] rounded-2xl border border-[#D2E0D0] p-4 text-center space-y-3">
           <p className="text-xs font-bold text-[#1A2E1E]">📖 Menú de Lectura Tradicional</p>
           <p className="text-[11px] text-[#2F5233]/80 leading-relaxed">
-            Si querés realizar un pedido directamente desde tu celular, utilizá el Menú Interactivo de Pedidos.
+            Si querés realizar un pedido directamente desde tu celular, utilizá el Menú Interactivo de Pedidos o descargá la carta en PDF para imprimir.
           </p>
-          <button
-            onClick={() => navigate('/menu')}
-            className="py-2.5 px-4 rounded-xl bg-[#2F5233] text-[#FFFDF8] font-bold text-xs hover:bg-[#1A2E1E] transition-colors shadow-soft"
-          >
-            Ir al Menú Interactivo de Pedidos
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => setIsPrintModalOpen(true)}
+              className="py-2.5 px-4 rounded-xl border border-[#2F5233] text-[#2F5233] bg-white font-bold text-xs hover:bg-[#D8E4C3]/40 transition-colors shadow-xs flex items-center justify-center gap-2"
+            >
+              <FileText className="w-4 h-4 text-[#2F5233]" /> Descargar / Imprimir Carta (PDF)
+            </button>
+            <button
+              onClick={() => navigate('/menu')}
+              className="py-2.5 px-4 rounded-xl bg-[#2F5233] text-[#FFFDF8] font-bold text-xs hover:bg-[#1A2E1E] transition-colors shadow-soft"
+            >
+              Ir al Menú Interactivo de Pedidos
+            </button>
+          </div>
           <div className="pt-2 border-t border-[#D2E0D0]/60">
             <a
               href="https://www.growlabs.lat"
@@ -195,6 +208,13 @@ export const TraditionalMenuPage: React.FC = () => {
           </div>
         </footer>
       </main>
+
+      {/* Modal de Impresión / PDF */}
+      <PrintableMenuModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+      />
     </div>
   );
 };
+
