@@ -28,6 +28,7 @@ import { AutomationsPage } from '../pages/AutomationsPage';
 import { ManualsPage } from '../pages/ManualsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { WebsiteEditorPage } from '../pages/WebsiteEditorPage';
+import { AuditPage } from '../pages/AuditPage';
 
 export const router = createBrowserRouter([
   // ============================================================
@@ -156,6 +157,10 @@ export const router = createBrowserRouter([
           {
             path: 'configuracion',
             element: <SettingsPage />,
+          },
+          {
+            path: 'auditoria',
+            element: <AuditPage />,
           },
         ],
       },

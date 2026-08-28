@@ -318,7 +318,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [cashRegisters, setCashRegisters] = useState<import('../types').CashRegister[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CASH_REGISTERS);
-    return saved ? JSON.parse(saved) : [];
+    const parsed = saved ? JSON.parse(saved) : null;
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    
+    // Default open register so QR codes work on fresh devices (like customers scanning from their phones)
+    return [{
+      id: `caja-auto-${Date.now()}`,
+      openedAt: new Date().toISOString(),
+      openedBy: 'Sistema (Auto)',
+      initialBalance: 0,
+      status: 'abierta'
+    }];
   });
 
   const [cashTransactions, setCashTransactions] = useState<import('../types').CashTransaction[]>(() => {

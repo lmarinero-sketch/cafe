@@ -323,3 +323,35 @@ export interface StaffUser {
   password?: string;
   status: 'active' | 'inactive';
 }
+
+
+// ============================================================
+// AUDIT & ACTIVITY LOGS
+// ============================================================
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  module: string;
+  action: 'login' | 'logout' | 'Clic' | 'Crear' | 'Actualizar' | 'Eliminar' | 'Visualizar';
+  details: string;
+}
+
+export interface UserActivityStats {
+  userId: string;
+  userName: string;
+  totalSessions: number;
+  totalHours: string;
+  lastActive: string;
+  clicksLast24h: number;
+  hoursLast24h: string;
+}
+
+export interface ModuleUsage {
+  moduleName: string;
+  hours: string;
+  minutes: string;
+  userCount: number;
+}

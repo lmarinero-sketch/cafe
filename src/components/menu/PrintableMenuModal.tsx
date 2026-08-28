@@ -21,9 +21,9 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
   const publicLink = `${window.location.origin}/menu`;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-fade-in print:static print:block print:inset-auto print:overflow-visible print:bg-white print:p-0">
       {/* Container Dialog */}
-      <div className="bg-[#FAF7F2] rounded-2xl shadow-2xl border border-[#E5DEC9] w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-[#2C221E]">
+      <div className="bg-[#FAF7F2] rounded-2xl shadow-2xl border border-[#E5DEC9] w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-[#2C221E] print:max-h-none print:w-full print:block print:overflow-visible print:border-none print:shadow-none print:bg-transparent">
         
         {/* Modal Toolbar (Hidden during print) */}
         <div className="bg-[#1A2E1E] text-white p-4 flex items-center justify-between shadow-md print:hidden">
@@ -55,11 +55,17 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         </div>
 
         {/* Scrollable Modal Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-[#F4EFDF]/40 print:p-0 print:overflow-visible print:bg-white">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-[#F4EFDF]/40 print:overflow-visible print:p-0 print:block print:bg-transparent">
           
           {/* Print Style Injector */}
           <style>{`
             @media print {
+              html, body {
+                height: auto !important;
+                min-height: auto !important;
+                overflow: visible !important;
+                position: static !important;
+              }
               body * {
                 visibility: hidden;
               }
@@ -154,7 +160,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             {/* Menu Items Grouped by Category */}
             <div className="space-y-8">
               {categories.map((cat) => {
-                const catProducts = products.filter((p) => p.categoryId === cat.id && p.isAvailable);
+                const catProducts = products.filter((p) => p.categoryId === cat.id);
                 if (catProducts.length === 0) return null;
 
                 return (

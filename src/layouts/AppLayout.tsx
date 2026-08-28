@@ -16,7 +16,7 @@ export const AppLayout: React.FC = () => {
       <HeaderPlanSwitcher />
 
       {/* Main Container */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left Sidebar */}
         <Sidebar />
 

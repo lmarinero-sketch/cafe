@@ -566,16 +566,16 @@ export const TablesPage: React.FC = () => {
         </div>
 
         {isAdmin && (
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex-1 sm:flex-initial py-2.5 px-3 sm:px-4 rounded-xl border-2 border-brand-brown text-brand-brown font-bold text-xs hover:bg-brand-brown/10 transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-full sm:w-auto py-2.5 px-3 sm:px-4 rounded-xl border-2 border-brand-brown text-brand-brown font-bold text-xs hover:bg-brand-brown/10 transition-all duration-200 flex items-center justify-center gap-2"
             >
               Administrar Sectores
             </button>
             <button
               onClick={handleOpenAddModal}
-              className="flex-1 sm:flex-initial py-2.5 px-3 sm:px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all duration-200 shadow-soft flex items-center justify-center gap-2"
+              className="w-full sm:w-auto py-2.5 px-3 sm:px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all duration-200 shadow-soft flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4 text-brand-yellow shrink-0" />
               <span className="whitespace-nowrap">Agregar mesa</span>

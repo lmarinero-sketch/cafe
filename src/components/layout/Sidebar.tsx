@@ -26,6 +26,7 @@ import {
   Store,
   Globe,
   Wallet,
+  ShieldCheck,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { PlanType } from '../../types';
@@ -101,6 +102,7 @@ export const Sidebar: React.FC = () => {
       title: 'Sistema & Personal',
       items: [
         { name: 'Usuarios y Equipo', path: '/configuracion', icon: <Users className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
+        { name: 'Auditoría y Actividad', path: '/auditoria', icon: <ShieldCheck className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
         { name: 'Manuales', path: '/manuales', icon: <BookOpen className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
         { name: 'Configuración', path: '/configuracion', icon: <Settings className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
       ],

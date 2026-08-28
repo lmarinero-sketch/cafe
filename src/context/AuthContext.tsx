@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import * as staffService from '../services/staff.service';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { StaffUser } from '../types';
@@ -30,6 +30,7 @@ export interface AuthUser {
   role?: 'admin' | 'cajero' | 'mozo' | 'cocina';
   avatarUrl?: string;
   subscription: UserSubscription;
+  sessionId?: string;
 }
 
 interface AuthContextType {
@@ -156,6 +157,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (staffRow?.name) name = staffRow.name;
           }
 
+          const sessionId = Date.now().toString() + Math.random().toString(36).substring(7);
           const authUser: AuthUser = {
             id: authData.user.id,
             name,
@@ -164,9 +166,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             phone: '+54 264 422-8900',
             role,
             subscription: TEST_USER.subscription,
+            sessionId,
           };
           setUser(authUser);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+          localStorage.setItem(`hilos_session_${normalizedEmail}`, sessionId);
           setIsLoading(false);
           return { success: true };
         }
@@ -200,6 +204,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { success: false, error: 'Contraseña incorrecta. Verificá tu contraseña.' };
       }
       const official = getOfficialDetails(normalizedEmail);
+      const sessionId = Date.now().toString() + Math.random().toString(36).substring(7);
       const authUser: AuthUser = {
         id: matchedStaff.id,
         name: official?.name || matchedStaff.name,
@@ -208,9 +213,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         phone: '+54 264 422-8900',
         role: official?.role || matchedStaff.role || 'cajero',
         subscription: TEST_USER.subscription,
+        sessionId,
       };
       setUser(authUser);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+      localStorage.setItem(`hilos_session_${normalizedEmail}`, sessionId);
       setIsLoading(false);
       return { success: true };
     }
@@ -225,14 +232,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       normalizedEmail.startsWith('admin@');
 
     if (isMasterAdmin && (cleanPassword === 'hilos2026' || cleanPassword === TEST_PASSWORD || cleanPassword.length >= 3)) {
+      const sessionId = Date.now().toString() + Math.random().toString(36).substring(7);
       const authUser: AuthUser = {
         ...TEST_USER,
         email: normalizedEmail,
         name: official?.name || (normalizedEmail.includes('lmarinero') ? 'Lucas Marinero' : 'Administrador'),
         role: official?.role || 'admin',
+        sessionId,
       };
       setUser(authUser);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+      localStorage.setItem(`hilos_session_${normalizedEmail}`, sessionId);
       setIsLoading(false);
       return { success: true };
     }
@@ -242,6 +252,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const logout = useCallback(() => {
+    if (user && user.email) {
+      localStorage.removeItem(`hilos_session_${user.email}`);
+    }
     setUser(null);
     localStorage.removeItem(STORAGE_KEY);
     // Also clear app data cache
@@ -250,7 +263,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.removeItem(key);
       }
     });
-  }, []);
+  }, [user]);
+
+  // Session Tracking Effect
+  useEffect(() => {
+    if (!user || !user.email || !user.sessionId) return;
+
+    const checkSession = () => {
+      const activeSession = localStorage.getItem(`hilos_session_${user.email}`);
+      if (activeSession && activeSession !== user.sessionId) {
+        // Different session detected, log out current
+        logout();
+        alert('Se ha iniciado sesión desde otro dispositivo. Tu sesión ha sido cerrada por seguridad.');
+      }
+    };
+
+    // Check periodically
+    const interval = setInterval(checkSession, 3000);
+    // Listen to storage events across tabs
+    window.addEventListener('storage', checkSession);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkSession);
+    };
+  }, [user, logout]);
 
   return (
     <AuthContext.Provider value={{

@@ -263,18 +263,6 @@ export const PublicMenuPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Autogestión & Cash Impact Callout Banner */}
-        <div className="bg-brand-yellow/30 border border-brand-yellow/80 rounded-xl p-3 text-xs text-brand-dark flex items-start gap-2.5 shadow-xs">
-          <span className="text-base shrink-0">📱</span>
-          <div>
-            <h4 className="font-extrabold text-brand-dark text-[11px] sm:text-xs leading-tight">
-              Experiencia de Autogestión del Cliente
-            </h4>
-            <p className="text-[10px] sm:text-xs text-brand-brown/90 mt-0.5 leading-relaxed">
-              El cliente realiza todo el pedido de forma autónoma desde su celular o PC. Al confirmar, <span className="font-bold text-brand-dark">impacta directamente en la caja</span> del comercio y en la comanda de cocina en tiempo real.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Category Pills Navigation */}
