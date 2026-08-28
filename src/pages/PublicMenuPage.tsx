@@ -47,10 +47,10 @@ export const PublicMenuPage: React.FC = () => {
   const [selectedTableId, setSelectedTableId] = useState<string>(selectedTableObj ? selectedTableObj.id : tables[0]?.id || 'tbl-1');
 
   // Checkout Form fields
-  const [customerName, setCustomerName] = useState('Sofía Martínez');
-  const [customerPhone, setCustomerPhone] = useState('+5491133445566');
-  const [address, setAddress] = useState('Av. Corrientes 1450, 4B');
-  const [addressRef, setAddressRef] = useState('Frente al banco');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [addressRef, setAddressRef] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
 
   const [orderSuccessCode, setOrderSuccessCode] = useState<string | null>(null);
@@ -602,34 +602,40 @@ export const PublicMenuPage: React.FC = () => {
                 {/* Customer Info Fields */}
                 <div className="space-y-2 text-xs">
                   <div>
-                    <label className="block font-bold text-brand-dark mb-1">Nombre</label>
+                    <label className="block font-bold text-brand-dark mb-1">Tu Nombre y Apellido *</label>
                     <input
                       type="text"
                       required
+                      placeholder="Ej. Martín Pérez"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg font-bold focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-brand-dark mb-1">Teléfono</label>
+                    <label className="block font-bold text-brand-dark mb-1">Tu Teléfono / WhatsApp *</label>
                     <input
                       type="tel"
                       required
+                      placeholder="Ej. +54 9 11 1234-5678"
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg font-bold focus:outline-none"
                     />
+                    <span className="text-[10px] text-brand-brown/80 mt-0.5 block">
+                      Vincula automáticamente tus puntos del Club de Socios
+                    </span>
                   </div>
 
                   {orderType === 'delivery' && (
                     <>
                       <div>
-                        <label className="block font-bold text-brand-dark mb-1">Dirección de entrega</label>
+                        <label className="block font-bold text-brand-dark mb-1">Dirección de entrega *</label>
                         <input
                           type="text"
                           required
+                          placeholder="Calle, altura y piso/depto"
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
                           className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
@@ -639,6 +645,7 @@ export const PublicMenuPage: React.FC = () => {
                         <label className="block font-bold text-brand-dark mb-1">Referencia</label>
                         <input
                           type="text"
+                          placeholder="Ej. Entre calles o timbre"
                           value={addressRef}
                           onChange={(e) => setAddressRef(e.target.value)}
                           className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
@@ -652,13 +659,28 @@ export const PublicMenuPage: React.FC = () => {
                     <select
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg font-bold text-brand-dark focus:outline-none"
                     >
-                      <option value="efectivo">Efectivo en entrega</option>
-                      <option value="transferencia">Transferencia bancaria</option>
+                      <option value="efectivo">Efectivo en el local</option>
+                      <option value="transferencia">Transferencia bancaria / QR</option>
                       <option value="tarjeta">Tarjeta de débito/crédito</option>
+                      <option value="mercadopago">Mercado Pago</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Club Points Banner in Cart */}
+                <div className="bg-emerald-50 border border-emerald-300 p-3 rounded-xl text-xs text-emerald-950 flex items-center justify-between shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⭐</span>
+                    <div>
+                      <span className="font-extrabold text-[11px] block">Club de Puntos Hilos de Amor</span>
+                      <span className="text-[10px] text-emerald-800">Acumulás 100 pts por cada $1.000 consumidos</span>
+                    </div>
+                  </div>
+                  <span className="font-extrabold text-emerald-900 bg-white px-2.5 py-1 rounded-lg border border-emerald-200 shadow-xs font-mono">
+                    +{Math.floor(total / 10)} pts
+                  </span>
                 </div>
 
                 {/* Subtotal & Total Breakdown */}
@@ -700,19 +722,30 @@ export const PublicMenuPage: React.FC = () => {
 
       {/* Order Success Modal */}
       {orderSuccessCode && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 max-w-sm w-full text-center space-y-4 shadow-soft-lg">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border-2 border-emerald-600 p-6 max-w-sm w-full text-center space-y-4 shadow-soft-lg">
             <CheckCircle2 className="w-12 h-12 text-emerald-800 mx-auto" />
-            <h3 className="text-lg font-extrabold text-brand-dark">¡Pedido Recibido!</h3>
-            <p className="text-xs text-brand-brown/90">
-              Tu pedido ha sido enviado a la cocina de Hilos de Amor.
-            </p>
+            <div>
+              <h3 className="text-lg font-extrabold text-brand-dark font-serif">¡Pedido Recibido con Éxito!</h3>
+              <p className="text-xs text-brand-brown/90 mt-1">
+                {selectedTableObj ? `Vinculado a ${selectedTableObj.number}` : 'Enviado a la cocina de Hilos de Amor.'}
+              </p>
+            </div>
+
             <div className="p-3 bg-brand-cream rounded-xl border border-brand-secondary font-mono font-extrabold text-sm text-brand-brown">
               Código: #{orderSuccessCode}
             </div>
+
+            <div className="bg-emerald-50 border border-emerald-300 p-2.5 rounded-xl text-xs text-emerald-950">
+              <p className="font-extrabold text-[11px]">⭐ ¡Puntos Acumulados en tu Socio!</p>
+              <p className="text-[10px] text-emerald-800 mt-0.5">
+                Sumaste <strong>+{Math.floor(total / 10)} puntos</strong> en tu tarjeta digital con tu número {customerPhone}.
+              </p>
+            </div>
+
             <button
               onClick={() => setOrderSuccessCode(null)}
-              className="w-full py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors"
+              className="w-full py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft"
             >
               Entendido
             </button>

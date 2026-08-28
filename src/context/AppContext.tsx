@@ -26,6 +26,7 @@ import { initialTables } from '../data/seeds/tables.seed';
 import { initialOrders } from '../data/seeds/orders.seed';
 import { initialIngredients } from '../data/seeds/ingredients.seed';
 import { initialCustomers } from '../data/seeds/customers.seed';
+import { initialRewards } from '../data/seeds/rewards.seed';
 import { initialCampaigns } from '../data/seeds/campaigns.seed';
 import { initialAutomations } from '../data/seeds/automations.seed';
 import { calculateNormalizedCost, calculateRecipeCostDetails } from '../utils/costEngine';
@@ -171,6 +172,7 @@ const STORAGE_KEYS = {
   ORDERS: 'hilos_de_amor_orders',
   INGREDIENTS: 'hilos_de_amor_ingredients',
   CUSTOMERS: 'hilos_de_amor_customers',
+  REWARDS: 'hilos_de_amor_rewards',
   CAMPAIGNS: 'hilos_de_amor_campaigns',
   AUTOMATIONS: 'hilos_de_amor_automations',
   TICKETS: 'hilos_de_amor_tickets',
@@ -293,11 +295,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Supabase-backed states (Plan Fidelización)
   const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-    return saved ? JSON.parse(saved) : initialCustomers;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialCustomers;
+    } catch {
+      return initialCustomers;
+    }
   });
 
-  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [rewards, setRewards] = useState<Reward[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.REWARDS);
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialRewards;
+    } catch {
+      return initialRewards;
+    }
+  });
 
   const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CAMPAIGNS);
@@ -442,8 +457,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           ingredientsService.getIngredients(),
         ]);
 
-        setCustomers(dbCustomers);
-        setRewards(dbRewards);
+        if (dbCustomers && dbCustomers.length > 0) setCustomers(dbCustomers);
+        if (dbRewards && dbRewards.length > 0) setRewards(dbRewards);
         setCampaigns(dbCampaigns);
         setAutomations(dbAutomations);
         setBranches(dbBranches);
@@ -481,6 +496,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Also keep localStorage as cache for Supabase entities (offline fallback)
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers)); }, [customers]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.REWARDS, JSON.stringify(rewards)); }, [rewards]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(campaigns)); }, [campaigns]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.AUTOMATIONS, JSON.stringify(automations)); }, [automations]);
 
@@ -656,16 +672,99 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const id = crypto.randomUUID();
     const codeNumber = Math.floor(1000 + Math.random() * 9000);
     const code = `ORD-${codeNumber}`;
-    const pointsEarned = Math.floor(orderData.total / 1000);
+    // Paridad oficial del Club: 100 puntos = $1.000 consumidos ($10 = 1 pt)
+    const pointsEarned = Math.floor(orderData.total / 10);
 
     const resolvedTable = orderData.tableId ? tables.find((t) => t.id === orderData.tableId) : null;
     const resolvedTableName = orderData.tableName || (resolvedTable ? resolvedTable.number : undefined);
     const resolvedWaiterName = orderData.waiterName || (user ? `${user.name} (${user.role})` : 'Atención en Salón / QR');
 
+    // ── Mapeo Automático de Clientes / Creación de Socio Digital desde la Mesa ──
+    const cleanPhone = (orderData.customerPhone || '').replace(/\D/g, '');
+    const cleanName = (orderData.customerName || '').trim();
+    let assignedCustomerId = orderData.customerId;
+
+    if (cleanPhone || cleanName) {
+      // Buscar cliente existente por teléfono (últimos 6 dígitos) o nombre completo
+      const existingCustomer = customers.find((c) => {
+        const cPhone = (c.phone || '').replace(/\D/g, '');
+        const phoneMatch = cleanPhone.length >= 6 && cPhone.length >= 6 && (cPhone.endsWith(cleanPhone.slice(-6)) || cleanPhone.endsWith(cPhone.slice(-6)));
+        const nameMatch = cleanName && `${c.firstName} ${c.lastName}`.trim().toLowerCase() === cleanName.toLowerCase();
+        return phoneMatch || nameMatch;
+      });
+
+      if (existingCustomer) {
+        assignedCustomerId = existingCustomer.id;
+        const newTotalSpent = (existingCustomer.totalSpent || 0) + orderData.total;
+        const newCount = (existingCustomer.purchaseCount || 0) + 1;
+        const newPoints = (existingCustomer.points || 0) + pointsEarned;
+        let newLevel: Customer['level'] = existingCustomer.level;
+        if (newPoints > 3000) newLevel = 'VIP';
+        else if (newPoints > 1500) newLevel = 'Preferencial';
+        else if (newPoints > 500) newLevel = 'Frecuente';
+
+        const updatedCustomer: Customer = {
+          ...existingCustomer,
+          points: newPoints,
+          level: newLevel,
+          purchaseCount: newCount,
+          totalSpent: newTotalSpent,
+          averageTicket: Math.round(newTotalSpent / newCount),
+          lastPurchaseDate: new Date().toISOString(),
+          favoriteProduct: orderData.items[0]?.productName || existingCustomer.favoriteProduct,
+        };
+
+        setCustomers((prev) => prev.map((c) => (c.id === existingCustomer.id ? updatedCustomer : c)));
+        if (isSupabaseConfigured) {
+          customersService.updateCustomer(existingCustomer.id, updatedCustomer).catch(console.error);
+        }
+      } else if (cleanName) {
+        // Auto-crear socio digital con ID generado a partir del teléfono o número único
+        const phoneSuffix = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : Math.floor(100 + Math.random() * 900).toString();
+        let newId = `socio-${phoneSuffix}`;
+        let counter = 1;
+        while (customers.some((c) => c.id === newId)) {
+          newId = `socio-${phoneSuffix}-${counter}`;
+          counter++;
+        }
+
+        const nameParts = cleanName.split(' ');
+        const firstName = nameParts[0] || 'Cliente';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        const initialPoints = 100 + pointsEarned; // 100 pts de bono de bienvenida + puntos del pedido
+
+        const newCustomer: Customer = {
+          id: newId,
+          firstName,
+          lastName,
+          phone: orderData.customerPhone || '',
+          email: '',
+          birthDate: '',
+          registrationDate: new Date().toISOString(),
+          purchaseCount: 1,
+          totalSpent: orderData.total,
+          averageTicket: orderData.total,
+          lastPurchaseDate: new Date().toISOString(),
+          points: initialPoints,
+          level: initialPoints > 500 ? 'Frecuente' : 'Inicial',
+          usedPromotionsCount: 0,
+          marketingConsent: true,
+          favoriteProduct: orderData.items[0]?.productName || 'Café de Especialidad',
+        };
+
+        assignedCustomerId = newId;
+        setCustomers((prev) => [newCustomer, ...prev]);
+        if (isSupabaseConfigured) {
+          customersService.createCustomer(newCustomer).catch(console.error);
+        }
+      }
+    }
+
     const newOrder: Order = {
       ...orderData,
       id,
       code,
+      customerId: assignedCustomerId,
       tableName: resolvedTableName,
       waiterName: resolvedWaiterName,
       registerId: activeRegister.id,
@@ -681,11 +780,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setTables((prev) =>
         prev.map((t) => (t.id === newOrder.tableId ? { ...t, status: 'ocupada' } : t))
       );
-    }
-
-    // Auto update client points if customer linked
-    if (newOrder.customerId) {
-      addCustomerPoints(newOrder.customerId, pointsEarned);
     }
 
     showToast('¡Pedido recibido!', `Pedido ${code} generado exitosamente.`, 'success');
@@ -829,7 +923,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const dbCustomer = await customersService.createCustomer(customerData);
       if (dbCustomer) {
         setCustomers((prev) => [dbCustomer, ...prev]);
-        showToast('¡Cliente registrado!', `${dbCustomer.firstName} ${dbCustomer.lastName} recibió 150 puntos de bienvenida.`, 'success');
+        showToast('¡Socio registrado!', `${dbCustomer.firstName} ${dbCustomer.lastName} recibió 100 puntos de bienvenida ($1.000 equiv).`, 'success');
         return dbCustomer;
       } else {
         showToast('Error', 'No se pudo registrar el cliente en la base de datos.', 'error');
@@ -838,7 +932,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     // LocalStorage fallback
-    const id = crypto.randomUUID();
+    const id = `socio-${Date.now().toString().slice(-4)}`;
     const newCustomer: Customer = {
       ...customerData,
       id,
@@ -847,12 +941,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       totalSpent: 0,
       averageTicket: 0,
       lastPurchaseDate: new Date().toISOString(),
-      points: 150,
+      points: 100, // Bono de bienvenida: 100 pts ($1.000 consumidos)
       level: 'Inicial',
       usedPromotionsCount: 0,
     };
     setCustomers((prev) => [newCustomer, ...prev]);
-    showToast('¡Cliente registrado!', `${newCustomer.firstName} ${newCustomer.lastName} recibió 150 puntos de bienvenida.`, 'success');
+    showToast('¡Socio registrado!', `${newCustomer.firstName} ${newCustomer.lastName} recibió 100 puntos de bienvenida ($1.000 equiv).`, 'success');
     return newCustomer;
   };
 
