@@ -1,3 +1,68 @@
 import { Table } from '../../types';
 
-export const initialTables: Table[] = [];
+export const initialTables: Table[] = [
+  {
+    id: 'tbl-1',
+    number: 'Mesa 1',
+    capacity: 2,
+    sector: 'Salon',
+    status: 'ocupada',
+    qrCode: 'QR-TBL-001',
+  },
+  {
+    id: 'tbl-2',
+    number: 'Mesa 2',
+    capacity: 4,
+    sector: 'Salon',
+    status: 'ocupada',
+    qrCode: 'QR-TBL-002',
+  },
+  {
+    id: 'tbl-3',
+    number: 'Mesa 3',
+    capacity: 4,
+    sector: 'Salon',
+    status: 'disponible',
+    qrCode: 'QR-TBL-003',
+  },
+  {
+    id: 'tbl-4',
+    number: 'Mesa 4',
+    capacity: 6,
+    sector: 'Salon',
+    status: 'reservada',
+    qrCode: 'QR-TBL-004',
+  },
+  {
+    id: 'tbl-5',
+    number: 'Mesa 5 (Terraza)',
+    capacity: 4,
+    sector: 'Terraza',
+    status: 'disponible',
+    qrCode: 'QR-TBL-005',
+  },
+  {
+    id: 'tbl-6',
+    number: 'Mesa 6 (Terraza)',
+    capacity: 2,
+    sector: 'Terraza',
+    status: 'disponible',
+    qrCode: 'QR-TBL-006',
+  },
+  {
+    id: 'tbl-7',
+    number: 'Mesa 7 (Vereda)',
+    capacity: 2,
+    sector: 'Vereda',
+    status: 'disponible',
+    qrCode: 'QR-TBL-007',
+  },
+  {
+    id: 'tbl-8',
+    number: 'Mesa 8 (Patio)',
+    capacity: 6,
+    sector: 'Patio',
+    status: 'disponible',
+    qrCode: 'QR-TBL-008',
+  },
+];
