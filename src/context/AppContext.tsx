@@ -676,20 +676,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     setOrders((prev) => [newOrder, ...prev]);
 
-    // Registrar movimiento de caja en vivo instantáneamente
-    const newTx: import('../types').CashTransaction = {
-      id: `tx-ord-${id}`,
-      registerId: activeRegister.id,
-      orderId: id,
-      type: 'ingreso',
-      amount: newOrder.total,
-      paymentMethod: newOrder.paymentMethod || 'efectivo',
-      description: `Cobro Pedido ${code}`,
-      timestamp: new Date().toISOString(),
-      registeredBy: resolvedWaiterName,
-    };
-    setCashTransactions((prev) => [newTx, ...prev]);
-
     // If order linked to table, update table status to 'ocupada'
     if (newOrder.tableId) {
       setTables((prev) =>
