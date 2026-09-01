@@ -263,14 +263,14 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             <div class="sub-info-bar">
               <span>☕ Granos 100% Arábica Seleccionados</span>
               <span>•</span>
-              <span>🥐 Elaboración 100% Artesanal y Fresca del Día</span>
+              <span>🥐 Elaboración 100% Artesanal y Libre de Gluten</span>
               <span>•</span>
               <span>✨ Club de Puntos Activo</span>
             </div>
 
             <!-- Showcase -->
             <div class="showcase-box">
-              <strong>✨ Experiencia Hilos de Amor:</strong> Todos nuestros cafés son calibrados a diario y extraídos en el punto justo. Consultá a nuestro personal por opciones sin TACC y leches vegetales.
+              <strong>✨ Experiencia Hilos de Amor:</strong> Todos nuestros cafés son calibrados a diario y extraídos en el punto justo.
             </div>
 
             <!-- Categories and Products -->
@@ -421,7 +421,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 <span>•</span>
                 <div className="flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Elaboración Fresca del Día</span>
+                  <span>Elaboración Libre de Gluten</span>
                 </div>
               </div>
             </div>
