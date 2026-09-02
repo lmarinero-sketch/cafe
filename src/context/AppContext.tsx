@@ -1537,6 +1537,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const addTransaction = (tx: Omit<import('../types').CashTransaction, 'id' | 'timestamp'>) => {
     const newTx: import('../types').CashTransaction = {
       ...tx,
+      registeredBy: tx.registeredBy || (user ? `${user.name} (${user.role})` : 'Sistema'),
       id: `tx-${Date.now()}`,
       timestamp: new Date().toISOString(),
     };

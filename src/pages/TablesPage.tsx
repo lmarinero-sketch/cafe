@@ -40,6 +40,7 @@ export const TablesPage: React.FC = () => {
       amount: chargingOrder.total,
       paymentMethod: selectedPayment,
       description: `Cobro Pedido ${chargingOrder.code}`,
+      registeredBy: user ? `${user.name} (${user.role})` : 'Atención en Salón / QR',
     });
 
     updateOrderStatus(chargingOrder.id, 'entregado');

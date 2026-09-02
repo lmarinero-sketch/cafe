@@ -147,6 +147,7 @@ export const CajaPage: React.FC = () => {
       amount: txAmount,
       paymentMethod: txMethod,
       description: txDesc || (txType === 'ingreso' ? 'Ingreso manual' : 'Egreso manual'),
+      registeredBy: user ? `${user.name} (${user.role})` : 'Cajero',
     });
     setIsTxModal(false);
     setTxAmount(0);

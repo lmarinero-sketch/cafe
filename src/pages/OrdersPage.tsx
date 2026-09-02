@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, ArrowRight, ArrowLeft, CheckCircle2, Clock, Truck, XCircle, MapPin, Phone, Banknote, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { Order, OrderStatus, PaymentMethod } from '../types';
 import { formatCurrency, formatDate } from '../utils/currency';
 
 export const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { orders, updateOrderStatus, addTransaction, cashRegisters } = useApp();
   const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
   const [cancelingOrderConfirm, setCancelingOrderConfirm] = useState<Order | null>(null);
@@ -79,6 +81,7 @@ export const OrdersPage: React.FC = () => {
       amount: chargingOrder.total,
       paymentMethod: selectedPayment,
       description: `Cobro Pedido ${chargingOrder.code}`,
+      registeredBy: user ? `${user.name} (${user.role})` : 'Cajero',
     });
 
     updateOrderStatus(chargingOrder.id, 'entregado');

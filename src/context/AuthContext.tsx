@@ -184,22 +184,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const dbStaff = await staffService.getStaffUsers();
       if (dbStaff && dbStaff.length > 0) {
-        savedStaff = dbStaff;
-      } else {
-        const raw = localStorage.getItem('hilos_de_amor_staff_users');
-        if (raw) savedStaff = JSON.parse(raw);
+        savedStaff = [...dbStaff];
       }
-    } catch {
-      try {
-        const raw = localStorage.getItem('hilos_de_amor_staff_users');
-        if (raw) savedStaff = JSON.parse(raw);
-      } catch {}
+    } catch (err) {
+      console.warn('Error querying staff from DB in login:', err);
     }
+
+    try {
+      const raw = localStorage.getItem('hilos_de_amor_staff_users');
+      if (raw) {
+        const localList: StaffUser[] = JSON.parse(raw);
+        localList.forEach((lu) => {
+          const idx = savedStaff.findIndex((su) => su.email?.toLowerCase() === lu.email?.toLowerCase());
+          if (idx === -1) {
+            savedStaff.push(lu);
+          } else {
+            // Keep the one that has a password if available
+            if (!savedStaff[idx].password && lu.password) {
+              savedStaff[idx] = { ...savedStaff[idx], password: lu.password };
+            }
+          }
+        });
+      }
+    } catch {}
 
     const matchedStaff = savedStaff.find((u) => u.email && u.email.trim().toLowerCase() === normalizedEmail);
 
     if (matchedStaff) {
-      if (matchedStaff.password && matchedStaff.password.trim() !== cleanPassword) {
+      if (matchedStaff.password && matchedStaff.password.trim() !== '' && matchedStaff.password.trim() !== cleanPassword) {
         setIsLoading(false);
         return { success: false, error: 'Contraseña incorrecta. Verificá tu contraseña.' };
       }
@@ -257,12 +269,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     setUser(null);
     localStorage.removeItem(STORAGE_KEY);
-    // Also clear app data cache
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('hilos_de_amor_')) {
-        localStorage.removeItem(key);
-      }
-    });
   }, [user]);
 
   // Session Tracking Effect
