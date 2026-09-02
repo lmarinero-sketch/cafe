@@ -334,16 +334,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [cashRegisters, setCashRegisters] = useState<import('../types').CashRegister[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CASH_REGISTERS);
     const parsed = saved ? JSON.parse(saved) : null;
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    
-    // Default open register so QR codes work on fresh devices (like customers scanning from their phones)
-    return [{
-      id: `caja-auto-${Date.now()}`,
-      openedAt: new Date().toISOString(),
-      openedBy: 'Sistema (Auto)',
-      initialBalance: 0,
-      status: 'abierta'
-    }];
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Filtrar y eliminar cualquier caja automática previa
+      return parsed.filter(
+        (reg: import('../types').CashRegister) =>
+          reg.openedBy !== 'Sistema (Auto)' && !reg.id?.startsWith('caja-auto-')
+      );
+    }
+    return [];
   });
 
   const [cashTransactions, setCashTransactions] = useState<import('../types').CashTransaction[]>(() => {
@@ -377,13 +375,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   const [tableSectors, setTableSectors] = useState<Sector[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.TABLE_SECTORS);
-    return saved ? JSON.parse(saved) : [
-      { id: 'salon', name: 'salon', label: 'Salón Principal' },
-      { id: 'patio', name: 'patio', label: 'Patio Central' },
-      { id: 'terraza', name: 'terraza', label: 'Terraza' },
-      { id: 'vereda', name: 'vereda', label: 'Vereda' },
+    const DEFAULT_SECTORS: Sector[] = [
+      { id: 'recepcion', name: 'Recepción', label: 'Recepción' },
+      { id: 'sala-1', name: 'Sala 1', label: 'Sala 1' },
+      { id: 'sala-2', name: 'Sala 2', label: 'Sala 2' },
+      { id: 'patio-atras', name: 'Patio de atrás', label: 'Patio de atrás' },
+      { id: 'patio-lateral', name: 'Patio lateral', label: 'Patio lateral' },
+      { id: 'patio-delantero', name: 'Patio delantero', label: 'Patio delantero' },
+      { id: 'salon', name: 'Salón Principal', label: 'Salón Principal' },
+      { id: 'patio', name: 'Patio Central', label: 'Patio Central' },
+      { id: 'terraza', name: 'Terraza', label: 'Terraza' },
+      { id: 'vereda', name: 'Vereda', label: 'Vereda' },
     ];
+
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.TABLE_SECTORS);
+      let list: Sector[] = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(list) || list.length === 0) {
+        list = DEFAULT_SECTORS;
+      }
+
+      const knownNames = new Set(list.map((s) => (s.label || s.name || s.id).toLowerCase()));
+      initialTables.forEach((t) => {
+        if (t.sector && !knownNames.has(t.sector.toLowerCase())) {
+          list.push({
+            id: t.sector.toLowerCase().replace(/\s+/g, '-'),
+            name: t.sector,
+            label: t.sector,
+          });
+          knownNames.add(t.sector.toLowerCase());
+        }
+      });
+      return list;
+    } catch {
+      return DEFAULT_SECTORS;
+    }
   });
 
   const [affectedProductsAlert, setAffectedProductsAlert] = useState<string[]>([]);
@@ -464,7 +490,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setBranches(dbBranches);
         if (dbStaff && dbStaff.length > 0) setStaffUsers(dbStaff);
         if (dbProducts && dbProducts.length > 0) setProducts(dbProducts);
-        if (dbTables && dbTables.length > 0) setTables(dbTables);
+        if (dbTables && dbTables.length > 0) {
+          setTables(dbTables);
+          setTableSectors((prev) => {
+            const known = new Set(prev.map((s) => (s.label || s.name || s.id).toLowerCase()));
+            const added: Sector[] = [];
+            dbTables.forEach((t) => {
+              if (t.sector && !known.has(t.sector.toLowerCase())) {
+                added.push({
+                  id: t.sector.toLowerCase().replace(/\s+/g, '-'),
+                  name: t.sector,
+                  label: t.sector,
+                });
+                known.add(t.sector.toLowerCase());
+              }
+            });
+            return added.length > 0 ? [...prev, ...added] : prev;
+          });
+        }
         if (dbOrders && dbOrders.length > 0) setOrders(dbOrders);
         if (dbIngredients && dbIngredients.length > 0) setIngredients(dbIngredients);
       } catch (err) {
@@ -589,7 +632,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // ============================================================
-  // TABLES (LocalStorage - unchanged)
+  // TABLES
   // ============================================================
   const addTable = (tableData: Omit<Table, 'id' | 'qrCode'>): boolean => {
     const cleanNumber = tableData.number.trim();
@@ -614,6 +657,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       qrCode: `QR-TBL-${num}`,
     };
     setTables((prev) => [...prev, newTable]);
+
+    // Ensure sector is in tableSectors if it's new
+    if (tableData.sector) {
+      const secName = tableData.sector.trim();
+      const secExists = tableSectors.some(
+        (s) => (s.label || s.name || s.id).toLowerCase() === secName.toLowerCase()
+      );
+      if (!secExists && secName) {
+        const newSec: Sector = {
+          id: secName.toLowerCase().replace(/\s+/g, '-'),
+          name: secName,
+          label: secName,
+        };
+        setTableSectors((prev) => [...prev, newSec]);
+      }
+    }
+
+    if (isSupabaseConfigured) {
+      tablesService.createTable(newTable).catch(console.error);
+    }
+
     showToast('Mesa creada', `${newTable.number} agregada al sector ${newTable.sector}.`, 'success');
     return true;
   };
@@ -634,6 +698,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
     setTables((prev) => prev.map((t) => (t.id === id ? { ...t, ...tableData } : t)));
+
+    // Ensure sector is in tableSectors if it's new
+    if (tableData.sector) {
+      const secName = tableData.sector.trim();
+      const secExists = tableSectors.some(
+        (s) => (s.label || s.name || s.id).toLowerCase() === secName.toLowerCase()
+      );
+      if (!secExists && secName) {
+        const newSec: Sector = {
+          id: secName.toLowerCase().replace(/\s+/g, '-'),
+          name: secName,
+          label: secName,
+        };
+        setTableSectors((prev) => [...prev, newSec]);
+      }
+    }
+
+    if (isSupabaseConfigured) {
+      tablesService.updateTableInDb(id, tableData).catch(console.error);
+    }
+
     showToast('Mesa actualizada', 'Los datos de la mesa fueron guardados.', 'success');
     return true;
   };
@@ -648,12 +733,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return t;
       })
     );
+    if (isSupabaseConfigured) {
+      tablesService.updateTableStatus(id, status).catch(console.error);
+    }
   };
 
   const deleteTable = (id: string): boolean => {
     const target = tables.find((t) => t.id === id);
     if (!target) return false;
     setTables((prev) => prev.filter((t) => t.id !== id));
+    if (isSupabaseConfigured) {
+      tablesService.deleteTableFromDb(id).catch(console.error);
+    }
     showToast('Mesa eliminada', `${target.number} fue eliminada del sistema.`, 'info');
     return true;
   };
@@ -1332,18 +1423,70 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addSector = (sectorData: Omit<Sector, 'id'>) => {
-    const newSector: Sector = { ...sectorData, id: crypto.randomUUID() };
+    const cleanLabel = sectorData.label.trim();
+    if (!cleanLabel) return;
+    const existing = tableSectors.find(
+      (s) => (s.label || s.name).toLowerCase() === cleanLabel.toLowerCase()
+    );
+    if (existing) {
+      showToast('Sector existente', `El sector "${cleanLabel}" ya existe.`, 'warning');
+      return;
+    }
+    const newSector: Sector = {
+      id: sectorData.name ? sectorData.name.toLowerCase().replace(/\s+/g, '-') : cleanLabel.toLowerCase().replace(/\s+/g, '-'),
+      name: sectorData.name || cleanLabel,
+      label: cleanLabel,
+    };
     setTableSectors((prev) => [...prev, newSector]);
-    showToast('Sector creado', `Se agregó el sector ${newSector.label}.`, 'success');
+    showToast('Sector creado', `Se agregó el sector "${newSector.label}".`, 'success');
   };
 
   const updateSector = (id: string, data: Partial<Sector>) => {
-    setTableSectors((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
+    const current = tableSectors.find((s) => s.id === id);
+    const oldName = current?.label || current?.name;
+    const newName = data.label?.trim() || data.name?.trim();
+
+    setTableSectors((prev) => prev.map((s) => (s.id === id ? { ...s, ...data, label: newName || s.label, name: newName || s.name } : s)));
+
+    if (oldName && newName && oldName.toLowerCase() !== newName.toLowerCase()) {
+      setTables((prev) =>
+        prev.map((t) => {
+          if (t.sector.toLowerCase() === oldName.toLowerCase()) {
+            const updated = { ...t, sector: newName };
+            if (isSupabaseConfigured) {
+              tablesService.updateTableInDb(t.id, { sector: newName }).catch(console.error);
+            }
+            return updated;
+          }
+          return t;
+        })
+      );
+    }
     showToast('Sector actualizado', 'Los datos del sector fueron guardados.', 'success');
   };
 
   const deleteSector = (id: string) => {
+    const target = tableSectors.find((s) => s.id === id);
+    const targetName = target?.label || target?.name;
+
     setTableSectors((prev) => prev.filter((s) => s.id !== id));
+
+    if (targetName) {
+      const remaining = tableSectors.filter((s) => s.id !== id);
+      const fallbackSector = remaining.length > 0 ? (remaining[0].label || remaining[0].name) : 'Salón Principal';
+      setTables((prev) =>
+        prev.map((t) => {
+          if (t.sector.toLowerCase() === targetName.toLowerCase()) {
+            const updated = { ...t, sector: fallbackSector };
+            if (isSupabaseConfigured) {
+              tablesService.updateTableInDb(t.id, { sector: fallbackSector }).catch(console.error);
+            }
+            return updated;
+          }
+          return t;
+        })
+      );
+    }
     showToast('Sector eliminado', 'El sector ha sido removido del sistema.', 'info');
   };
 

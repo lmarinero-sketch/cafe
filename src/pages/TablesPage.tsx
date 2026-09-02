@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed, Receipt, ShoppingBag, ArrowRight, ArrowLeft, Clock, AlertCircle, CheckCircle2, RotateCcw, AlertTriangle, RefreshCw, Banknote, Edit3, Trash2 } from 'lucide-react';
+import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed, Receipt, ShoppingBag, ArrowRight, ArrowLeft, Clock, AlertCircle, CheckCircle2, RotateCcw, AlertTriangle, RefreshCw, Banknote, Edit3, Trash2, Layers } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { Table, TableStatus, OrderStatus, Order, PaymentMethod } from '../types';
@@ -11,13 +11,21 @@ export const TablesPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const { tables, tableSectors, addTable, updateTable, deleteTable, updateTableStatus, updateOrderStatus, orders, addTransaction, cashRegisters } = useApp();
+  const { tables, tableSectors, addTable, updateTable, deleteTable, updateTableStatus, updateOrderStatus, orders, addTransaction, cashRegisters, addSector, updateSector, deleteSector } = useApp();
   const [selectedHistoryTable, setSelectedHistoryTable] = useState<Table | null>(null);
   const [cancelledAlertOrder, setCancelledAlertOrder] = useState<Order | null>(null);
   const [lastCancelledCount, setLastCancelledCount] = useState<number>(0);
 
   const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('efectivo');
+
+  // Sector management states
+  const [isSectorsModalOpen, setIsSectorsModalOpen] = useState(false);
+  const [newSectorInput, setNewSectorInput] = useState('');
+  const [editingSectorId, setEditingSectorId] = useState<string | null>(null);
+  const [editingSectorName, setEditingSectorName] = useState('');
+  const [isAddingNewSectorInline, setIsAddingNewSectorInline] = useState(false);
+  const [inlineNewSectorName, setInlineNewSectorName] = useState('');
 
   const activeRegister = cashRegisters.find((r) => r.status === 'abierta');
 
@@ -57,6 +65,15 @@ export const TablesPage: React.FC = () => {
     }
     setLastCancelledCount(cancelledOrders.length);
   }, [orders, lastCancelledCount]);
+
+  const isRegisterFromPreviousDay = (openedAtIso?: string): boolean => {
+    if (!openedAtIso) return false;
+    const openedDate = new Date(openedAtIso);
+    const now = new Date();
+    const openedDay = new Date(openedDate.getFullYear(), openedDate.getMonth(), openedDate.getDate()).getTime();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return openedDay < today;
+  };
 
   const [selectedSector, setSelectedSector] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -431,7 +448,7 @@ export const TablesPage: React.FC = () => {
   const [editFormData, setEditFormData] = useState({
     number: '',
     capacity: 4,
-    sector: 'salon',
+    sector: 'Salón Principal',
   });
   const [tableToDelete, setTableToDelete] = useState<Table | null>(null);
 
@@ -442,6 +459,8 @@ export const TablesPage: React.FC = () => {
       capacity: t.capacity,
       sector: t.sector,
     });
+    setIsAddingNewSectorInline(false);
+    setInlineNewSectorName('');
   };
 
   const handleEditSubmit = (e: React.FormEvent) => {
@@ -461,18 +480,31 @@ export const TablesPage: React.FC = () => {
   };
 
   const handleOpenAddModal = () => {
+    let initialSector = 'Salón Principal';
+    if (selectedSector !== 'all') {
+      const match = tableSectors.find((s) => s.id === selectedSector);
+      initialSector = match ? (match.label || match.name) : selectedSector;
+    } else if (tableSectors.length > 0) {
+      initialSector = tableSectors[0].label || tableSectors[0].name;
+    }
+
     setFormData({
       number: getNextTableNumber(),
       capacity: 4,
-      sector: selectedSector !== 'all' ? selectedSector : 'salon',
+      sector: initialSector,
       status: 'disponible',
     });
+    setIsAddingNewSectorInline(false);
+    setInlineNewSectorName('');
     setIsModalOpen(true);
   };
 
-  const filteredTables = tables.filter(
-    (t) => selectedSector === 'all' || t.sector === selectedSector
-  );
+  const filteredTables = tables.filter((t) => {
+    if (selectedSector === 'all') return true;
+    const matchSec = tableSectors.find((s) => s.id === selectedSector);
+    const target = (matchSec?.label || matchSec?.name || selectedSector).toLowerCase();
+    return t.sector.trim().toLowerCase() === target || t.sector.trim().toLowerCase() === selectedSector.toLowerCase();
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -568,10 +600,11 @@ export const TablesPage: React.FC = () => {
         {isAdmin && (
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <button
-              onClick={() => setIsModalOpen(true)}
-              className="w-full sm:w-auto py-2.5 px-3 sm:px-4 rounded-xl border-2 border-brand-brown text-brand-brown font-bold text-xs hover:bg-brand-brown/10 transition-all duration-200 flex items-center justify-center gap-2"
+              onClick={() => setIsSectorsModalOpen(true)}
+              className="w-full sm:w-auto py-2.5 px-3 sm:px-4 rounded-xl border-2 border-brand-brown text-brand-brown font-bold text-xs hover:bg-brand-brown/10 transition-all duration-200 flex items-center justify-center gap-2 shadow-xs"
             >
-              Administrar Sectores
+              <Layers className="w-4 h-4 text-brand-brown shrink-0" />
+              <span>Administrar Sectores</span>
             </button>
             <button
               onClick={handleOpenAddModal}
@@ -605,31 +638,69 @@ export const TablesPage: React.FC = () => {
         </div>
       )}
 
+      {/* Banner Advertencia de Caja Abierta de Jornada Anterior */}
+      {activeRegister && isRegisterFromPreviousDay(activeRegister.openedAt) && (
+        <div className="bg-amber-50 border-2 border-amber-500 p-4 rounded-2xl text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-amber-700 shrink-0 animate-pulse" />
+            <div>
+              <h4 className="font-extrabold text-sm text-amber-950">⚠️ Caja Abierta de una Jornada Anterior</h4>
+              <p className="text-xs text-amber-900 mt-0.5">
+                La caja activa fue abierta el <strong>{formatDate(activeRegister.openedAt)} hs</strong> ({activeRegister.openedBy}) y quedó pendiente de cierre. Te sugerimos realizar el arqueo en Tesorería.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/caja')}
+            className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-extrabold text-xs transition shrink-0 shadow-xs flex items-center gap-1.5"
+          >
+            <span>Arqueo & Cerrar Caja</span>
+          </button>
+        </div>
+      )}
+
       {/* Sector Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto bg-brand-card p-3 rounded-2xl border border-brand-secondary shadow-soft">
         <button
           onClick={() => setSelectedSector('all')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
             selectedSector === 'all'
               ? 'bg-brand-brown text-brand-card shadow-soft'
               : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
           }`}
         >
-          Todos los sectores
+          <span>Todos los sectores</span>
+          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+            selectedSector === 'all' ? 'bg-white/20 text-white' : 'bg-brand-secondary/60 text-brand-brown'
+          }`}>
+            {tables.length}
+          </span>
         </button>
-        {tableSectors.map((sec) => (
-          <button
-            key={sec.id}
-            onClick={() => setSelectedSector(sec.id)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              selectedSector === sec.id
-                ? 'bg-brand-brown text-brand-card shadow-soft'
-                : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
-            }`}
-          >
-            {sec.label}
-          </button>
-        ))}
+        {tableSectors.map((sec) => {
+          const secLabel = (sec.label || sec.name || sec.id).toLowerCase();
+          const count = tables.filter(
+            (t) => t.sector.trim().toLowerCase() === secLabel || t.sector.trim().toLowerCase() === sec.id.toLowerCase()
+          ).length;
+
+          return (
+            <button
+              key={sec.id}
+              onClick={() => setSelectedSector(sec.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                selectedSector === sec.id
+                  ? 'bg-brand-brown text-brand-card shadow-soft'
+                  : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
+              }`}
+            >
+              <span>{sec.label || sec.name}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                selectedSector === sec.id ? 'bg-white/20 text-white' : 'bg-brand-secondary/60 text-brand-brown'
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Tables Visual Cards Grid */}
@@ -1223,7 +1294,7 @@ export const TablesPage: React.FC = () => {
                   required
                   value={formData.number}
                   onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-                  placeholder="Ej. Mesa 13"
+                  placeholder="Ej. Mesa 13, Barra 2, VIP 1"
                   className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
                 />
               </div>
@@ -1242,16 +1313,54 @@ export const TablesPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-brand-dark mb-1">Sector</label>
-                  <select
-                    value={formData.sector}
-                    onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
-                  >
-                    {tableSectors.map((sec) => (
-                      <option key={sec.id} value={sec.id}>{sec.label}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-brand-dark">Sector</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewSectorInline(!isAddingNewSectorInline)}
+                      className="text-[10px] text-brand-brown font-bold hover:underline"
+                    >
+                      {isAddingNewSectorInline ? 'Elegir lista' : '+ Nuevo'}
+                    </button>
+                  </div>
+
+                  {isAddingNewSectorInline ? (
+                    <div className="flex gap-1">
+                      <input
+                        type="text"
+                        placeholder="Ej. Balcón"
+                        value={inlineNewSectorName}
+                        onChange={(e) => setInlineNewSectorName(e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (inlineNewSectorName.trim()) {
+                            addSector({ name: inlineNewSectorName.trim(), label: inlineNewSectorName.trim() });
+                            setFormData({ ...formData, sector: inlineNewSectorName.trim() });
+                            setInlineNewSectorName('');
+                            setIsAddingNewSectorInline(false);
+                          }
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl bg-brand-brown text-white font-bold text-[10px] hover:bg-brand-dark transition shrink-0"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={formData.sector}
+                      onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none capitalize"
+                    >
+                      {tableSectors.map((sec) => (
+                        <option key={sec.id} value={sec.label || sec.name}>
+                          {sec.label || sec.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -1271,7 +1380,7 @@ export const TablesPage: React.FC = () => {
               <div className="flex items-center gap-2 pt-3">
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold hover:bg-brand-dark transition-colors"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold hover:bg-brand-dark transition-colors shadow-soft"
                 >
                   Crear mesa
                 </button>
@@ -1330,16 +1439,57 @@ export const TablesPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-brand-dark mb-1">Sector</label>
-                  <select
-                    value={editFormData.sector}
-                    onChange={(e) => setEditFormData({ ...editFormData, sector: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
-                  >
-                    {tableSectors.map((sec) => (
-                      <option key={sec.id} value={sec.id}>{sec.label}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-brand-dark">Sector</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewSectorInline(!isAddingNewSectorInline)}
+                      className="text-[10px] text-brand-brown font-bold hover:underline"
+                    >
+                      {isAddingNewSectorInline ? 'Elegir lista' : '+ Nuevo'}
+                    </button>
+                  </div>
+
+                  {isAddingNewSectorInline ? (
+                    <div className="flex gap-1">
+                      <input
+                        type="text"
+                        placeholder="Ej. Balcón"
+                        value={inlineNewSectorName}
+                        onChange={(e) => setInlineNewSectorName(e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (inlineNewSectorName.trim()) {
+                            addSector({ name: inlineNewSectorName.trim(), label: inlineNewSectorName.trim() });
+                            setEditFormData({ ...editFormData, sector: inlineNewSectorName.trim() });
+                            setInlineNewSectorName('');
+                            setIsAddingNewSectorInline(false);
+                          }
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl bg-brand-brown text-white font-bold text-[10px] hover:bg-brand-dark transition shrink-0"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={editFormData.sector}
+                      onChange={(e) => setEditFormData({ ...editFormData, sector: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none capitalize"
+                    >
+                      {!tableSectors.some(s => (s.label || s.name).toLowerCase() === editFormData.sector.toLowerCase()) && (
+                        <option value={editFormData.sector}>{editFormData.sector}</option>
+                      )}
+                      {tableSectors.map((sec) => (
+                        <option key={sec.id} value={sec.label || sec.name}>
+                          {sec.label || sec.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -1388,6 +1538,169 @@ export const TablesPage: React.FC = () => {
                 className="py-2.5 px-4 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30"
               >
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Administrar Sectores */}
+      {isSectorsModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-2xl border-2 border-brand-brown p-6 max-w-lg w-full shadow-soft-lg space-y-5 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-brand-secondary pb-3 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-brand-cream border border-brand-secondary flex items-center justify-center text-brand-brown">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-brand-dark font-serif">Administrar Sectores</h3>
+                  <p className="text-[11px] text-brand-brown/80">Crea, renombra y organiza los sectores del local</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsSectorsModalOpen(false);
+                  setEditingSectorId(null);
+                }}
+                className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Formulario Agregar Nuevo Sector */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newSectorInput.trim()) return;
+                addSector({ name: newSectorInput.trim(), label: newSectorInput.trim() });
+                setNewSectorInput('');
+              }}
+              className="flex gap-2 shrink-0 bg-brand-cream/60 p-3 rounded-xl border border-brand-secondary/70"
+            >
+              <input
+                type="text"
+                placeholder="Nombre del nuevo sector (ej. Salón VIP, Barra, Jardín)..."
+                value={newSectorInput}
+                onChange={(e) => setNewSectorInput(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs font-medium text-brand-dark focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition shadow-soft flex items-center gap-1.5 shrink-0"
+              >
+                <Plus className="w-4 h-4 text-brand-yellow" />
+                <span>Agregar</span>
+              </button>
+            </form>
+
+            {/* Listado de Sectores */}
+            <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+              <p className="text-[11px] font-bold text-brand-brown uppercase tracking-wider px-1">
+                Sectores Configurados ({tableSectors.length})
+              </p>
+              {tableSectors.length === 0 ? (
+                <p className="text-xs text-center text-brand-brown/60 py-6">No hay sectores configurados.</p>
+              ) : (
+                tableSectors.map((sec) => {
+                  const secName = sec.label || sec.name;
+                  const assignedTables = tables.filter(
+                    (t) => t.sector.trim().toLowerCase() === secName.trim().toLowerCase() ||
+                           t.sector.trim().toLowerCase() === sec.id.toLowerCase()
+                  );
+                  const isEditingThis = editingSectorId === sec.id;
+
+                  return (
+                    <div
+                      key={sec.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-brand-bg border border-brand-secondary/80 hover:border-brand-brown/40 transition gap-3"
+                    >
+                      {isEditingThis ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="text"
+                            value={editingSectorName}
+                            onChange={(e) => setEditingSectorName(e.target.value)}
+                            className="flex-1 px-2.5 py-1.5 rounded-lg border border-brand-brown bg-white text-xs font-bold text-brand-dark focus:outline-none"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (editingSectorName.trim()) {
+                                updateSector(sec.id, { label: editingSectorName.trim(), name: editingSectorName.trim() });
+                                setEditingSectorId(null);
+                              }
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-700 text-white font-bold text-xs hover:bg-emerald-800 transition"
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingSectorId(null)}
+                            className="px-2.5 py-1.5 rounded-lg border border-brand-secondary text-xs text-brand-dark hover:bg-brand-secondary/30 transition"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-xs text-brand-dark capitalize">{secName}</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-card text-brand-brown border border-brand-secondary">
+                              {assignedTables.length} {assignedTables.length === 1 ? 'mesa' : 'mesas'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingSectorId(sec.id);
+                                setEditingSectorName(secName);
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-brand-secondary text-brand-brown transition"
+                              title="Renombrar sector"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (assignedTables.length > 0) {
+                                  if (window.confirm(`El sector "${secName}" tiene ${assignedTables.length} mesas asignadas. Al eliminarlo, las mesas se reasignarán automáticamente. ¿Deseas continuar?`)) {
+                                    deleteSector(sec.id);
+                                  }
+                                } else {
+                                  deleteSector(sec.id);
+                                }
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-rose-100 text-rose-700 transition"
+                              title="Eliminar sector"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-brand-secondary/60 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSectorsModalOpen(false);
+                  setEditingSectorId(null);
+                }}
+                className="px-5 py-2 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition shadow-soft"
+              >
+                Listo / Cerrar
               </button>
             </div>
           </div>

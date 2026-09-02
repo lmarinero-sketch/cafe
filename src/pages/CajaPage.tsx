@@ -377,6 +377,27 @@ export const CajaPage: React.FC = () => {
     printWindow.document.close();
   };
 
+  const isRegisterFromPreviousDay = (openedAtIso?: string): boolean => {
+    if (!openedAtIso) return false;
+    const openedDate = new Date(openedAtIso);
+    const now = new Date();
+    const openedDay = new Date(openedDate.getFullYear(), openedDate.getMonth(), openedDate.getDate()).getTime();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return openedDay < today;
+  };
+
+  const getDaysAgoFormatted = (openedAtIso: string): string => {
+    const openedDate = new Date(openedAtIso);
+    const now = new Date();
+    const diffMs = Math.max(0, now.getTime() - openedDate.getTime());
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays >= 2) return `hace ${diffDays} días (${diffHours} hs abierta)`;
+    if (diffDays === 1) return `ayer (${diffHours} hs abierta)`;
+    return `hace ${diffHours} horas`;
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       {/* Header Bar */}
@@ -452,6 +473,44 @@ export const CajaPage: React.FC = () => {
       {activeTab === 'actual' ? (
         activeRegister ? (
         <>
+          {/* Cuadro de Alerta Destacada: Caja Abierta del Día Anterior */}
+          {isRegisterFromPreviousDay(activeRegister.openedAt) && (
+            <div className="bg-amber-50 border-2 border-amber-500 text-amber-950 p-5 rounded-2xl shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fade-in">
+              <div className="flex items-start gap-3.5">
+                <div className="p-3 bg-amber-200/90 rounded-2xl text-amber-900 shrink-0 border border-amber-400 shadow-xs">
+                  <AlertTriangle className="w-7 h-7 text-amber-800 animate-pulse" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-amber-300 text-amber-950 px-2.5 py-0.5 rounded-full border border-amber-400">
+                      ⚠️ Atención: Turno Anterior Sin Cerrar
+                    </span>
+                    <span className="text-xs font-bold text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-200">
+                      Abierta {getDaysAgoFormatted(activeRegister.openedAt)}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-extrabold text-amber-950">
+                    La caja quedó abierta desde una jornada anterior
+                  </h3>
+                  <p className="text-xs text-amber-900/90 leading-relaxed max-w-2xl">
+                    Esta caja fue abierta el <strong>{formatDate(activeRegister.openedAt)} hs</strong> por <strong>{activeRegister.openedBy}</strong> con un fondo de <strong>{formatCurrency(activeRegister.initialBalance)}</strong> y no se registró su cierre al finalizar el día. 
+                    Te recomendamos hacer el arqueo y cierre ahora para que las ventas de hoy inicien con un turno limpio.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+                <button
+                  onClick={handleStartClosing}
+                  className="w-full md:w-auto px-5 py-3 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-extrabold text-xs shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 transform active:scale-95"
+                >
+                  <Check className="w-4 h-4 text-amber-200" />
+                  <span>Arqueo & Cerrar Caja Anterior</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Info Banner box */}
           <div className="bg-emerald-950 text-brand-card p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-soft border border-emerald-800">
             <div className="flex items-center gap-3">

@@ -1,16 +1,27 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, ArrowRight, ArrowLeft, CheckCircle2, Clock, Truck, XCircle, MapPin, Phone, Banknote, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Order, OrderStatus, PaymentMethod } from '../types';
 import { formatCurrency, formatDate } from '../utils/currency';
 
 export const OrdersPage: React.FC = () => {
+  const navigate = useNavigate();
   const { orders, updateOrderStatus, addTransaction, cashRegisters } = useApp();
   const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
   const [cancelingOrderConfirm, setCancelingOrderConfirm] = useState<Order | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('efectivo');
 
   const activeRegister = cashRegisters.find(r => r.status === 'abierta');
+
+  const isRegisterFromPreviousDay = (openedAtIso?: string): boolean => {
+    if (!openedAtIso) return false;
+    const openedDate = new Date(openedAtIso);
+    const now = new Date();
+    const openedDay = new Date(openedDate.getFullYear(), openedDate.getMonth(), openedDate.getDate()).getTime();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return openedDay < today;
+  };
 
   const columns: { status: OrderStatus; title: string; color: string }[] = [
     { status: 'nuevo', title: 'Nuevo', color: 'bg-amber-100 text-amber-900 border-amber-300' },
@@ -88,11 +99,37 @@ export const OrdersPage: React.FC = () => {
 
       {/* Banner Advertencia de Caja Cerrada */}
       {!activeRegister && (
-        <div className="bg-amber-50 border border-amber-300 p-4 rounded-2xl text-amber-950 flex items-center gap-3 shadow-xs">
-          <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0" />
-          <div className="text-xs">
-            <span className="font-extrabold">⚠️ Caja Cerrada:</span> Para registrar el cobro de pedidos entregados es necesario abrir un turno en Tesorería.
+        <div className="bg-amber-50 border border-amber-300 p-4 rounded-2xl text-amber-950 flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0" />
+            <div className="text-xs">
+              <span className="font-extrabold">⚠️ Caja Cerrada:</span> Para registrar el cobro de pedidos entregados es necesario abrir un turno en Tesorería.
+            </div>
           </div>
+          <button
+            onClick={() => navigate('/caja')}
+            className="px-3 py-1.5 rounded-xl bg-amber-800 text-white font-bold text-xs hover:bg-amber-900 transition shrink-0 shadow-xs"
+          >
+            Abrir Caja
+          </button>
+        </div>
+      )}
+
+      {/* Banner Advertencia de Caja Abierta de Jornada Anterior */}
+      {activeRegister && isRegisterFromPreviousDay(activeRegister.openedAt) && (
+        <div className="bg-amber-50 border-2 border-amber-500 p-4 rounded-2xl text-amber-950 flex items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 animate-pulse" />
+            <div className="text-xs">
+              <span className="font-extrabold">⚠️ Caja Abierta de una Jornada Anterior:</span> La caja activa fue abierta el <strong>{formatDate(activeRegister.openedAt)} hs</strong> ({activeRegister.openedBy}). Te recomendamos hacer el arqueo en Tesorería.
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/caja')}
+            className="px-3 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs transition shrink-0 shadow-xs"
+          >
+            Cerrar Caja Anterior
+          </button>
         </div>
       )}
 
