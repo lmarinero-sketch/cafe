@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Wallet, Plus, ArrowDownToLine, ArrowUpFromLine, History, CreditCard, Send, Check, Printer, FileText, AlertTriangle, ShieldCheck, FileSpreadsheet, User, Clock, MessageSquare, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Utensils, ShoppingBag } from 'lucide-react';
+import { Wallet, Plus, ArrowDownToLine, ArrowUpFromLine, History, CreditCard, Send, Check, Printer, FileText, AlertTriangle, ShieldCheck, FileSpreadsheet, User, Clock, MessageSquare, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Utensils, ShoppingBag, Coins, Sparkles, Search, Eye } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate, formatShortDate } from '../utils/currency';
 import { CashRegister, CashTransaction, PaymentMethod, Order } from '../types';
+import { isOrderInCurrentShift } from '../utils/shiftUtils';
+import { OrderReceiptModal } from '../components/orders/OrderReceiptModal';
 
 export const CajaPage: React.FC = () => {
   const { cashRegisters, cashTransactions, openRegister, closeRegister, addTransaction, orders } = useApp();
@@ -13,8 +15,13 @@ export const CajaPage: React.FC = () => {
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [isTxModal, setIsTxModal] = useState(false);
   const [selectedReceiptRegister, setSelectedReceiptRegister] = useState<CashRegister | null>(null);
-  const [activeTab, setActiveTab] = useState<'actual' | 'historial'>('actual');
+  const [activeTab, setActiveTab] = useState<'actual' | 'historial' | 'propinas'>('actual');
   const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
+
+  // Tips & Service Pool states
+  const [selectedTipReceiptOrder, setSelectedTipReceiptOrder] = useState<Order | null>(null);
+  const [tipsScope, setTipsScope] = useState<'turno' | 'hoy' | 'todos'>('turno');
+  const [tipSearchTerm, setTipSearchTerm] = useState('');
 
   const [openedBy, setOpenedBy] = useState('');
   const [initialBalance, setInitialBalance] = useState(0);
@@ -402,6 +409,149 @@ export const CajaPage: React.FC = () => {
     return `hace ${diffHours} horas`;
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // GESTIÓN DE PROPINAS & POZO DE SERVICIO (AUDITORÍA COMPLETA)
+  // ─────────────────────────────────────────────────────────────
+  const allTipsOrders = useMemo(() => {
+    return orders.filter((o) => (o.tipAmount && o.tipAmount > 0) || Boolean(o.tipRegisteredBy));
+  }, [orders]);
+
+  const filteredTipsOrders = useMemo(() => {
+    let list = allTipsOrders;
+
+    if (tipsScope === 'turno') {
+      if (activeRegister) {
+        list = list.filter((o) => isOrderInCurrentShift(o, activeRegister));
+      } else {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        list = list.filter((o) => (o.createdAt || '').slice(0, 10) === todayStr);
+      }
+    } else if (tipsScope === 'hoy') {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      list = list.filter((o) => (o.createdAt || '').slice(0, 10) === todayStr);
+    }
+
+    if (tipSearchTerm.trim()) {
+      const term = tipSearchTerm.toLowerCase().trim();
+      list = list.filter((o) => {
+        const codeMatch = o.code?.toLowerCase().includes(term);
+        const cashierMatch = o.tipRegisteredBy?.toLowerCase().includes(term);
+        const waiterMatch = o.waiterName?.toLowerCase().includes(term);
+        const tableMatch = o.tableName?.toLowerCase().includes(term);
+        const custMatch = o.customerName?.toLowerCase().includes(term);
+        return codeMatch || cashierMatch || waiterMatch || tableMatch || custMatch;
+      });
+    }
+
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [allTipsOrders, tipsScope, tipSearchTerm, activeRegister]);
+
+  const totalTipAmount = useMemo(() => {
+    return filteredTipsOrders.reduce((sum, o) => sum + (o.tipAmount || 0), 0);
+  }, [filteredTipsOrders]);
+
+  const averageTipAmount = useMemo(() => {
+    if (filteredTipsOrders.length === 0) return 0;
+    return Math.round(totalTipAmount / filteredTipsOrders.length);
+  }, [filteredTipsOrders, totalTipAmount]);
+
+  const handlePrintTipReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const rows = filteredTipsOrders
+      .map(
+        (o) => `
+      <tr>
+        <td style="padding: 7px 8px; border-bottom: 1px solid #e5e7eb; font-weight: bold; font-family: monospace;">#${o.code}</td>
+        <td style="padding: 7px 8px; border-bottom: 1px solid #e5e7eb;">${formatDate(o.createdAt)}</td>
+        <td style="padding: 7px 8px; border-bottom: 1px solid #e5e7eb;">${o.tableName || o.type.toUpperCase()}</td>
+        <td style="padding: 7px 8px; border-bottom: 1px solid #e5e7eb;">${o.waiterName || 'Salón'}</td>
+        <td style="padding: 7px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatCurrency(o.total)}</td>
+        <td style="padding: 7px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 800; color: #065f46;">+${formatCurrency(o.tipAmount || 0)} (${o.tipPercentage || 10}%)</td>
+        <td style="padding: 7px 8px; border-bottom: 1px solid #e5e7eb; font-weight: 700; color: #1e293b;">${o.tipRegisteredBy || 'Cajero de Turno'}</td>
+      </tr>
+    `
+      )
+      .join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Reporte de Propinas - Café Magnolia</title>
+        <style>
+          body { font-family: system-ui, -apple-system, sans-serif; padding: 24px; color: #111827; font-size: 12px; }
+          h1 { font-size: 20px; margin: 0 0 4px 0; color: #2b1810; }
+          .header { margin-bottom: 20px; border-bottom: 2px solid #2b1810; padding-bottom: 10px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
+          th { background: #f3f4f6; padding: 8px; text-align: left; font-weight: 800; text-transform: uppercase; font-size: 10px; border-bottom: 2px solid #d1d5db; }
+          .kpis { display: flex; gap: 14px; margin-bottom: 18px; }
+          .kpi { border: 1px solid #e5e7eb; padding: 10px 14px; border-radius: 10px; background: #fafaf9; }
+          .sig-box { margin-top: 55px; display: flex; justify-content: space-between; padding: 0 40px; }
+          .sig-line { width: 220px; border-top: 1px dashed #374151; text-align: center; padding-top: 6px; font-size: 11px; font-weight: 600; color: #374151; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>CAFÉ MAGNOLIA - PLANILLA DE CONTROL DE PROPINAS</h1>
+          <div style="font-size: 11px; color: #4b5563;">Hilos de Amor Resto & Café • Área de Tesorería & Salón</div>
+          <div style="font-size: 11px; color: #4b5563; margin-top: 3px;">
+            <strong>Emisión:</strong> ${new Date().toLocaleString()} | <strong>Alcance:</strong> ${
+      tipsScope === 'turno' ? 'Turno Actual de Caja' : tipsScope === 'hoy' ? 'Jornada de Hoy' : 'Histórico Total'
+    }
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi">
+            <div style="font-size: 10px; color: #6b7280; font-weight: bold; text-transform: uppercase;">Pozo Total Propinas</div>
+            <div style="font-size: 18px; font-weight: 900; color: #065f46;">${formatCurrency(totalTipAmount)}</div>
+          </div>
+          <div class="kpi">
+            <div style="font-size: 10px; color: #6b7280; font-weight: bold; text-transform: uppercase;">Tickets con Propina</div>
+            <div style="font-size: 18px; font-weight: 900; color: #111827;">${filteredTipsOrders.length}</div>
+          </div>
+          <div class="kpi">
+            <div style="font-size: 10px; color: #6b7280; font-weight: bold; text-transform: uppercase;">Promedio por Ticket</div>
+            <div style="font-size: 18px; font-weight: 900; color: #111827;">${formatCurrency(averageTipAmount)}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Ticket</th>
+              <th>Fecha / Hora</th>
+              <th>Mesa / Canal</th>
+              <th>Mozo</th>
+              <th style="text-align: right;">Consumo</th>
+              <th style="text-align: right;">Propina Sugerida</th>
+              <th>Cajero Registrador</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+
+        <div class="sig-box">
+          <div class="sig-line">Firma Cajero en Turno</div>
+          <div class="sig-line">Firma Encargado / Auditor</div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       {/* Header Bar */}
@@ -461,6 +611,22 @@ export const CajaPage: React.FC = () => {
           }`}
         >
           Turno Actual
+        </button>
+        <button
+          onClick={() => setActiveTab('propinas')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'propinas'
+              ? 'bg-brand-brown text-brand-card shadow-soft'
+              : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
+          }`}
+        >
+          <Coins className="w-3.5 h-3.5 text-amber-300" />
+          <span>Propinas & Pozo de Servicio</span>
+          {allTipsOrders.length > 0 && (
+            <span className="bg-amber-400 text-amber-950 font-mono text-[10px] px-1.5 py-0.5 rounded-full font-black">
+              {allTipsOrders.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('historial')}
@@ -796,6 +962,249 @@ export const CajaPage: React.FC = () => {
           </button>
         </div>
         )
+      ) : activeTab === 'propinas' ? (
+        /* VISTA DE PROPINAS & POZO DE SERVICIO */
+        <div className="space-y-4 animate-fade-in">
+          {/* Header Card con Filtros y Botón de Reporte */}
+          <div className="bg-brand-card p-5 rounded-2xl border border-brand-secondary shadow-soft flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-3 bg-amber-100 text-amber-900 rounded-2xl border border-amber-300 shadow-xs shrink-0">
+                <Coins className="w-6 h-6 text-amber-700" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-extrabold text-brand-dark">
+                    Propinas & Pozo de Servicio
+                  </h3>
+                  <span className="text-[10px] bg-amber-200 text-amber-950 font-black px-2 py-0.5 rounded-full border border-amber-300">
+                    ⭐ 10% Sugerido
+                  </span>
+                </div>
+                <p className="text-xs text-brand-brown/80 mt-0.5 max-w-xl">
+                  Auditoría completa de propinas recibidas por pedido, con desglose del consumo, porcentaje aplicado y el <strong>cajero responsable que registró la propina</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
+              <button
+                onClick={handlePrintTipReport}
+                disabled={filteredTipsOrders.length === 0}
+                className="py-2.5 px-4 rounded-xl bg-brand-brown hover:bg-brand-dark text-white font-bold text-xs shadow-soft flex items-center justify-center gap-2 transition-all disabled:opacity-50 w-full sm:w-auto"
+                title="Imprimir planilla para el reparto del pozo de propinas entre mozos y personal"
+              >
+                <Printer className="w-4 h-4 text-brand-yellow" />
+                Imprimir Planilla de Reparto
+              </button>
+            </div>
+          </div>
+
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-brand-card p-4 rounded-2xl border border-brand-secondary shadow-soft">
+              <div className="flex items-center justify-between text-brand-brown/80 mb-1">
+                <span className="text-xs font-bold uppercase tracking-wider">Pozo Total Propinas</span>
+                <Coins className="w-4 h-4 text-amber-600" />
+              </div>
+              <p className="text-xl font-black text-emerald-800 font-mono">
+                {formatCurrency(totalTipAmount)}
+              </p>
+              <p className="text-[10px] text-gray-500 font-semibold mt-0.5">
+                {tipsScope === 'turno' ? 'En el turno actual' : tipsScope === 'hoy' ? 'En la jornada de hoy' : 'En todo el historial'}
+              </p>
+            </div>
+
+            <div className="bg-brand-card p-4 rounded-2xl border border-brand-secondary shadow-soft">
+              <div className="flex items-center justify-between text-brand-brown/80 mb-1">
+                <span className="text-xs font-bold uppercase tracking-wider">Tickets con Propina</span>
+                <Sparkles className="w-4 h-4 text-amber-500" />
+              </div>
+              <p className="text-xl font-black text-brand-dark font-mono">
+                {filteredTipsOrders.length}
+              </p>
+              <p className="text-[10px] text-gray-500 font-semibold mt-0.5">
+                Pedidos con propina voluntaria
+              </p>
+            </div>
+
+            <div className="bg-brand-card p-4 rounded-2xl border border-brand-secondary shadow-soft">
+              <div className="flex items-center justify-between text-brand-brown/80 mb-1">
+                <span className="text-xs font-bold uppercase tracking-wider">Promedio por Ticket</span>
+                <Wallet className="w-4 h-4 text-brand-brown" />
+              </div>
+              <p className="text-xl font-black text-brand-dark font-mono">
+                {formatCurrency(averageTipAmount)}
+              </p>
+              <p className="text-[10px] text-gray-500 font-semibold mt-0.5">
+                Monto medio por comensal
+              </p>
+            </div>
+
+            <div className="bg-brand-card p-4 rounded-2xl border border-brand-secondary shadow-soft">
+              <div className="flex items-center justify-between text-brand-brown/80 mb-1">
+                <span className="text-xs font-bold uppercase tracking-wider">Cajero en Turno</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+              </div>
+              <p className="text-sm font-extrabold text-brand-dark truncate">
+                {activeRegister?.openedBy || user?.name || 'Cajero de Turno'}
+              </p>
+              <p className="text-[10px] text-emerald-700 font-bold mt-0.5">
+                ✓ Perfil habilitado para registrar
+              </p>
+            </div>
+          </div>
+
+          {/* Toolbar de Filtros y Búsqueda */}
+          <div className="bg-brand-card p-3 rounded-2xl border border-brand-secondary shadow-soft flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto">
+              <button
+                onClick={() => setTipsScope('turno')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  tipsScope === 'turno'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
+                }`}
+              >
+                Turno Actual
+              </button>
+              <button
+                onClick={() => setTipsScope('hoy')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  tipsScope === 'hoy'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
+                }`}
+              >
+                Jornada de Hoy
+              </button>
+              <button
+                onClick={() => setTipsScope('todos')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  tipsScope === 'todos'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
+                }`}
+              >
+                Todo el Historial ({allTipsOrders.length})
+              </button>
+            </div>
+
+            <div className="relative w-full md:w-80">
+              <Search className="w-4 h-4 text-brand-brown/50 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Buscar ticket, cajero, mozo, mesa..."
+                value={tipSearchTerm}
+                onChange={(e) => setTipSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-brand-secondary bg-brand-bg text-xs font-bold text-brand-dark focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Tabla Detallada de Pedidos con Propina */}
+          <div className="bg-brand-card rounded-2xl border border-brand-secondary shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-brand-bg/80 border-b border-brand-secondary text-brand-brown/80 font-extrabold uppercase text-[10px] tracking-wider">
+                    <th className="p-3.5">Ticket</th>
+                    <th className="p-3.5">Fecha / Hora</th>
+                    <th className="p-3.5">Mesa / Canal</th>
+                    <th className="p-3.5">Mozo</th>
+                    <th className="p-3.5 text-right">Consumo</th>
+                    <th className="p-3.5 text-right">Propina Recaudada</th>
+                    <th className="p-3.5 text-right">Total Cobrado</th>
+                    <th className="p-3.5">Registrado por (Cajero)</th>
+                    <th className="p-3.5">Medio de Pago</th>
+                    <th className="p-3.5 text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-secondary/40">
+                  {filteredTipsOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="p-12 text-center text-brand-brown/60 text-xs">
+                        <Coins className="w-10 h-10 mx-auto mb-2 text-brand-brown/30" />
+                        <p className="font-bold text-sm text-brand-dark">No hay propinas registradas</p>
+                        <p className="text-brand-brown/70 mt-1">No se encontraron pedidos con propina en el rango seleccionado.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTipsOrders.map((ord) => {
+                      const grandTotal = ord.total + (ord.tipAmount || 0);
+                      return (
+                        <tr key={ord.id} className="hover:bg-brand-bg/50 transition-colors">
+                          <td className="p-3.5 font-mono font-extrabold text-brand-dark">
+                            #{ord.code}
+                          </td>
+                          <td className="p-3.5 text-brand-brown whitespace-nowrap">
+                            {formatDate(ord.createdAt)} hs
+                          </td>
+                          <td className="p-3.5 font-bold text-brand-dark">
+                            {ord.tableName ? (
+                              <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-lg border border-amber-200">
+                                {ord.tableName}
+                              </span>
+                            ) : (
+                              <span className="uppercase text-[11px] text-brand-brown">
+                                {ord.type}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3.5 text-brand-dark font-medium">
+                            {ord.waiterName || 'Salón / Mostrador'}
+                          </td>
+                          <td className="p-3.5 text-right font-bold text-gray-700">
+                            {formatCurrency(ord.total)}
+                          </td>
+                          <td className="p-3.5 text-right">
+                            <span className="inline-flex items-center gap-1 font-mono font-extrabold text-emerald-900 bg-emerald-100 px-2.5 py-1 rounded-xl border border-emerald-300">
+                              +{formatCurrency(ord.tipAmount || 0)}
+                              <span className="text-[10px] text-emerald-700 font-bold">
+                                ({ord.tipPercentage || 10}%)
+                              </span>
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-right font-mono font-black text-brand-dark text-sm">
+                            {formatCurrency(grandTotal)}
+                          </td>
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-6 h-6 rounded-full bg-amber-200 text-amber-950 flex items-center justify-center text-[10px] font-bold border border-amber-300 shrink-0">
+                                👤
+                              </span>
+                              <div>
+                                <span className="font-extrabold text-brand-dark block text-[11px]">
+                                  {ord.tipRegisteredBy || 'Cajero de Turno'}
+                                </span>
+                                {ord.tipRegisteredAt && (
+                                  <span className="text-[10px] text-gray-400">
+                                    {formatDate(ord.tipRegisteredAt)} hs
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-3.5 capitalize font-semibold text-brand-brown">
+                            {ord.paymentMethod}
+                          </td>
+                          <td className="p-3.5 text-center">
+                            <button
+                              onClick={() => setSelectedTipReceiptOrder(ord)}
+                              className="p-1.5 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark border border-brand-secondary transition-all"
+                              title="Ver Comprobante Digital"
+                            >
+                              <Eye className="w-4 h-4 text-brand-brown" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       ) : (
         /* HISTORIAL DE CAJAS & COMPROBANTES */
         <div className="bg-brand-card rounded-2xl border border-brand-secondary shadow-soft overflow-hidden">
@@ -1102,6 +1511,15 @@ export const CajaPage: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal de Comprobante de Pago para Propinas */}
+      {selectedTipReceiptOrder && (
+        <OrderReceiptModal
+          isOpen={true}
+          order={selectedTipReceiptOrder}
+          onClose={() => setSelectedTipReceiptOrder(null)}
+        />
       )}
     </div>
   );

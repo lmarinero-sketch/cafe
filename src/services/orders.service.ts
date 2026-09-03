@@ -22,6 +22,10 @@ export function mapRowToOrder(row: any): Order {
     registerId: row.register_id || undefined,
     createdAt: row.created_at,
     pointsEarned: row.points_earned || 0,
+    tipAmount: Number(row.tip_amount) || 0,
+    tipPercentage: Number(row.tip_percentage) || 0,
+    tipRegisteredBy: row.tip_registered_by || undefined,
+    tipRegisteredAt: row.tip_registered_at || undefined,
   };
 }
 
@@ -46,6 +50,10 @@ function mapOrderToRow(order: Partial<Order>): Record<string, any> {
   if (order.waiterName !== undefined) row.waiter_name = order.waiterName;
   if (order.registerId !== undefined) row.register_id = order.registerId;
   if (order.pointsEarned !== undefined) row.points_earned = order.pointsEarned;
+  if (order.tipAmount !== undefined) row.tip_amount = order.tipAmount;
+  if (order.tipPercentage !== undefined) row.tip_percentage = order.tipPercentage;
+  if (order.tipRegisteredBy !== undefined) row.tip_registered_by = order.tipRegisteredBy;
+  if (order.tipRegisteredAt !== undefined) row.tip_registered_at = order.tipRegisteredAt;
   return row;
 }
 
@@ -100,6 +108,34 @@ export async function getOrderByCode(code: string): Promise<Order | null> {
     .single();
 
   if (error || !data) {
+    return null;
+  }
+  return mapRowToOrder(data);
+}
+
+export async function updateOrderTipDB(
+  orderId: string,
+  tipAmount: number,
+  tipPercentage: number,
+  registeredBy: string
+): Promise<Order | null> {
+  if (!isSupabaseConfigured) return null;
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      tip_amount: tipAmount,
+      tip_percentage: tipPercentage,
+      tip_registered_by: registeredBy,
+      tip_registered_at: now,
+      updated_at: now,
+    })
+    .eq('id', orderId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating order tip in Supabase:', error);
     return null;
   }
   return mapRowToOrder(data);

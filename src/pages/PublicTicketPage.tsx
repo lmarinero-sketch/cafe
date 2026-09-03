@@ -268,7 +268,7 @@ export const PublicTicketPage: React.FC = () => {
             {/* Financial Summary */}
             <div className="border-t-2 border-dashed border-gray-300 pt-3 space-y-1.5 text-xs">
               <div className="flex justify-between text-gray-600">
-                <span>Subtotal:</span>
+                <span>Subtotal Consumo:</span>
                 <span className="font-bold text-gray-900">{formatCurrency(order.subtotal || order.total)}</span>
               </div>
               {order.deliveryFee ? (
@@ -277,16 +277,23 @@ export const PublicTicketPage: React.FC = () => {
                   <span className="font-bold text-gray-900">{formatCurrency(order.deliveryFee)}</span>
                 </div>
               ) : null}
+              {order.tipAmount && order.tipAmount > 0 ? (
+                <div className="flex justify-between text-emerald-800 font-bold">
+                  <span>Propina del Servicio ({order.tipPercentage || 10}%):</span>
+                  <span>+{formatCurrency(order.tipAmount)}</span>
+                </div>
+              ) : null}
 
               <div className="flex justify-between items-baseline pt-2 border-t-2 border-gray-900">
                 <div>
                   <span className="text-sm font-black text-amber-950 block">TOTAL ABONADO</span>
                   <span className="text-[10px] text-gray-500 font-bold uppercase">
                     Medio: {getPaymentMethodLabel(order.paymentMethod)}
+                    {order.tipRegisteredBy && ` • Propina reg. por: ${order.tipRegisteredBy}`}
                   </span>
                 </div>
                 <span className="text-xl font-black text-emerald-800 font-mono">
-                  {formatCurrency(order.total)}
+                  {formatCurrency(order.total + (order.tipAmount || 0))}
                 </span>
               </div>
             </div>

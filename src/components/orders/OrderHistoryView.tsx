@@ -39,6 +39,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ orders, onUp
   const [selectedStatus, setSelectedStatus] = useState<string>('todos');
   const [selectedType, setSelectedType] = useState<string>('todos');
   const [selectedPayment, setSelectedPayment] = useState<string>('todos');
+  const [onlyWithTip, setOnlyWithTip] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<Order | null>(null);
@@ -64,7 +65,12 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ orders, onUp
       result = result.filter((o) => o.paymentMethod === selectedPayment);
     }
 
-    // 5. Search Text Filter (code, customer name, phone, table, waiter)
+    // 5. Only With Tip Filter
+    if (onlyWithTip) {
+      result = result.filter((o) => (o.tipAmount && o.tipAmount > 0) || Boolean(o.tipRegisteredBy));
+    }
+
+    // 6. Search Text Filter (code, customer name, phone, table, waiter)
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim();
       result = result.filter((o) => {
@@ -73,14 +79,15 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ orders, onUp
         const phoneMatch = o.customerPhone?.toLowerCase().includes(term);
         const tableMatch = o.tableName?.toLowerCase().includes(term);
         const waiterMatch = o.waiterName?.toLowerCase().includes(term);
+        const tipRegistrarMatch = o.tipRegisteredBy?.toLowerCase().includes(term);
         const itemMatch = o.items?.some((it) => it.productName.toLowerCase().includes(term));
-        return codeMatch || nameMatch || phoneMatch || tableMatch || waiterMatch || itemMatch;
+        return codeMatch || nameMatch || phoneMatch || tableMatch || waiterMatch || tipRegistrarMatch || itemMatch;
       });
     }
 
     // Sort descending by creation date
     return [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [orders, datePreset, customFrom, customTo, selectedStatus, selectedType, selectedPayment, searchTerm]);
+  }, [orders, datePreset, customFrom, customTo, selectedStatus, selectedType, selectedPayment, onlyWithTip, searchTerm]);
 
   // KPI Metrics calculation
   const metrics = useMemo(() => {
@@ -116,6 +123,9 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ orders, onUp
       'Medio de Pago',
       'Subtotal',
       'Envío',
+      'Propina ($)',
+      'Propina (%)',
+      'Propina Registrada Por',
       'Total',
       'Estado',
       'Items',
@@ -138,7 +148,10 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ orders, onUp
         `"${o.paymentMethod}"`,
         o.subtotal || o.total - (o.deliveryFee || 0),
         o.deliveryFee || 0,
-        o.total,
+        o.tipAmount || 0,
+        o.tipPercentage || 0,
+        `"${(o.tipRegisteredBy || '').replace(/"/g, '""')}"`,
+        o.total + (o.tipAmount || 0),
         `"${o.status}"`,
         `"${itemsStr.replace(/"/g, '""')}"`,
       ].join(',');
@@ -263,6 +276,19 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ orders, onUp
                 <span className="hidden sm:inline">Tarjetas</span>
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setOnlyWithTip(!onlyWithTip)}
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border shrink-0 ${
+                onlyWithTip
+                  ? 'bg-amber-600 text-white border-amber-700 shadow-xs ring-2 ring-amber-400'
+                  : 'bg-brand-bg text-brand-dark border-brand-secondary hover:bg-brand-secondary/40'
+              }`}
+              title="Filtrar solo pedidos con propina registrada"
+            >
+              <span>🪙 Con Propina</span>
+            </button>
 
             <button
               onClick={handleExportCSV}
@@ -421,7 +447,9 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ orders, onUp
                   <th className="py-3 px-4">Canal / Mesa</th>
                   <th className="py-3 px-4">Medio de Pago</th>
                   <th className="py-3 px-4">Items</th>
-                  <th className="py-3 px-4 text-right">Total</th>
+                  <th className="py-3 px-4 text-right">Consumo</th>
+                  <th className="py-3 px-4 text-right">Propina</th>
+                  <th className="py-3 px-4 text-right">Total Final</th>
                   <th className="py-3 px-4 text-center">Estado</th>
                   <th className="py-3 px-4 text-center">Acción</th>
                 </tr>
@@ -429,6 +457,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ orders, onUp
               <tbody className="divide-y divide-brand-secondary/40 font-medium text-brand-dark">
                 {filteredOrders.map((ord) => {
                   const badge = getStatusBadge(ord.status);
+                  const grandTotal = ord.total + (ord.tipAmount || 0);
                   return (
                     <tr
                       key={ord.id}
@@ -465,8 +494,25 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ orders, onUp
                       <td className="py-3 px-4 text-[11px] text-brand-brown max-w-xs truncate">
                         {ord.items.map((it) => `${it.quantity}x ${it.productName}`).join(', ')}
                       </td>
-                      <td className="py-3 px-4 text-right font-extrabold text-brand-dark text-xs whitespace-nowrap">
+                      <td className="py-3 px-4 text-right font-medium text-gray-700 text-xs whitespace-nowrap">
                         {formatCurrency(ord.total)}
+                      </td>
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        {ord.tipAmount && ord.tipAmount > 0 ? (
+                          <div title={ord.tipRegisteredBy ? `Registrado por: ${ord.tipRegisteredBy}` : undefined}>
+                            <span className="font-extrabold text-emerald-800 text-xs">
+                              +{formatCurrency(ord.tipAmount)}
+                            </span>
+                            <span className="text-[10px] text-gray-500 block">
+                              ({ord.tipPercentage || 10}%)
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-[11px]">-</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right font-black text-brand-dark text-xs whitespace-nowrap">
+                        {formatCurrency(grandTotal)}
                       </td>
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${badge.bg}`}>
@@ -560,7 +606,12 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ orders, onUp
                 <div className="pt-2 border-t border-brand-secondary/40 flex items-center justify-between text-xs gap-2">
                   <div>
                     <span className="text-[10px] text-brand-brown capitalize">Pago: {ord.paymentMethod}</span>
-                    <p className="font-extrabold text-brand-dark text-sm">{formatCurrency(ord.total)}</p>
+                    <p className="font-extrabold text-brand-dark text-sm">{formatCurrency(ord.total + (ord.tipAmount || 0))}</p>
+                    {ord.tipAmount && ord.tipAmount > 0 ? (
+                      <span className="text-[10px] text-emerald-800 font-bold block">
+                        Incluye Propina: +{formatCurrency(ord.tipAmount)} ({ord.tipPercentage || 10}%)
+                      </span>
+                    ) : null}
                   </div>
 
                   <div className="flex items-center gap-1.5">

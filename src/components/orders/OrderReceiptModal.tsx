@@ -179,16 +179,23 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             <span>${formatCurrency(ord.deliveryFee)}</span>
           </div>
         ` : ''}
+        ${ord.tipAmount && ord.tipAmount > 0 ? `
+          <div style="display: flex; justify-content: space-between; font-size: 10px; color: #111;">
+            <span>PROPINA SUG. (${ord.tipPercentage || 10}%):</span>
+            <span>+${formatCurrency(ord.tipAmount)}</span>
+          </div>
+        ` : ''}
         
         <div class="double-divider"></div>
         <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900;">
           <span>TOTAL:</span>
-          <span>${formatCurrency(ord.total)}</span>
+          <span>${formatCurrency(ord.total + (ord.tipAmount || 0))}</span>
         </div>
         <div class="double-divider"></div>
 
         <div style="font-size: 10px; margin-top: 4px;">
           <div><strong>FORMA DE PAGO:</strong> ${getPaymentMethodLabel(ord.paymentMethod).toUpperCase()}</div>
+          ${ord.tipRegisteredBy ? `<div style="font-size: 9px; color: #444;">Propina reg. por: ${ord.tipRegisteredBy}</div>` : ''}
           <div style="color: #222; margin-top: 2px;">⭐ Puntos del Club: +${pointsEarned} pts</div>
         </div>
 
@@ -407,11 +414,22 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                     <td style="text-align: right; font-weight: 700; color: #111827;">${formatCurrency(ord.deliveryFee)}</td>
                   </tr>
                 ` : ''}
+                ${ord.tipAmount && ord.tipAmount > 0 ? `
+                  <tr>
+                    <td style="color: #065f46; font-weight: 700;">Propina Sugerida (${ord.tipPercentage || 10}%):</td>
+                    <td style="text-align: right; font-weight: 800; color: #065f46;">+${formatCurrency(ord.tipAmount)}</td>
+                  </tr>
+                ` : ''}
                 <tr style="border-top: 2px solid #111827; border-bottom: 2px solid #111827;">
                   <td style="font-size: 16px; font-weight: 900; color: #2b1810; padding: 10px 8px;">TOTAL ABONADO:</td>
-                  <td style="text-align: right; font-size: 18px; font-weight: 900; color: #065f46; padding: 10px 8px;">${formatCurrency(ord.total)}</td>
+                  <td style="text-align: right; font-size: 18px; font-weight: 900; color: #065f46; padding: 10px 8px;">${formatCurrency(ord.total + (ord.tipAmount || 0))}</td>
                 </tr>
               </table>
+              ${ord.tipRegisteredBy ? `
+                <div style="font-size: 10px; color: #6b7280; text-align: right; margin-top: 4px;">
+                  Propina reg. por: <strong>${ord.tipRegisteredBy}</strong>
+                </div>
+              ` : ''}
             </td>
           </tr>
         </table>
@@ -446,7 +464,11 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
   const handleShareWhatsApp = () => {
     const publicTicketUrl = `${window.location.origin}/ticket/${order.code}`;
     const itemsList = order.items.map((i) => `• ${i.quantity}x ${i.productName} (${formatCurrency(i.unitPrice * i.quantity)})`).join('\n');
-    const msg = `🧾 *COMPROBANTE DE CONSUMO #${order.code}*\n*Café Magnolia - Hilos de Amor*\n_(Documento no válido como factura)_\n\n📅 Fecha: ${orderDateStr} ${orderTimeStr}\n👤 Cliente: ${order.customerName}\n📍 Modalidad: ${order.tableName || order.type.toUpperCase()}\n\n*Detalle del Pedido:*\n${itemsList}\n\n💰 *TOTAL ABONADO:* ${formatCurrency(order.total)}\n💳 *Medio de Pago:* ${getPaymentMethodLabel(order.paymentMethod)}\n⭐ *Puntos Club Ganados:* +${pointsEarned} pts\n\n🔗 *Ver Comprobante Digital:* ${publicTicketUrl}\n\n¡Muchas gracias por tu visita! ☕✨`;
+    const tipText = order.tipAmount && order.tipAmount > 0 
+      ? `\n🪙 *Propina Sugerida (${order.tipPercentage || 10}%):* +${formatCurrency(order.tipAmount)}${order.tipRegisteredBy ? ` _(reg. por ${order.tipRegisteredBy})_` : ''}`
+      : '';
+    const totalAmount = order.total + (order.tipAmount || 0);
+    const msg = `🧾 *COMPROBANTE DE CONSUMO #${order.code}*\n*Café Magnolia - Hilos de Amor*\n_(Documento no válido como factura)_\n\n📅 Fecha: ${orderDateStr} ${orderTimeStr}\n👤 Cliente: ${order.customerName}\n📍 Modalidad: ${order.tableName || order.type.toUpperCase()}\n\n*Detalle del Pedido:*\n${itemsList}\n${tipText}\n\n💰 *TOTAL ABONADO:* ${formatCurrency(totalAmount)}\n💳 *Medio de Pago:* ${getPaymentMethodLabel(order.paymentMethod)}\n⭐ *Puntos Club Ganados:* +${pointsEarned} pts\n\n🔗 *Ver Comprobante Digital:* ${publicTicketUrl}\n\n¡Muchas gracias por tu visita! ☕✨`;
     const cleanPhone = (order.customerPhone || '').replace(/\D/g, '');
     const url = cleanPhone
       ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`
@@ -573,14 +595,23 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                     <span>{formatCurrency(order.deliveryFee)}</span>
                   </div>
                 ) : null}
+                {order.tipAmount && order.tipAmount > 0 ? (
+                  <div className="flex justify-between font-bold text-gray-800">
+                    <span>PROPINA ({order.tipPercentage || 10}%):</span>
+                    <span>+{formatCurrency(order.tipAmount)}</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between text-sm font-black border-t-2 border-black pt-1">
-                  <span>TOTAL:</span>
-                  <span>{formatCurrency(order.total)}</span>
+                  <span>TOTAL FINAL:</span>
+                  <span>{formatCurrency(order.total + (order.tipAmount || 0))}</span>
                 </div>
               </div>
 
               <div className="border-t border-dashed border-gray-400 pt-2 text-[10px] space-y-0.5">
                 <div><strong>MEDIO DE PAGO:</strong> {getPaymentMethodLabel(order.paymentMethod).toUpperCase()}</div>
+                {order.tipRegisteredBy && (
+                  <div className="text-gray-600 font-semibold">Propina reg. por: {order.tipRegisteredBy}</div>
+                )}
                 <div className="text-gray-700">⭐ Puntos Club Fidelización: +{pointsEarned} pts</div>
               </div>
 
@@ -723,10 +754,21 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                       <span className="font-bold text-gray-900">{formatCurrency(order.deliveryFee)}</span>
                     </div>
                   ) : null}
+                  {order.tipAmount && order.tipAmount > 0 ? (
+                    <div className="flex justify-between text-emerald-800 font-bold">
+                      <span>Propina ({order.tipPercentage || 10}%):</span>
+                      <span>+{formatCurrency(order.tipAmount)}</span>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between text-base font-black text-brand-dark pt-1 border-t-2 border-gray-900">
                     <span>TOTAL:</span>
-                    <span className="text-emerald-800">{formatCurrency(order.total)}</span>
+                    <span className="text-emerald-800">{formatCurrency(order.total + (order.tipAmount || 0))}</span>
                   </div>
+                  {order.tipRegisteredBy && (
+                    <div className="text-[10px] text-gray-500 text-right pt-0.5">
+                      Propina reg. por: <strong>{order.tipRegisteredBy}</strong>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -114,6 +114,7 @@ interface AppContextType {
 
   createOrder: (order: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>) => Order | null;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  updateOrderTip: (orderId: string, tipAmount: number, tipPercentage: number, registeredBy: string) => Promise<boolean>;
 
   addIngredient: (ingredient: Omit<Ingredient, 'id' | 'updatedAt' | 'normalizedCost'>) => void;
   updateIngredientPrice: (id: string, newPurchasePrice: number) => void;
@@ -1129,6 +1130,42 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const updateOrderTip = async (
+    orderId: string,
+    tipAmount: number,
+    tipPercentage: number,
+    registeredBy: string
+  ): Promise<boolean> => {
+    const currentRole = user?.role;
+    const canRegisterTip = currentRole === 'cajero' || currentRole === 'admin' || !currentRole;
+    if (!canRegisterTip) {
+      showToast('Permiso Denegado', 'Solo el perfil de Cajero o Administrador puede registrar propinas.', 'error');
+      return false;
+    }
+
+    const now = new Date().toISOString();
+    setOrders((prev) =>
+      prev.map((ord) => {
+        if (ord.id === orderId) {
+          return {
+            ...ord,
+            tipAmount,
+            tipPercentage,
+            tipRegisteredBy: registeredBy,
+            tipRegisteredAt: now,
+          };
+        }
+        return ord;
+      })
+    );
+
+    if (isSupabaseConfigured) {
+      await ordersService.updateOrderTipDB(orderId, tipAmount, tipPercentage, registeredBy).catch(console.error);
+    }
+
+    return true;
+  };
+
   // ============================================================
   // INGREDIENTS & Cost Recalculation (LocalStorage - unchanged)
   // ============================================================
@@ -1971,6 +2008,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         deleteTable,
         createOrder,
         updateOrderStatus,
+        updateOrderTip,
         addIngredient,
         updateIngredientPrice,
         updateIngredient,

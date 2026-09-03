@@ -22,6 +22,7 @@ export const TablesPage: React.FC = () => {
     deleteTable,
     updateTableStatus,
     updateOrderStatus,
+    updateOrderTip,
     orders,
     addTransaction,
     cashRegisters,
@@ -38,6 +39,8 @@ export const TablesPage: React.FC = () => {
   const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
   const [cancelingOrderConfirm, setCancelingOrderConfirm] = useState<Order | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('efectivo');
+  const [tipMode, setTipMode] = useState<'none' | '10' | '15' | 'custom'>('10');
+  const [customTipAmount, setCustomTipAmount] = useState<number>(0);
   const [giftCardCodeInput, setGiftCardCodeInput] = useState<string>('');
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
 
@@ -89,26 +92,58 @@ export const TablesPage: React.FC = () => {
       }
     }
 
+    const isCashier = user?.role === 'cajero' || user?.role === 'admin' || !user?.role;
+    const suggested10 = Math.round(chargingOrder.total * 0.1);
+    const suggested15 = Math.round(chargingOrder.total * 0.15);
+    const tipAmount = isCashier
+      ? tipMode === '10'
+        ? suggested10
+        : tipMode === '15'
+        ? suggested15
+        : tipMode === 'custom'
+        ? customTipAmount
+        : 0
+      : 0;
+
+    const tipPercentage =
+      tipAmount > 0 && chargingOrder.total > 0
+        ? tipMode === '10'
+          ? 10
+          : tipMode === '15'
+          ? 15
+          : Math.round((tipAmount / chargingOrder.total) * 100)
+        : 0;
+
+    const tipRegisteredBy = user ? `${user.name} (${user.role || 'cajero'})` : 'Cajero de Turno';
+    const grandTotal = chargingOrder.total + tipAmount;
+
     addTransaction({
       registerId: activeRegister.id,
       orderId: chargingOrder.id,
       type: 'ingreso',
-      amount: chargingOrder.total,
+      amount: grandTotal,
       paymentMethod: selectedPayment,
       description:
         selectedPayment === 'giftcard'
-          ? `Cobro Pedido ${chargingOrder.code} con Gift Card ${giftCardCodeInput.toUpperCase()}`
-          : `Cobro Pedido ${chargingOrder.code}`,
-      registeredBy: user ? `${user.name} (${user.role})` : 'Atención en Salón / QR',
+          ? `Cobro Pedido ${chargingOrder.code} con Gift Card ${giftCardCodeInput.toUpperCase()}${tipAmount > 0 ? ` [Propina: ${formatCurrency(tipAmount)}]` : ''}`
+          : `Cobro Pedido ${chargingOrder.code}${tipAmount > 0 ? ` [Propina: ${formatCurrency(tipAmount)}]` : ''}`,
+      registeredBy: tipRegisteredBy,
     });
 
     const orderPaid: Order = {
       ...chargingOrder,
       paymentMethod: selectedPayment,
       status: 'entregado',
+      tipAmount,
+      tipPercentage,
+      tipRegisteredBy: tipAmount > 0 ? tipRegisteredBy : undefined,
+      tipRegisteredAt: tipAmount > 0 ? new Date().toISOString() : undefined,
     };
 
     updateOrderStatus(chargingOrder.id, 'entregado');
+    if (tipAmount > 0) {
+      updateOrderTip(chargingOrder.id, tipAmount, tipPercentage, tipRegisteredBy);
+    }
 
     if (chargingOrder.tableId) {
       const otherUnpaid = orders.filter(
@@ -121,6 +156,8 @@ export const TablesPage: React.FC = () => {
 
     setChargingOrder(null);
     setGiftCardCodeInput('');
+    setTipMode('10');
+    setCustomTipAmount(0);
     setReceiptOrder(orderPaid);
   };
 
@@ -1384,12 +1421,142 @@ export const TablesPage: React.FC = () => {
                   </div>
                 )}
 
+                {/* ── PROPINA DEL SERVICIO (10% Sugerido) ── */}
+                {(() => {
+                  const isCashier = user?.role === 'cajero' || user?.role === 'admin' || !user?.role;
+                  const suggested10 = Math.round(chargingOrder.total * 0.1);
+                  const suggested15 = Math.round(chargingOrder.total * 0.15);
+                  const currentTipValue =
+                    tipMode === '10'
+                      ? suggested10
+                      : tipMode === '15'
+                      ? suggested15
+                      : tipMode === 'custom'
+                      ? customTipAmount
+                      : 0;
+
+                  return (
+                    <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-300 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                          <span>🪙 Propina del Servicio</span>
+                          <span className="bg-amber-200 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-amber-400">
+                            10% Sugerido
+                          </span>
+                        </label>
+                        <span className="text-[10px] text-amber-900 font-bold">
+                          {isCashier ? `Cajero: ${user?.name || 'En turno'}` : 'Solo Cajero'}
+                        </span>
+                      </div>
+
+                      {!isCashier ? (
+                        <div className="bg-white/90 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-900 font-medium flex items-center gap-2">
+                          <span>🔒</span>
+                          <span>El registro de si hubo propina corresponde exclusivamente al Cajero al momento de percibir el cobro.</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-4 gap-1.5 text-xs">
+                            <button
+                              type="button"
+                              onClick={() => setTipMode('none')}
+                              className={`py-2 px-1 rounded-xl font-bold border transition-all text-center ${
+                                tipMode === 'none'
+                                  ? 'bg-brand-dark text-white border-brand-dark shadow-xs'
+                                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                              }`}
+                            >
+                              <span className="block text-[11px]">Sin propina</span>
+                              <span className="text-[9px] opacity-70">$0</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setTipMode('10')}
+                              className={`py-2 px-1 rounded-xl font-black border transition-all text-center relative ${
+                                tipMode === '10'
+                                  ? 'bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-400'
+                                  : 'bg-white text-amber-950 border-amber-300 hover:bg-amber-50'
+                              }`}
+                            >
+                              <span className="block text-[11px]">⭐ 10%</span>
+                              <span className="text-[9px] font-mono">{formatCurrency(suggested10)}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setTipMode('15')}
+                              className={`py-2 px-1 rounded-xl font-bold border transition-all text-center ${
+                                tipMode === '15'
+                                  ? 'bg-brand-dark text-white border-brand-dark shadow-xs'
+                                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                              }`}
+                            >
+                              <span className="block text-[11px]">15%</span>
+                              <span className="text-[9px] font-mono">{formatCurrency(suggested15)}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setTipMode('custom')}
+                              className={`py-2 px-1 rounded-xl font-bold border transition-all text-center ${
+                                tipMode === 'custom'
+                                  ? 'bg-brand-dark text-white border-brand-dark shadow-xs'
+                                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                              }`}
+                            >
+                              <span className="block text-[11px]">Otro $</span>
+                              <span className="text-[9px] opacity-70">Libre</span>
+                            </button>
+                          </div>
+
+                          {tipMode === 'custom' && (
+                            <div className="pt-1">
+                              <input
+                                type="number"
+                                min={0}
+                                step={50}
+                                placeholder="Ingresá monto de propina $"
+                                value={customTipAmount || ''}
+                                onChange={(e) => setCustomTipAmount(Math.max(0, Number(e.target.value)))}
+                                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                              />
+                            </div>
+                          )}
+
+                          {/* Resumen Total con Propina */}
+                          <div className="bg-white/90 p-2.5 rounded-xl border border-amber-200 text-xs space-y-1">
+                            <div className="flex justify-between text-gray-600 text-[11px]">
+                              <span>Consumo Mesa:</span>
+                              <span className="font-bold text-gray-800">{formatCurrency(chargingOrder.total)}</span>
+                            </div>
+                            {currentTipValue > 0 && (
+                              <div className="flex justify-between text-emerald-800 font-bold text-[11px]">
+                                <span>Propina ({tipMode === '10' ? '10%' : tipMode === '15' ? '15%' : `${Math.round((currentTipValue / chargingOrder.total) * 100)}%`}):</span>
+                                <span>+{formatCurrency(currentTipValue)}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between font-black text-sm text-brand-dark pt-1 border-t border-gray-200">
+                              <span>Total a Cobrar:</span>
+                              <span className="text-emerald-900 font-mono text-base">
+                                {formatCurrency(chargingOrder.total + currentTipValue)}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => {
                       setChargingOrder(null);
                       setGiftCardCodeInput('');
+                      setTipMode('10');
+                      setCustomTipAmount(0);
                     }}
                     className="flex-1 py-2.5 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition"
                   >

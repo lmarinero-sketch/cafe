@@ -112,6 +112,10 @@ export interface Order {
   customerId?: string;
   pointsEarned?: number;
   registerId?: string;
+  tipAmount?: number;
+  tipPercentage?: number;
+  tipRegisteredBy?: string;
+  tipRegisteredAt?: string;
 }
 
 export type IngredientUnit = 
