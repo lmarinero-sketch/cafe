@@ -88,6 +88,8 @@ export const PublicMenuPage: React.FC = () => {
           unitPrice: selectedProduct.price,
           quantity: productQty,
           notes: productNotes,
+          isComposite: selectedProduct.isComposite,
+          compositeItems: selectedProduct.compositeItems,
         },
       ];
     });
@@ -139,7 +141,12 @@ export const PublicMenuPage: React.FC = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-1">
             <h4 className="text-xs font-bold text-brand-dark truncate">{p.name}</h4>
-            {p.isFeatured && !isOutOfStock && (
+            {p.isComposite && (
+              <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.5 rounded shrink-0">
+                📦 Combo
+              </span>
+            )}
+            {p.isFeatured && !isOutOfStock && !p.isComposite && (
               <span className="text-[9px] bg-brand-yellow/50 text-brand-brown font-bold px-1.5 py-0.5 rounded shrink-0">★ Destacado</span>
             )}
             {isOutOfStock && (
@@ -147,6 +154,11 @@ export const PublicMenuPage: React.FC = () => {
             )}
           </div>
           <p className="text-[11px] text-brand-brown/80 line-clamp-2 mt-0.5 leading-relaxed">{p.description}</p>
+          {p.isComposite && p.compositeItems && p.compositeItems.length > 0 && (
+            <p className="text-[10px] text-amber-900 font-semibold truncate mt-1 bg-amber-50/80 px-1.5 py-0.5 rounded border border-amber-200">
+              Incluye: {p.compositeItems.map((ci) => `${ci.quantity}x ${ci.productName}`).join(' + ')}
+            </p>
+          )}
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs font-extrabold text-brand-brown">{formatCurrency(p.price)}</span>
             {isOutOfStock ? (
@@ -444,6 +456,33 @@ export const PublicMenuPage: React.FC = () => {
             <p className="text-xs text-brand-brown/90 leading-relaxed">
               {selectedProduct.description}
             </p>
+
+            {selectedProduct.isComposite && selectedProduct.compositeItems && selectedProduct.compositeItems.length > 0 && (
+              <div className="bg-amber-50/90 p-3 rounded-xl border border-amber-200 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-extrabold text-amber-950 uppercase tracking-wider">
+                  <span>📦 Este Combo Incluye:</span>
+                  {(() => {
+                    const totalSeparado = selectedProduct.compositeItems.reduce((acc, it) => acc + (it.unitPrice || 0) * it.quantity, 0);
+                    const ahorro = totalSeparado > selectedProduct.price ? totalSeparado - selectedProduct.price : 0;
+                    return ahorro > 0 ? (
+                      <span className="text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                        Ahorras {formatCurrency(ahorro)} ({Math.round((ahorro / totalSeparado) * 100)}% OFF)
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+                <div className="space-y-1">
+                  {selectedProduct.compositeItems.map((ci, idx) => (
+                    <div key={idx} className="flex justify-between text-xs text-amber-950 bg-white/80 p-1.5 rounded-lg border border-amber-200/60">
+                      <span className="font-bold">{ci.quantity}x {ci.productName}</span>
+                      {ci.unitPrice ? (
+                        <span className="text-gray-500 font-mono text-[11px]">{formatCurrency(ci.unitPrice * ci.quantity)}</span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="text-base font-extrabold text-brand-brown">
               {formatCurrency(selectedProduct.price * productQty)}

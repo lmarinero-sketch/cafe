@@ -10,6 +10,13 @@ export interface Category {
 
 export type Channel = 'salon' | 'retiro' | 'delivery';
 
+export interface CompositeItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice?: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -24,6 +31,8 @@ export interface Product {
   cost?: number; // Costo total calculado si aplica
   suggestedPrice?: number;
   recipeItems?: RecipeIngredient[];
+  isComposite?: boolean; // Producto compuesto / combo
+  compositeItems?: CompositeItem[]; // Lista de productos que integran el combo
 }
 
 export interface Sector {
@@ -48,6 +57,8 @@ export interface OrderItem {
   unitPrice: number;
   quantity: number;
   notes?: string;
+  isComposite?: boolean;
+  compositeItems?: CompositeItem[];
 }
 
 export type OrderType = 'salon' | 'retiro' | 'delivery';

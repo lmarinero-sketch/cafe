@@ -126,13 +126,31 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
                     {it.quantity}x
                   </span>
                   <div>
-                    <p className="font-bold text-brand-dark">{it.productName}</p>
+                    <p className="font-bold text-brand-dark flex items-center gap-1.5">
+                      <span>{it.productName}</span>
+                      {it.isComposite && (
+                        <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded">
+                          📦 Combo
+                        </span>
+                      )}
+                    </p>
+                    {it.compositeItems && it.compositeItems.length > 0 && (
+                      <div className="bg-amber-50/80 border border-amber-200/80 rounded-lg p-1.5 mt-1 space-y-0.5 text-[10px] text-amber-950">
+                        <span className="font-extrabold uppercase text-[9px] text-amber-900 block">Incluye:</span>
+                        {it.compositeItems.map((ci, cidx) => (
+                          <div key={cidx} className="flex items-center gap-1">
+                            <span className="text-amber-700 font-black">•</span>
+                            <span>{ci.quantity * it.quantity}x {ci.productName}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {it.notes && (
                       <p className="text-[10px] text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 inline-block">
                         Nota: {it.notes}
                       </p>
                     )}
-                    <p className="text-[10px] text-brand-brown/70">{formatCurrency(it.unitPrice)} c/u</p>
+                    <p className="text-[10px] text-brand-brown/70 mt-0.5">{formatCurrency(it.unitPrice)} c/u</p>
                   </div>
                 </div>
                 <span className="font-extrabold text-brand-dark text-xs shrink-0">

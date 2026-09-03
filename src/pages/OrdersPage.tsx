@@ -378,13 +378,25 @@ export const OrdersPage: React.FC = () => {
                               </span>
                             </div>
 
-                            <div className="space-y-1 pt-1 border-t border-brand-secondary/40">
+                            <div className="space-y-1.5 pt-1 border-t border-brand-secondary/40">
                               {ord.items.map((it, i) => (
-                                <div key={i} className="flex justify-between text-[11px] text-brand-dark">
-                                  <span>
-                                    {it.quantity}x {it.productName}
-                                  </span>
-                                  <span className="font-bold">{formatCurrency(it.unitPrice * it.quantity)}</span>
+                                <div key={i} className="space-y-0.5 text-[11px] text-brand-dark">
+                                  <div className="flex justify-between font-medium">
+                                    <span>
+                                      {it.quantity}x {it.productName}
+                                    </span>
+                                    <span className="font-bold">{formatCurrency(it.unitPrice * it.quantity)}</span>
+                                  </div>
+                                  {it.compositeItems && it.compositeItems.length > 0 && (
+                                    <div className="pl-2 border-l-2 border-amber-400 bg-amber-50/60 py-0.5 px-1 rounded text-[10px] text-amber-950 font-medium space-y-0.5 my-0.5">
+                                      {it.compositeItems.map((ci, cidx) => (
+                                        <div key={cidx} className="flex items-center gap-1">
+                                          <span className="text-amber-700 font-black">•</span>
+                                          <span>{ci.quantity * it.quantity}x {ci.productName}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>

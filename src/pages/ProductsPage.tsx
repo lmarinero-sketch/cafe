@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Search, Eye, EyeOff, Edit, Tag, Image, Check, X } from 'lucide-react';
+import { Plus, Search, Eye, EyeOff, Edit, Tag, Image, Check, X, Package, Layers, Trash2, Percent, Sparkles } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Product, Channel } from '../types';
+import { Product, Channel, CompositeItem } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 
@@ -9,12 +9,28 @@ export const ProductsPage: React.FC = () => {
   const { products, categories, addProduct, updateProduct, toggleProductStatus } = useApp();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [filterType, setFilterType] = useState<'all' | 'simple' | 'composite'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+  // Composite builder state
+  const [selectedCompProdId, setSelectedCompProdId] = useState<string>('');
+  const [compProdQty, setCompProdQty] = useState<number>(1);
+
   // Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    categoryId: string;
+    description: string;
+    price: number;
+    image: string;
+    isAvailable: boolean;
+    isFeatured: boolean;
+    channels: Channel[];
+    isComposite: boolean;
+    compositeItems: CompositeItem[];
+  }>({
     name: '',
     categoryId: categories[0]?.id || 'cat-1',
     description: '',
@@ -23,26 +39,38 @@ export const ProductsPage: React.FC = () => {
     isAvailable: true,
     isFeatured: false,
     channels: ['salon', 'retiro', 'delivery'] as Channel[],
+    isComposite: false,
+    compositeItems: [],
   });
 
   const filteredProducts = products.filter((p) => {
     const matchesCat = selectedCategory === 'all' || p.categoryId === selectedCategory;
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesSearch;
+    const matchesType =
+      filterType === 'all'
+        ? true
+        : filterType === 'composite'
+        ? Boolean(p.isComposite)
+        : !p.isComposite;
+    return matchesCat && matchesSearch && matchesType;
   });
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = (asComposite = false) => {
     setEditingProduct(null);
     setFormData({
       name: '',
       categoryId: categories[0]?.id || 'cat-1',
       description: '',
       price: 3000,
-      image: '/products/espresso.svg',
+      image: asComposite ? '/products/combo-desayuno.svg' : '/products/espresso.svg',
       isAvailable: true,
       isFeatured: false,
       channels: ['salon', 'retiro', 'delivery'],
+      isComposite: asComposite,
+      compositeItems: [],
     });
+    setSelectedCompProdId('');
+    setCompProdQty(1);
     setIsModalOpen(true);
   };
 
@@ -57,8 +85,68 @@ export const ProductsPage: React.FC = () => {
       isAvailable: product.isAvailable,
       isFeatured: product.isFeatured,
       channels: product.channels,
+      isComposite: Boolean(product.isComposite),
+      compositeItems: product.compositeItems || [],
     });
+    setSelectedCompProdId('');
+    setCompProdQty(1);
     setIsModalOpen(true);
+  };
+
+  const handleAddCompositeItem = () => {
+    if (!selectedCompProdId) return;
+    const targetProduct = products.find((p) => p.id === selectedCompProdId);
+    if (!targetProduct) return;
+
+    setFormData((prev) => {
+      const existingIndex = prev.compositeItems.findIndex((item) => item.productId === targetProduct.id);
+      if (existingIndex >= 0) {
+        const updated = [...prev.compositeItems];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + compProdQty,
+          unitPrice: targetProduct.price,
+        };
+        return { ...prev, compositeItems: updated };
+      } else {
+        return {
+          ...prev,
+          compositeItems: [
+            ...prev.compositeItems,
+            {
+              productId: targetProduct.id,
+              productName: targetProduct.name,
+              quantity: compProdQty,
+              unitPrice: targetProduct.price,
+            },
+          ],
+        };
+      }
+    });
+
+    setCompProdQty(1);
+  };
+
+  const handleUpdateCompositeItemQty = (productId: string, delta: number) => {
+    setFormData((prev) => {
+      const updated = prev.compositeItems
+        .map((item) => {
+          if (item.productId === productId) {
+            const newQty = item.quantity + delta;
+            return newQty > 0 ? { ...item, quantity: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean) as CompositeItem[];
+      return { ...prev, compositeItems: updated };
+    });
+  };
+
+  const handleRemoveCompositeItem = (productId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      compositeItems: prev.compositeItems.filter((i) => i.productId !== productId),
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -102,56 +190,106 @@ export const ProductsPage: React.FC = () => {
         <div>
           <h2 className="text-2xl font-extrabold text-brand-dark">Administración de Productos</h2>
           <p className="text-xs text-brand-brown/80 mt-1">
-            Gestión de carta, precios, categorías e imágenes ({products.length} productos)
+            Gestión de carta, promociones, precios y recetas ({products.length} ítems en catálogo)
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreateModal}
-          className="py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-all duration-200 shadow-soft flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4 text-brand-yellow" />
-          Nuevo producto
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleOpenCreateModal(false)}
+            className="py-2.5 px-4 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark border border-brand-secondary font-bold text-xs transition-all duration-200 shadow-soft flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4 text-brand-brown" />
+            Producto Simple
+          </button>
+          <button
+            onClick={() => handleOpenCreateModal(true)}
+            className="py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs transition-all duration-200 shadow-soft flex items-center gap-2"
+          >
+            <Package className="w-4 h-4 text-amber-200" />
+            Nuevo Combo / Promo
+          </button>
+        </div>
       </div>
 
       {/* Filters & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-brand-card p-4 rounded-2xl border border-brand-secondary shadow-soft">
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+      <div className="bg-brand-card p-4 rounded-2xl border border-brand-secondary shadow-soft space-y-3">
+        {/* Type Selector (All, Simples, Combos) */}
+        <div className="flex items-center gap-2 border-b border-brand-secondary/60 pb-3">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-brand-brown/70 mr-1">
+            Tipo de Producto:
+          </span>
           <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              selectedCategory === 'all'
-                ? 'bg-brand-brown text-brand-card shadow-soft'
+            onClick={() => setFilterType('all')}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+              filterType === 'all'
+                ? 'bg-brand-brown text-brand-card shadow-xs'
                 : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
             }`}
           >
-            Todas ({products.length})
+            Todos ({products.length})
           </button>
-          {categories.map((c) => (
+          <button
+            onClick={() => setFilterType('simple')}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+              filterType === 'simple'
+                ? 'bg-brand-brown text-brand-card shadow-xs'
+                : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
+            }`}
+          >
+            <span>☕ Simples ({products.filter((p) => !p.isComposite).length})</span>
+          </button>
+          <button
+            onClick={() => setFilterType('composite')}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+              filterType === 'composite'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-amber-100/70 text-amber-950 border border-amber-300 hover:bg-amber-200/60'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5 text-amber-700" />
+            <span>Combos & Promos ({products.filter((p) => p.isComposite).length})</span>
+          </button>
+        </div>
+
+        {/* Category & Search Row */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
             <button
-              key={c.id}
-              onClick={() => setSelectedCategory(c.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                selectedCategory === c.id
+              onClick={() => setSelectedCategory('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                selectedCategory === 'all'
                   ? 'bg-brand-brown text-brand-card shadow-soft'
                   : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
               }`}
             >
-              {c.name}
+              Todas las Categorías
             </button>
-          ))}
-        </div>
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setSelectedCategory(c.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  selectedCategory === c.id
+                    ? 'bg-brand-brown text-brand-card shadow-soft'
+                    : 'bg-brand-bg text-brand-dark hover:bg-brand-secondary/40'
+                }`}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
 
-        <div className="relative w-full sm:w-64">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-brand-brown/60" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por nombre..."
-            className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none"
-          />
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-brand-brown/60" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por nombre..."
+              className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none"
+            />
+          </div>
         </div>
       </div>
 
@@ -172,10 +310,16 @@ export const ProductsPage: React.FC = () => {
                   className="w-16 h-16 rounded-xl object-cover bg-brand-bg border border-brand-secondary shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-brown/80 bg-brand-secondary/40 px-2 py-0.5 rounded">
-                      {p.categoryName || 'General'}
-                    </span>
+                  <div className="flex items-center justify-between gap-1">
+                    {p.isComposite ? (
+                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded flex items-center gap-1">
+                        <Package className="w-3 h-3 text-amber-700" /> Combo / Promo
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-brand-brown/80 bg-brand-secondary/40 px-2 py-0.5 rounded">
+                        {p.categoryName || 'General'}
+                      </span>
+                    )}
                     <button
                       onClick={() => toggleProductStatus(p.id)}
                       className={`p-1 rounded-lg transition-colors ${
@@ -189,15 +333,51 @@ export const ProductsPage: React.FC = () => {
                     </button>
                   </div>
                   <h4 className="text-sm font-bold text-brand-dark mt-1 truncate">{p.name}</h4>
-                  <p className="text-xs font-extrabold text-brand-brown mt-0.5">
-                    {formatCurrency(p.price)}
-                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs font-extrabold text-brand-brown">
+                      {formatCurrency(p.price)}
+                    </p>
+                    {p.isComposite && p.compositeItems && p.compositeItems.length > 0 && (() => {
+                      const totalSeparado = p.compositeItems.reduce((acc, it) => acc + (it.unitPrice || 0) * it.quantity, 0);
+                      const ahorro = totalSeparado > p.price ? totalSeparado - p.price : 0;
+                      return ahorro > 0 ? (
+                        <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-1.5 py-0.2 rounded-full">
+                          {Math.round((ahorro / totalSeparado) * 100)}% OFF
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
                 </div>
               </div>
 
               <p className="text-xs text-brand-brown/80 line-clamp-2 leading-relaxed">
                 {p.description}
               </p>
+
+              {/* Box de Contenido si es Producto Compuesto */}
+              {p.isComposite && p.compositeItems && p.compositeItems.length > 0 && (
+                <div className="bg-amber-50/90 p-2.5 rounded-xl border border-amber-200/90 space-y-1">
+                  <div className="flex items-center justify-between text-[10px] font-extrabold text-amber-950 uppercase tracking-wider">
+                    <span>Incluye {p.compositeItems.reduce((s, i) => s + i.quantity, 0)} productos:</span>
+                    {(() => {
+                      const totalSeparado = p.compositeItems.reduce((acc, it) => acc + (it.unitPrice || 0) * it.quantity, 0);
+                      const ahorro = totalSeparado > p.price ? totalSeparado - p.price : 0;
+                      return ahorro > 0 ? (
+                        <span className="text-emerald-800 font-bold">
+                          Ahorra {formatCurrency(ahorro)}
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {p.compositeItems.map((item, idx) => (
+                      <span key={idx} className="bg-white px-2 py-0.5 rounded-md border border-amber-200 text-[11px] font-bold text-amber-950 shadow-2xs">
+                        <strong className="text-amber-800">{item.quantity}x</strong> {item.productName}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-1 pt-1">
                 {p.channels.map((ch) => (
@@ -234,11 +414,20 @@ export const ProductsPage: React.FC = () => {
       {/* Modal Form */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 max-w-md w-full shadow-soft-lg space-y-4">
+          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 max-w-xl w-full max-h-[92vh] overflow-y-auto shadow-soft-lg space-y-4">
             <div className="flex items-center justify-between border-b border-brand-secondary pb-3">
-              <h3 className="text-base font-bold text-brand-dark">
-                {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
-              </h3>
+              <div className="flex items-center gap-2">
+                {formData.isComposite && <Package className="w-5 h-5 text-amber-600" />}
+                <h3 className="text-base font-bold text-brand-dark">
+                  {editingProduct
+                    ? formData.isComposite
+                      ? 'Editar Combo / Promoción'
+                      : 'Editar Producto Simple'
+                    : formData.isComposite
+                    ? 'Crear Nuevo Combo / Promoción'
+                    : 'Crear Nuevo Producto Simple'}
+                </h3>
+              </div>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark"
@@ -247,15 +436,224 @@ export const ProductsPage: React.FC = () => {
               </button>
             </div>
 
+            {/* Selector de Tipo de Producto */}
+            <div className="grid grid-cols-2 gap-2 bg-brand-bg p-1.5 rounded-xl border border-brand-secondary">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, isComposite: false })}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  !formData.isComposite
+                    ? 'bg-brand-brown text-brand-card shadow-xs'
+                    : 'text-brand-dark hover:bg-brand-secondary/40'
+                }`}
+              >
+                <span>☕ Producto Simple</span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    isComposite: true,
+                    image: formData.image === '/products/espresso.svg' ? '/products/combo-desayuno.svg' : formData.image,
+                  })
+                }
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  formData.isComposite
+                    ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-400'
+                    : 'text-brand-dark hover:bg-brand-secondary/40'
+                }`}
+              >
+                <Package className="w-4 h-4 text-amber-200" />
+                <span>📦 Producto Compuesto (Combo)</span>
+              </button>
+            </div>
+
+            {/* Constructor Visual de Combo / Promoción si isComposite está activo */}
+            {formData.isComposite && (
+              <div className="bg-amber-50/80 p-4 rounded-2xl border border-amber-300 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-extrabold text-amber-950 text-xs flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-amber-700" />
+                      <span>Composición del Combo</span>
+                    </h4>
+                    <p className="text-[11px] text-amber-900/80">
+                      Seleccioná los productos que integran esta promoción y sus cantidades.
+                    </p>
+                  </div>
+                  {formData.compositeItems.length > 0 && (
+                    <span className="text-[10px] font-black bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full border border-amber-300">
+                      {formData.compositeItems.reduce((s, i) => s + i.quantity, 0)} ítems incluidos
+                    </span>
+                  )}
+                </div>
+
+                {/* Fila para seleccionar producto y agregar */}
+                <div className="flex flex-col sm:flex-row items-end gap-2 pt-1">
+                  <div className="flex-1 w-full">
+                    <label className="block text-[10px] font-bold text-amber-950 mb-1 uppercase tracking-wider">
+                      Agregar Producto al Combo:
+                    </label>
+                    <select
+                      value={selectedCompProdId}
+                      onChange={(e) => setSelectedCompProdId(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-xl border border-amber-300 bg-white text-xs font-bold text-brand-dark focus:outline-none"
+                    >
+                      <option value="">-- Seleccionar producto del catálogo --</option>
+                      {products
+                        .filter((p) => p.id !== editingProduct?.id && !p.isComposite)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({formatCurrency(p.price)})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-end gap-2 w-full sm:w-auto">
+                    <div className="w-24">
+                      <label className="block text-[10px] font-bold text-amber-950 mb-1 uppercase tracking-wider">
+                        Cantidad:
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={compProdQty}
+                        onChange={(e) => setCompProdQty(Math.max(1, Number(e.target.value)))}
+                        className="w-full px-2 py-2 rounded-xl border border-amber-300 bg-white text-xs font-bold text-center focus:outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={!selectedCompProdId}
+                      onClick={handleAddCompositeItem}
+                      className="py-2 px-3.5 rounded-xl bg-amber-700 hover:bg-amber-800 disabled:opacity-40 text-white font-extrabold text-xs flex items-center gap-1 shadow-xs transition-colors shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Incluir</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Lista de productos incluidos en el Combo */}
+                {formData.compositeItems.length === 0 ? (
+                  <div className="p-3.5 bg-white/70 rounded-xl border border-dashed border-amber-300 text-center text-xs text-amber-900/80 font-medium">
+                    Aún no incluiste productos en este combo. Elegí un producto arriba y presioná <strong>"Incluir"</strong>.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 bg-white p-2.5 rounded-xl border border-amber-200 divide-y divide-amber-100">
+                    {formData.compositeItems.map((item) => {
+                      const prodRef = products.find((p) => p.id === item.productId);
+                      const unitPrice = item.unitPrice || prodRef?.price || 0;
+                      const subtotal = unitPrice * item.quantity;
+                      return (
+                        <div key={item.productId} className="pt-2 first:pt-0 flex items-center justify-between gap-2 text-xs">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {prodRef?.image && (
+                              <img
+                                src={prodRef.image}
+                                alt={item.productName}
+                                className="w-9 h-9 rounded-lg object-cover bg-gray-100 border border-gray-200 shrink-0"
+                              />
+                            )}
+                            <div className="truncate">
+                              <span className="font-bold text-gray-900 block truncate">{item.productName}</span>
+                              <span className="text-[10px] text-gray-500 font-medium">
+                                {formatCurrency(unitPrice)} unitario
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2.5 shrink-0">
+                            <div className="flex items-center border border-gray-300 rounded-lg bg-gray-50 overflow-hidden">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateCompositeItemQty(item.productId, -1)}
+                                className="px-2 py-0.5 text-gray-700 hover:bg-gray-200 font-bold"
+                              >
+                                -
+                              </button>
+                              <span className="px-2 font-mono font-extrabold text-xs">{item.quantity}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateCompositeItemQty(item.productId, 1)}
+                                className="px-2 py-0.5 text-gray-700 hover:bg-gray-200 font-bold"
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            <span className="font-mono font-extrabold text-gray-900 w-16 text-right text-xs">
+                              {formatCurrency(subtotal)}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCompositeItem(item.productId)}
+                              className="p-1 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                              title="Quitar del combo"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Comparador de Precios y Descuento en Vivo */}
+                {formData.compositeItems.length > 0 && (() => {
+                  const totalIndividual = formData.compositeItems.reduce((acc, it) => {
+                    const pRef = products.find((p) => p.id === it.productId);
+                    return acc + (it.unitPrice || pRef?.price || 0) * it.quantity;
+                  }, 0);
+                  const ahorro = totalIndividual > formData.price ? totalIndividual - formData.price : 0;
+                  const porcentaje = totalIndividual > 0 ? Math.round((ahorro / totalIndividual) * 100) : 0;
+
+                  return (
+                    <div className="bg-amber-100/80 p-3 rounded-xl border border-amber-300 text-xs space-y-1.5">
+                      <div className="flex justify-between text-amber-900">
+                        <span>Suma de productos comprados por separado:</span>
+                        <span className="font-mono font-bold line-through text-gray-500">
+                          {formatCurrency(totalIndividual)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between font-black text-amber-950 text-sm">
+                        <span>Precio de Venta Promocional:</span>
+                        <span className="font-mono text-emerald-900">{formatCurrency(formData.price)}</span>
+                      </div>
+                      {ahorro > 0 ? (
+                        <div className="flex justify-between text-emerald-800 font-black text-xs pt-1 border-t border-amber-300/60">
+                          <span>Beneficio / Ahorro para el Cliente:</span>
+                          <span className="bg-emerald-200 text-emerald-950 px-2.5 py-0.5 rounded-full shadow-2xs">
+                            Ahorra {formatCurrency(ahorro)} ({porcentaje}% OFF)
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-amber-800 italic pt-0.5">
+                          Tip: Fijá el precio del combo por debajo de {formatCurrency(totalIndividual)} para ofrecer un descuento atractivo al cliente.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-brand-dark mb-1">Nombre del producto</label>
+                <label className="block font-bold text-brand-dark mb-1">
+                  {formData.isComposite ? 'Nombre de la Promoción / Combo' : 'Nombre del producto'}
+                </label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ej. Capuchino Especial"
+                  placeholder={formData.isComposite ? 'Ej. Promo Desayuno (Café + 2 Medialunas)' : 'Ej. Capuchino Especial'}
                   className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
                 />
               </div>
@@ -276,13 +674,15 @@ export const ProductsPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-bold text-brand-dark mb-1">Precio ($ ARS)</label>
+                  <label className="block font-bold text-brand-dark mb-1">
+                    {formData.isComposite ? 'Precio Promo ($ ARS)' : 'Precio ($ ARS)'}
+                  </label>
                   <input
                     type="number"
                     required
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg focus:outline-none font-bold"
                   />
                 </div>
               </div>

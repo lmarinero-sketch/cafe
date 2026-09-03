@@ -128,7 +128,12 @@ export const TraditionalMenuPage: React.FC = () => {
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-bold text-[#1A2E1E]">{item.name}</h3>
-                            {item.isFeatured && !isOut && (
+                            {item.isComposite && (
+                              <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded">
+                                📦 Combo
+                              </span>
+                            )}
+                            {item.isFeatured && !isOut && !item.isComposite && (
                               <span className="text-[9px] bg-[#D8E4C3] text-[#2F5233] font-extrabold px-1.5 py-0.2 rounded">
                                 ★ Destacado
                               </span>
@@ -142,6 +147,11 @@ export const TraditionalMenuPage: React.FC = () => {
                           <p className="text-xs text-[#2F5233]/90 leading-relaxed font-serif">
                             {item.description}
                           </p>
+                          {item.isComposite && item.compositeItems && item.compositeItems.length > 0 && (
+                            <p className="text-[11px] text-amber-900 font-bold bg-amber-50 p-1.5 rounded-lg border border-amber-200/70">
+                              Incluye: {item.compositeItems.map((ci) => `${ci.quantity}x ${ci.productName}`).join(' + ')}
+                            </p>
+                          )}
                         </div>
 
                         {/* Price Display */}

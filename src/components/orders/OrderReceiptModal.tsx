@@ -75,9 +75,15 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
     const itemsHtml = ord.items
       .map(
         (it) => `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px;">
-          <div style="flex: 1; padding-right: 4px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 10px;">
+          <div style="padding-right: 4px;">
             <strong>${it.quantity}x</strong> ${it.productName}
+            ${it.isComposite ? ' <span style="font-size: 8px; border: 1px solid #000; padding: 0 2px;">[COMBO]</span>' : ''}
+            ${it.compositeItems && it.compositeItems.length > 0 ? `
+              <div style="font-size: 8.5px; color: #333; padding-left: 8px;">
+                ${it.compositeItems.map((ci) => `+ ${ci.quantity * it.quantity}x ${ci.productName}`).join('<br/>')}
+              </div>
+            ` : ''}
             ${it.notes ? `<div style="font-size: 9px; color: #555; padding-left: 10px;">• ${it.notes}</div>` : ''}
           </div>
           <div style="text-align: right; white-space: nowrap; font-weight: bold;">
@@ -235,7 +241,15 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
         <tr style="border-bottom: 1px solid #e5e7eb; background: ${idx % 2 === 0 ? '#fafafa' : '#ffffff'};">
           <td style="padding: 10px 12px; font-weight: 800; color: #1f2937; width: 60px; text-align: center;">${it.quantity}</td>
           <td style="padding: 10px 12px; color: #111827;">
-            <div style="font-weight: 700;">${it.productName}</div>
+            <div style="font-weight: 700;">
+              ${it.productName}
+              ${it.isComposite ? ' <span style="font-size: 10px; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; border: 1px solid #fcd34d;">COMBO</span>' : ''}
+            </div>
+            ${it.compositeItems && it.compositeItems.length > 0 ? `
+              <div style="font-size: 11px; color: #78350f; background: #fffbeb; padding: 4px 8px; border-radius: 4px; margin-top: 4px; border: 1px solid #fef3c7;">
+                <strong>Incluye:</strong> ${it.compositeItems.map((ci) => `${ci.quantity * it.quantity}x ${ci.productName}`).join(' • ')}
+              </div>
+            ` : ''}
             ${it.notes ? `<div style="font-size: 11px; color: #6b7280; margin-top: 2px;">Nota: ${it.notes}</div>` : ''}
           </td>
           <td style="padding: 10px 12px; text-align: right; color: #4b5563;">${formatCurrency(it.unitPrice)}</td>
@@ -575,11 +589,23 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                   <span>IMPORTE</span>
                 </div>
                 {order.items.map((it, idx) => (
-                  <div key={idx} className="flex justify-between text-[11px]">
-                    <span className="truncate pr-2">
-                      <strong>{it.quantity}x</strong> {it.productName}
-                    </span>
-                    <span className="font-bold shrink-0">{formatCurrency(it.unitPrice * it.quantity)}</span>
+                  <div key={idx} className="space-y-0.5 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="pr-2">
+                        <strong>{it.quantity}x</strong> {it.productName}
+                        {it.isComposite && (
+                          <span className="ml-1 text-[8px] border border-black px-1 font-mono">[COMBO]</span>
+                        )}
+                      </span>
+                      <span className="font-bold shrink-0">{formatCurrency(it.unitPrice * it.quantity)}</span>
+                    </div>
+                    {it.compositeItems && it.compositeItems.length > 0 && (
+                      <div className="text-[9px] text-gray-700 pl-3">
+                        {it.compositeItems.map((ci, cidx) => (
+                          <div key={cidx}>+ {ci.quantity * it.quantity}x {ci.productName}</div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -704,7 +730,19 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                       <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'}>
                         <td className="py-2 px-3 text-center font-bold">{it.quantity}</td>
                         <td className="py-2 px-3">
-                          <span className="font-bold text-gray-900">{it.productName}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-gray-900">{it.productName}</span>
+                            {it.isComposite && (
+                              <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded">
+                                📦 COMBO
+                              </span>
+                            )}
+                          </div>
+                          {it.compositeItems && it.compositeItems.length > 0 && (
+                            <div className="text-[10px] text-amber-900 font-medium bg-amber-50/80 p-1 rounded border border-amber-200/60 mt-0.5">
+                              <strong>Incluye:</strong> {it.compositeItems.map((ci) => `${ci.quantity * it.quantity}x ${ci.productName}`).join(' • ')}
+                            </div>
+                          )}
                           {it.notes && <span className="text-[10px] text-gray-500 block">• {it.notes}</span>}
                         </td>
                         <td className="py-2 px-3 text-right text-gray-600">{formatCurrency(it.unitPrice)}</td>

@@ -16,6 +16,8 @@ function mapRowToProduct(row: any): Product {
     isFeatured: row.is_featured ?? false,
     channels: row.channels || ['salon', 'retiro', 'delivery'],
     recipeItems: row.recipe_items || [],
+    isComposite: Boolean(row.is_composite),
+    compositeItems: row.composite_items || [],
   };
 }
 
@@ -33,6 +35,8 @@ function mapProductToRow(prod: Partial<Product>): Record<string, any> {
   if (prod.isFeatured !== undefined) row.is_featured = prod.isFeatured;
   if (prod.channels !== undefined) row.channels = prod.channels;
   if (prod.recipeItems !== undefined) row.recipe_items = prod.recipeItems;
+  if (prod.isComposite !== undefined) row.is_composite = prod.isComposite;
+  if (prod.compositeItems !== undefined) row.composite_items = prod.compositeItems;
   return row;
 }
 

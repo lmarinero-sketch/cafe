@@ -246,10 +246,26 @@ export const PublicTicketPage: React.FC = () => {
                 {order.items.map((it, idx) => (
                   <div key={idx} className="py-2 flex items-start justify-between gap-2 text-xs">
                     <div className="space-y-0.5">
-                      <div className="font-bold text-gray-900">
-                        <span className="font-mono text-amber-900 mr-1.5 font-extrabold">{it.quantity}x</span>
-                        {it.productName}
+                      <div className="font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono text-amber-900 mr-0.5 font-extrabold">{it.quantity}x</span>
+                        <span>{it.productName}</span>
+                        {it.isComposite && (
+                          <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded">
+                            📦 COMBO
+                          </span>
+                        )}
                       </div>
+                      {it.compositeItems && it.compositeItems.length > 0 && (
+                        <div className="text-[10px] text-amber-950 font-medium bg-amber-50/90 p-1.5 rounded-lg border border-amber-200/80 ml-5 my-1 space-y-0.5">
+                          <span className="font-extrabold uppercase text-[9px] text-amber-900 block">Incluye:</span>
+                          {it.compositeItems.map((ci, cidx) => (
+                            <div key={cidx} className="flex items-center gap-1">
+                              <span className="text-amber-700 font-black">•</span>
+                              <span>{ci.quantity * it.quantity}x {ci.productName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {it.notes && (
                         <p className="text-[10px] text-gray-500 italic pl-5">• {it.notes}</p>
                       )}
