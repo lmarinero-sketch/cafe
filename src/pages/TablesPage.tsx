@@ -814,25 +814,31 @@ export const TablesPage: React.FC = () => {
                       </span>
                     </button>
 
-                    {/* Acciones de Edición & Eliminación (Solo Admin) */}
-                    {isAdmin && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleOpenEditModal(t)}
-                          className="p-1 rounded-lg hover:bg-brand-secondary/60 text-brand-brown transition-colors"
-                          title="Editar mesa"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setTableToDelete(t)}
-                          className="p-1 rounded-lg hover:bg-rose-100 text-rose-700 transition-colors"
-                          title="Eliminar mesa"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
+                    {/* Acciones de Edición & Eliminación de Mesa */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(t)}
+                        className="w-7 h-7 rounded-full bg-brand-bg hover:bg-amber-100 hover:text-amber-900 border border-brand-secondary text-brand-brown transition-all shadow-xs flex items-center justify-center relative group/btn shrink-0"
+                        title="Editar nombre, sector o capacidad"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span className="absolute bottom-full mb-1 hidden group-hover/btn:block whitespace-nowrap bg-brand-dark text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-soft z-20 pointer-events-none">
+                          Editar Mesa
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTableToDelete(t)}
+                        className="w-7 h-7 rounded-full bg-brand-bg hover:bg-rose-100 hover:text-rose-700 border border-brand-secondary text-brand-brown hover:border-rose-300 transition-all shadow-xs flex items-center justify-center relative group/btn shrink-0"
+                        title="Eliminar mesa del salón"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="absolute bottom-full mb-1 hidden group-hover/btn:block whitespace-nowrap bg-rose-900 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-soft z-20 pointer-events-none">
+                          Eliminar Mesa
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
                   <span
@@ -1643,36 +1649,77 @@ export const TablesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Confirmar Eliminación de Mesa (Solo Admin) */}
-      {tableToDelete && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-brand-card rounded-2xl border-2 border-rose-300 p-6 max-w-sm w-full shadow-soft-lg text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto shrink-0">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-extrabold text-brand-dark">¿Eliminar {tableToDelete.number}?</h3>
-              <p className="text-xs text-brand-brown/80 mt-1">
-                Esta acción eliminará la mesa y su código QR asignado del sector <span className="font-bold">{tableToDelete.sector}</span>.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                onClick={handleDeleteConfirm}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-extrabold text-xs shadow-soft transition-colors"
-              >
-                Sí, eliminar
-              </button>
-              <button
-                onClick={() => setTableToDelete(null)}
-                className="py-2.5 px-4 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30"
-              >
-                Cancelar
-              </button>
+      {/* Modal Confirmar Eliminación de Mesa */}
+      {tableToDelete && (() => {
+        const activeOrdersOnTable = orders.filter(
+          (o) => o.tableId === tableToDelete.id && o.status !== 'entregado' && o.status !== 'cancelado'
+        );
+        const pastOrdersCount = orders.filter(
+          (o) => o.tableId === tableToDelete.id && (o.status === 'entregado' || o.status === 'cancelado')
+        ).length;
+
+        return (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/60 backdrop-blur-xs animate-fade-in">
+            <div className="bg-brand-card rounded-3xl border-2 border-rose-300 p-6 max-w-md w-full shadow-soft-lg text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto shrink-0 border border-rose-200">
+                <Trash2 className="w-7 h-7" />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-black text-brand-dark font-serif">
+                  ¿Eliminar {tableToDelete.number}?
+                </h3>
+                <p className="text-xs text-brand-brown/80 mt-1">
+                  Se dará de baja la mesa del sector <span className="font-bold text-brand-dark">{tableToDelete.sector}</span>.
+                </p>
+              </div>
+
+              {/* Advertencia si hay pedidos activos */}
+              {activeOrdersOnTable.length > 0 && (
+                <div className="bg-amber-50 border border-amber-300 p-3 rounded-2xl text-left text-xs text-amber-950 space-y-1">
+                  <div className="flex items-center gap-1.5 font-extrabold text-amber-900">
+                    <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>Mesa con {activeOrdersOnTable.length} pedido(s) activo(s)</span>
+                  </div>
+                  <p className="text-[11px] text-amber-900/90 leading-tight">
+                    Hay comandas en curso sin cobrar ({activeOrdersOnTable.map((o) => o.code).join(', ')}). Te recomendamos cobrar la mesa o cancelar las comandas antes de eliminarla.
+                  </p>
+                </div>
+              )}
+
+              {/* Garantía de protección de historial */}
+              <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-left text-xs text-emerald-950 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className="font-extrabold block text-[11px]">Historial de pedidos 100% protegido</span>
+                  <p className="text-[10.5px] text-emerald-900/90 leading-tight">
+                    {pastOrdersCount > 0
+                      ? `Los ${pastOrdersCount} pedido(s) anteriores registrados en esta mesa seguirán guardados en la sección de Pedidos e Historial con el nombre original "${tableToDelete.number}".`
+                      : `Todo el historial de pedidos y cobros pasados permanecerá intacto en el sistema de Pedidos.`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleDeleteConfirm}
+                  className="flex-1 py-3 px-4 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-extrabold text-xs shadow-soft transition-all"
+                >
+                  Sí, eliminar mesa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTableToDelete(null)}
+                  className="py-3 px-4 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition-all"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Modal Administrar Sectores */}
       {isSectorsModalOpen && (

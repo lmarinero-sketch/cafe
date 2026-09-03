@@ -919,6 +919,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         );
         return false;
       }
+
+      // Actualizar nombre de mesa en comandas activas en curso
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.tableId === id && o.status !== 'entregado' && o.status !== 'cancelado'
+            ? { ...o, tableName: cleanNumber }
+            : o
+        )
+      );
     }
     setTables((prev) => prev.map((t) => (t.id === id ? { ...t, ...tableData } : t)));
 
@@ -968,7 +977,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (isSupabaseConfigured) {
       tablesService.deleteTableFromDb(id).catch(console.error);
     }
-    showToast('Mesa eliminada', `${target.number} fue eliminada del sistema.`, 'info');
+    showToast('Mesa eliminada', `${target.number} fue retirada. Todo su historial de pedidos se conserva intacto.`, 'info');
     return true;
   };
 
