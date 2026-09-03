@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   CreditCard,
   QrCode,
@@ -28,8 +29,12 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { formatCurrency } from '../utils/currency';
 import { Customer, Reward } from '../types';
+import { GiftCardsManager } from '../components/cards/GiftCardsManager';
 
 export const VirtualCardsPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = (searchParams.get('tab') as 'giftcards' | 'socios') || 'giftcards';
+
   const { customers, rewards, addCustomerPoints, redeemReward, addCustomer } = useApp();
   const { showToast } = useToast();
 
@@ -211,50 +216,84 @@ export const VirtualCardsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
-      {/* Header Banner & Club Parity Rule */}
-      <div className="bg-brand-card p-6 rounded-2xl border border-brand-secondary shadow-soft flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-900 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-700" /> Plan Fidelización
-            </span>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 shadow-xs">
-              <Coins className="w-3 h-3 text-amber-700" /> Paridad: 100 Pts = $1.000 Consumidos
-            </span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-brand-dark font-serif">
-            Club de Puntos & Tarjeta Digital de Socio
-          </h2>
-          <p className="text-xs text-brand-brown/90 max-w-2xl leading-relaxed">
-            Programa oficial de lealtad gastronómica. Por cada <strong>$10 de consumo acumulás 1 punto</strong> (100 puntos por cada $1.000). Visualizá credenciales en vivo para Apple Wallet y Google Wallet.
-          </p>
-        </div>
+      {/* ── TOP NAVIGATION TABS ── */}
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-brand-secondary/60 pb-3">
+        <button
+          type="button"
+          onClick={() => setSearchParams({ tab: 'giftcards' })}
+          className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-extrabold text-xs sm:text-sm transition-all shadow-soft ${
+            currentTab === 'giftcards'
+              ? 'bg-gradient-to-r from-emerald-700 to-emerald-800 text-white shadow-emerald-900/20'
+              : 'bg-brand-card text-brand-dark border border-brand-secondary hover:bg-brand-secondary/40'
+          }`}
+        >
+          <Gift className={`w-4 h-4 ${currentTab === 'giftcards' ? 'text-brand-yellow' : 'text-emerald-700'}`} />
+          Tarjetas de Regalo (Gift Cards Virtuales)
+        </button>
 
-        {/* Member Selector & Fast Register */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto shrink-0">
-          <div className="relative flex-1 sm:w-64">
-            <select
-              value={customer ? customer.id : ''}
-              onChange={(e) => setSelectedCustomerId(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-brand-secondary bg-brand-bg font-extrabold text-xs text-brand-dark focus:outline-none shadow-xs"
-            >
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.firstName} {c.lastName} ({c.points} pts - Nivel {c.level})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            onClick={() => setIsNewMemberModalOpen(true)}
-            className="py-2.5 px-4 rounded-xl bg-brand-brown hover:bg-brand-dark text-white font-extrabold text-xs transition-colors shadow-soft flex items-center justify-center gap-2 shrink-0"
-          >
-            <Plus className="w-4 h-4 text-brand-yellow" />
-            <span>Nuevo Socio (+100 pts)</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setSearchParams({ tab: 'socios' })}
+          className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-extrabold text-xs sm:text-sm transition-all shadow-soft ${
+            currentTab === 'socios'
+              ? 'bg-gradient-to-r from-brand-brown to-brand-dark text-white shadow-brand-dark/20'
+              : 'bg-brand-card text-brand-dark border border-brand-secondary hover:bg-brand-secondary/40'
+          }`}
+        >
+          <CreditCard className={`w-4 h-4 ${currentTab === 'socios' ? 'text-brand-yellow' : 'text-brand-brown'}`} />
+          Credenciales de Socios (Club Fidelización & Puntos)
+        </button>
       </div>
+
+      {/* ── TAB 1: GIFT CARDS VIRTUALES (DINERO A GASTAR) ── */}
+      {currentTab === 'giftcards' ? (
+        <GiftCardsManager />
+      ) : (
+        <>
+          {/* Header Banner & Club Parity Rule */}
+          <div className="bg-brand-card p-6 rounded-2xl border border-brand-secondary shadow-soft flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-900 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-300 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-emerald-700" /> Plan Fidelización
+                </span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 shadow-xs">
+                  <Coins className="w-3 h-3 text-amber-700" /> Paridad: 100 Pts = $1.000 Consumidos
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-brand-dark font-serif">
+                Club de Puntos & Tarjeta Digital de Socio
+              </h2>
+              <p className="text-xs text-brand-brown/90 max-w-2xl leading-relaxed">
+                Programa oficial de lealtad gastronómica. Por cada <strong>$10 de consumo acumulás 1 punto</strong> (100 puntos por cada $1.000). Visualizá credenciales en vivo para Apple Wallet y Google Wallet.
+              </p>
+            </div>
+
+            {/* Member Selector & Fast Register */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto shrink-0">
+              <div className="relative flex-1 sm:w-64">
+                <select
+                  value={customer ? customer.id : ''}
+                  onChange={(e) => setSelectedCustomerId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-brand-secondary bg-brand-bg font-extrabold text-xs text-brand-dark focus:outline-none shadow-xs"
+                >
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.firstName} {c.lastName} ({c.points} pts - Nivel {c.level})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={() => setIsNewMemberModalOpen(true)}
+                className="py-2.5 px-4 rounded-xl bg-brand-brown hover:bg-brand-dark text-white font-extrabold text-xs transition-colors shadow-soft flex items-center justify-center gap-2 shrink-0"
+              >
+                <Plus className="w-4 h-4 text-brand-yellow" />
+                <span>Nuevo Socio (+100 pts)</span>
+              </button>
+            </div>
+          </div>
 
       {/* Quick Club Metrics Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -881,6 +920,8 @@ export const VirtualCardsPage: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

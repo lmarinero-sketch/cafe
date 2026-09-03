@@ -34,7 +34,7 @@ function makeIdempotent(sql) {
 
   // Make CREATE POLICY idempotent for normal tables
   result = result.replace(
-    /CREATE POLICY "([^"]+)"\s+ON (\w+)/g,
+    /CREATE POLICY "([^"]+)"\s+ON ((?:public\.)?\w+)/g,
     `DROP POLICY IF EXISTS "$1" ON $2;\nCREATE POLICY "$1" ON $2`
   );
 

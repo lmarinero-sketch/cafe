@@ -19,12 +19,14 @@ import {
   Download,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useToast } from '../context/ToastContext';
 import { Product, OrderItem, PaymentMethod, OrderType } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { PrintableMenuModal } from '../components/menu/PrintableMenuModal';
 
 export const PublicMenuPage: React.FC = () => {
-  const { products, categories, tables, createOrder, customers, cashRegisters } = useApp();
+  const { products, categories, tables, createOrder, customers, cashRegisters, redeemGiftCard, getGiftCardByCode } = useApp();
+  const { showToast } = useToast();
   const activeRegister = cashRegisters.find((r) => r.status === 'abierta');
   const [searchParams] = useSearchParams();
 
@@ -52,6 +54,7 @@ export const PublicMenuPage: React.FC = () => {
   const [address, setAddress] = useState('');
   const [addressRef, setAddressRef] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
+  const [giftCardCode, setGiftCardCode] = useState<string>('');
 
   const [orderSuccessCode, setOrderSuccessCode] = useState<string | null>(null);
 
@@ -163,6 +166,26 @@ export const PublicMenuPage: React.FC = () => {
     e.preventDefault();
     if (cart.length === 0) return;
 
+    if (paymentMethod === 'giftcard') {
+      if (!giftCardCode.trim()) {
+        showToast('Código Requerido', 'Por favor ingresá el código de tu Gift Card.', 'error');
+        return;
+      }
+      const card = getGiftCardByCode(giftCardCode);
+      if (!card) {
+        showToast('Gift Card No Encontrada', 'No se encontró ninguna Gift Card con el código ingresado.', 'error');
+        return;
+      }
+      if (card.currentBalance < total) {
+        showToast(
+          'Saldo Insuficiente',
+          `Tu Gift Card tiene ${formatCurrency(card.currentBalance)} y el total es ${formatCurrency(total)}.`,
+          'error'
+        );
+        return;
+      }
+    }
+
     // Optional customer link
     const matchedCustomer = customers.find(
       (c) => c.phone.includes(customerPhone.slice(-6)) || c.firstName.toLowerCase() === customerName.toLowerCase()
@@ -187,9 +210,20 @@ export const PublicMenuPage: React.FC = () => {
     });
 
     if (newOrder) {
+      if (paymentMethod === 'giftcard') {
+        redeemGiftCard(
+          giftCardCode,
+          total,
+          newOrder.id,
+          newOrder.code,
+          activeTable ? activeTable.number : orderType,
+          `Pago de Pedido QR ${newOrder.code}`
+        );
+      }
       setCart([]);
       setIsCartOpen(false);
       setOrderSuccessCode(newOrder.code);
+      setGiftCardCode('');
     }
   };
 
@@ -661,12 +695,61 @@ export const PublicMenuPage: React.FC = () => {
                       onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                       className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg font-bold text-brand-dark focus:outline-none"
                     >
-                      <option value="efectivo">Efectivo en el local</option>
-                      <option value="transferencia">Transferencia bancaria / QR</option>
-                      <option value="tarjeta">Tarjeta de débito/crédito</option>
-                      <option value="mercadopago">Mercado Pago</option>
+                      <option value="efectivo">💵 Efectivo en el local</option>
+                      <option value="transferencia">🏦 Transferencia bancaria / QR</option>
+                      <option value="mercadopago">📲 Mercado Pago</option>
+                      <option value="giftcard">🎁 Gift Card Virtual (Saldo en Dinero)</option>
+                      <option value="debito">💳 Tarjeta de débito</option>
+                      <option value="credito">💳 Tarjeta de crédito</option>
                     </select>
                   </div>
+
+                  {paymentMethod === 'giftcard' && (
+                    <div className="p-3 bg-brand-cream rounded-xl border border-brand-secondary space-y-2 animate-fade-in text-xs">
+                      <label className="block font-extrabold text-brand-dark text-[11px] uppercase tracking-wider">
+                        Código de tu Gift Card Virtual
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej: GIFT-8921-MAG"
+                        value={giftCardCode}
+                        onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                        className="w-full px-3 py-2 bg-brand-card border border-brand-secondary rounded-xl font-mono font-extrabold text-xs text-brand-dark tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-amber-600/30"
+                      />
+
+                      {giftCardCode.trim() && (() => {
+                        const matched = getGiftCardByCode(giftCardCode);
+                        if (!matched) {
+                          return (
+                            <p className="text-[11px] font-bold text-rose-600">
+                              ✕ Código no encontrado. Verificá que esté bien escrito.
+                            </p>
+                          );
+                        }
+                        const hasEnough = matched.currentBalance >= total;
+                        return (
+                          <div className="p-2.5 bg-brand-card rounded-lg border border-brand-secondary space-y-1">
+                            <div className="flex justify-between font-bold text-[11px]">
+                              <span>Titular: <strong>{matched.recipientName}</strong></span>
+                              <span className={hasEnough ? 'text-emerald-800' : 'text-rose-600'}>
+                                Saldo: {formatCurrency(matched.currentBalance)}
+                              </span>
+                            </div>
+                            {hasEnough ? (
+                              <p className="text-[10px] text-emerald-800 font-bold">
+                                ✓ Saldo suficiente para abonar este pedido ({formatCurrency(total)}).
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-rose-600 font-bold">
+                                ⚠️ Saldo insuficiente ({formatCurrency(matched.currentBalance)} disponible).
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
 
                 {/* Club Points Banner in Cart */}
@@ -707,12 +790,17 @@ export const PublicMenuPage: React.FC = () => {
                     <span className="font-normal text-[11px]">No se pueden procesar ni recibir pedidos en este momento.</span>
                   </div>
                 ) : (
-                  <button
-                    type="submit"
-                    className="w-full py-3 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft"
-                  >
-                    Confirmar pedido • {formatCurrency(total)}
-                  </button>
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-brand-brown/80 text-center">
+                      🔒 Al confirmar, el pedido se enviará directo a cocina. Anulaciones únicamente por el <strong>mozo</strong>.
+                    </p>
+                    <button
+                      type="submit"
+                      className="w-full py-3 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft"
+                    >
+                      Confirmar pedido • {formatCurrency(total)}
+                    </button>
+                  </div>
                 )}
               </form>
             )}
@@ -740,6 +828,15 @@ export const PublicMenuPage: React.FC = () => {
               <p className="font-extrabold text-[11px]">⭐ ¡Puntos Acumulados en tu Socio!</p>
               <p className="text-[10px] text-emerald-800 mt-0.5">
                 Sumaste <strong>+{Math.floor(total / 10)} puntos</strong> en tu tarjeta digital con tu número {customerPhone}.
+              </p>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-300 p-2.5 rounded-xl text-xs text-amber-950 text-left space-y-0.5">
+              <p className="font-extrabold text-[11px] flex items-center gap-1 text-amber-900">
+                🔒 Política de Comanda en Mesa
+              </p>
+              <p className="text-[10px] text-amber-900/90 leading-tight">
+                Los pedidos no se pueden cancelar ni eliminar desde este menú digital. Si necesitás modificar o anular tu comanda, por favor solicitalo a tu <strong>mozo</strong>.
               </p>
             </div>
 

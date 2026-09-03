@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Table } from '../types';
 
-function mapRowToTable(row: any): Table {
+export function mapRowToTable(row: any): Table {
   return {
     id: row.id,
     number: row.number,

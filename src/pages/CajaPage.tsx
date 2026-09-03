@@ -73,6 +73,7 @@ export const CajaPage: React.FC = () => {
       mercadopago = 0,
       tarjetas = 0,
       transferencias = 0,
+      giftcards = 0,
       egresos = 0;
 
     targetTxs.forEach((tx) => {
@@ -84,6 +85,7 @@ export const CajaPage: React.FC = () => {
         else if (tx.paymentMethod === 'mercadopago') mercadopago += tx.amount;
         else if (tx.paymentMethod === 'transferencia') transferencias += tx.amount;
         else if (tx.paymentMethod === 'credito' || tx.paymentMethod === 'debito') tarjetas += tx.amount;
+        else if (tx.paymentMethod === 'giftcard') giftcards += tx.amount;
       }
     });
 
@@ -92,8 +94,9 @@ export const CajaPage: React.FC = () => {
       mercadopago,
       tarjetas,
       transferencias,
+      giftcards,
       egresos,
-      totalVentas: efectivo + mercadopago + tarjetas + transferencias - egresos,
+      totalVentas: efectivo + mercadopago + tarjetas + transferencias + giftcards - egresos,
     };
   };
 
@@ -538,15 +541,15 @@ export const CajaPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-brand-card p-5 rounded-2xl border border-brand-secondary shadow-soft space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider text-brand-brown">Efectivo Esperado en Caja</p>
-              <p className="text-3xl font-extrabold text-brand-dark">{formatCurrency(expectedCash)}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-brand-brown">Efectivo en Caja</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-brand-dark">{formatCurrency(expectedCash)}</p>
               <p className="text-[10px] text-brand-brown/80">Fondo: {formatCurrency(activeRegister.initialBalance)} • Ingresos: {formatCurrency(totals.efectivo)}</p>
             </div>
             
             <div className="bg-brand-card p-5 rounded-2xl border border-brand-secondary shadow-soft space-y-2">
-              <div className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-brand-brown" /><p className="text-xs font-bold uppercase tracking-wider text-brand-brown">Tarjetas (Débito/Crédito)</p></div>
+              <div className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-brand-brown" /><p className="text-xs font-bold uppercase tracking-wider text-brand-brown">Tarjetas</p></div>
               <p className="text-2xl font-bold text-brand-dark">{formatCurrency(totals.tarjetas)}</p>
             </div>
 
@@ -558,6 +561,11 @@ export const CajaPage: React.FC = () => {
             <div className="bg-brand-card p-5 rounded-2xl border border-brand-secondary shadow-soft space-y-2">
               <p className="text-xs font-bold uppercase tracking-wider text-brand-brown">MercadoPago</p>
               <p className="text-2xl font-bold text-brand-dark">{formatCurrency(totals.mercadopago)}</p>
+            </div>
+
+            <div className="bg-brand-card p-5 rounded-2xl border border-brand-secondary shadow-soft space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-brand-brown">Gift Cards / Vouchers</p>
+              <p className="text-2xl font-bold text-brand-dark">{formatCurrency(totals.giftcards)}</p>
             </div>
           </div>
 
@@ -1078,6 +1086,7 @@ export const CajaPage: React.FC = () => {
                   <option value="efectivo">Efectivo</option>
                   <option value="transferencia">Transferencia</option>
                   <option value="mercadopago">MercadoPago</option>
+                  <option value="giftcard">Gift Card</option>
                   <option value="debito">Débito</option>
                   <option value="credito">Crédito</option>
                 </select>

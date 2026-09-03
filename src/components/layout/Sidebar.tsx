@@ -27,6 +27,8 @@ import {
   Globe,
   Wallet,
   ShieldCheck,
+  History,
+  Gift,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { PlanType } from '../../types';
@@ -66,6 +68,7 @@ export const Sidebar: React.FC = () => {
         { name: 'Mesas', path: '/mesas', icon: <SquareCheckBig className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
         { name: 'Menú Digital', path: '/menu', icon: <QrCode className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
         { name: 'Pedidos', path: '/pedidos', icon: <UtensilsCrossed className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
+        { name: 'Historial Pedidos', path: '/historial-pedidos', icon: <History className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
         { name: 'Delivery', path: '/delivery', icon: <Truck className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin', 'cajero', 'mozo', 'cocina'] },
       ],
     },
@@ -95,7 +98,7 @@ export const Sidebar: React.FC = () => {
         { name: 'Editor Web', path: '/editor-web', icon: <Settings className="w-4 h-4" />, requiredPlan: 'fidelizacion', allowedRoles: ['admin'] },
         { name: 'Clientes', path: '/clientes', icon: <Users className="w-4 h-4" />, requiredPlan: 'fidelizacion', allowedRoles: ['admin'] },
         { name: 'Puntos y Recompensas', path: '/puntos', icon: <Award className="w-4 h-4" />, requiredPlan: 'fidelizacion', allowedRoles: ['admin'] },
-        { name: 'Tarjetas Virtuales', path: '/tarjetas', icon: <CreditCard className="w-4 h-4" />, requiredPlan: 'fidelizacion', allowedRoles: ['admin'] },
+        { name: 'Gift Cards & Tarjetas', path: '/tarjetas', icon: <Gift className="w-4 h-4" />, requiredPlan: 'fidelizacion', allowedRoles: ['admin', 'cajero'] },
       ],
     },
     {

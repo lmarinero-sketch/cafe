@@ -60,7 +60,7 @@ export type OrderStatus =
   | 'entregado' 
   | 'cancelado';
 
-export type PaymentMethod = 'efectivo' | 'transferencia' | 'credito' | 'debito' | 'mercadopago';
+export type PaymentMethod = 'efectivo' | 'transferencia' | 'credito' | 'debito' | 'mercadopago' | 'giftcard';
 
 export interface CashTransaction {
   id: string;
@@ -355,3 +355,41 @@ export interface ModuleUsage {
   minutes: string;
   userCount: number;
 }
+
+// ============================================================
+// TARJETAS DE REGALO / GIFT CARDS VIRTUALES
+// ============================================================
+
+export type GiftCardTheme = 'clasica' | 'dorada' | 'cumpleanos' | 'especial';
+export type GiftCardStatus = 'activa' | 'canjeada_parcial' | 'agotada' | 'vencida' | 'cancelada';
+
+export interface GiftCardUsage {
+  id: string;
+  date: string;
+  orderId?: string;
+  orderCode?: string;
+  amountUsed: number;
+  remainingBalance: number;
+  location?: string;
+  notes?: string;
+}
+
+export interface GiftCard {
+  id: string;
+  code: string; // e.g. "GIFT-7492-CAF"
+  initialAmount: number;
+  currentBalance: number;
+  purchaserName: string;
+  purchaserPhone?: string;
+  purchaserEmail?: string;
+  recipientName: string;
+  recipientPhone?: string;
+  recipientEmail?: string;
+  message?: string;
+  theme: GiftCardTheme;
+  status: GiftCardStatus;
+  createdAt: string;
+  expiresAt?: string;
+  usageHistory: GiftCardUsage[];
+}
+

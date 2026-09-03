@@ -1,23 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed, Receipt, ShoppingBag, ArrowRight, ArrowLeft, Clock, AlertCircle, CheckCircle2, RotateCcw, AlertTriangle, RefreshCw, Banknote, Edit3, Trash2, Layers } from 'lucide-react';
+import { Plus, QrCode, Users, ExternalLink, X, SquareCheckBig, UtensilsCrossed, Receipt, ShoppingBag, ArrowRight, ArrowLeft, Clock, AlertCircle, CheckCircle2, RotateCcw, AlertTriangle, RefreshCw, Banknote, Edit3, Trash2, Layers, Gift } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Table, TableStatus, OrderStatus, Order, PaymentMethod } from '../types';
 import { formatCurrency, formatDate } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
+import { OrderReceiptModal } from '../components/orders/OrderReceiptModal';
 
 export const TablesPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const isAdmin = user?.role === 'admin';
-  const { tables, tableSectors, addTable, updateTable, deleteTable, updateTableStatus, updateOrderStatus, orders, addTransaction, cashRegisters, addSector, updateSector, deleteSector } = useApp();
+  const {
+    tables,
+    tableSectors,
+    addTable,
+    updateTable,
+    deleteTable,
+    updateTableStatus,
+    updateOrderStatus,
+    orders,
+    addTransaction,
+    cashRegisters,
+    addSector,
+    updateSector,
+    deleteSector,
+    redeemGiftCard,
+    getGiftCardByCode,
+  } = useApp();
   const [selectedHistoryTable, setSelectedHistoryTable] = useState<Table | null>(null);
   const [cancelledAlertOrder, setCancelledAlertOrder] = useState<Order | null>(null);
   const [lastCancelledCount, setLastCancelledCount] = useState<number>(0);
 
   const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
+  const [cancelingOrderConfirm, setCancelingOrderConfirm] = useState<Order | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('efectivo');
+  const [giftCardCodeInput, setGiftCardCodeInput] = useState<string>('');
+  const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
 
   // Sector management states
   const [isSectorsModalOpen, setIsSectorsModalOpen] = useState(false);
@@ -33,15 +55,58 @@ export const TablesPage: React.FC = () => {
     e.preventDefault();
     if (!chargingOrder || !activeRegister) return;
 
+    if (selectedPayment === 'giftcard') {
+      if (!giftCardCodeInput.trim()) {
+        showToast('Código Requerido', 'Por favor ingresá el código de la Gift Card.', 'error');
+        return;
+      }
+      const card = getGiftCardByCode(giftCardCodeInput);
+      if (!card) {
+        showToast('Tarjeta No Encontrada', 'No se encontró ninguna Gift Card con el código ingresado.', 'error');
+        return;
+      }
+      if (card.currentBalance < chargingOrder.total) {
+        showToast(
+          'Saldo Insuficiente en Gift Card',
+          `La tarjeta tiene ${formatCurrency(card.currentBalance)} y el pedido es de ${formatCurrency(chargingOrder.total)}.`,
+          'error'
+        );
+        return;
+      }
+
+      const redeemRes = redeemGiftCard(
+        giftCardCodeInput,
+        chargingOrder.total,
+        chargingOrder.id,
+        chargingOrder.code,
+        chargingOrder.tableName || 'Salón',
+        `Cobro de Comanda ${chargingOrder.code}`
+      );
+
+      if (!redeemRes.success) {
+        showToast('Error al canjear', redeemRes.message, 'error');
+        return;
+      }
+    }
+
     addTransaction({
       registerId: activeRegister.id,
       orderId: chargingOrder.id,
       type: 'ingreso',
       amount: chargingOrder.total,
       paymentMethod: selectedPayment,
-      description: `Cobro Pedido ${chargingOrder.code}`,
+      description:
+        selectedPayment === 'giftcard'
+          ? `Cobro Pedido ${chargingOrder.code} con Gift Card ${giftCardCodeInput.toUpperCase()}`
+          : `Cobro Pedido ${chargingOrder.code}`,
       registeredBy: user ? `${user.name} (${user.role})` : 'Atención en Salón / QR',
     });
+
+    const orderPaid: Order = {
+      ...chargingOrder,
+      paymentMethod: selectedPayment,
+      status: 'entregado',
+    };
 
     updateOrderStatus(chargingOrder.id, 'entregado');
 
@@ -55,6 +120,8 @@ export const TablesPage: React.FC = () => {
     }
 
     setChargingOrder(null);
+    setGiftCardCodeInput('');
+    setReceiptOrder(orderPaid);
   };
 
   // Monitor canceled orders for centered popup alert
@@ -1145,8 +1212,7 @@ export const TablesPage: React.FC = () => {
                               <>
                                 <button
                                   onClick={() => {
-                                    updateOrderStatus(ord.id, 'cancelado');
-                                    setSelectedHistoryTable(null);
+                                    setCancelingOrderConfirm(ord);
                                   }}
                                   className="py-1 px-2.5 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-100 font-bold text-xs transition-colors"
                                 >
@@ -1162,7 +1228,18 @@ export const TablesPage: React.FC = () => {
                                   Ir a cobrar <ArrowRight className="w-3.5 h-3.5 text-brand-yellow" />
                                 </button>
                               </>
-                            ) : null}
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setReceiptOrder(ord);
+                                  setSelectedHistoryTable(null);
+                                }}
+                                className="py-1 px-3 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-950 font-extrabold text-xs transition-colors flex items-center gap-1.5 border border-amber-300 shadow-xs"
+                              >
+                                <Receipt className="w-3.5 h-3.5 text-amber-700" />
+                                Ver Comprobante
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1250,12 +1327,64 @@ export const TablesPage: React.FC = () => {
                     <option value="mercadopago">📲 MercadoPago</option>
                     <option value="debito">💳 Débito</option>
                     <option value="credito">💳 Crédito</option>
+                    <option value="giftcard">🎁 Gift Card / Tarjeta de Regalo</option>
                   </select>
                 </div>
+
+                {selectedPayment === 'giftcard' && (
+                  <div className="p-3 bg-brand-cream rounded-xl border border-brand-secondary space-y-2 animate-fade-in text-xs">
+                    <label className="block font-extrabold text-brand-dark text-[11px] uppercase tracking-wider">
+                      Código de Gift Card Virtual
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej: GIFT-8921-MAG"
+                      value={giftCardCodeInput}
+                      onChange={(e) => setGiftCardCodeInput(e.target.value.toUpperCase())}
+                      className="w-full px-3 py-2 bg-brand-card border border-brand-secondary rounded-xl font-mono font-extrabold text-xs text-brand-dark tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-amber-600/30"
+                    />
+
+                    {giftCardCodeInput.trim() && (() => {
+                      const matched = getGiftCardByCode(giftCardCodeInput);
+                      if (!matched) {
+                        return (
+                          <p className="text-[11px] font-bold text-rose-600">
+                            ✕ No existe ninguna Gift Card con este código.
+                          </p>
+                        );
+                      }
+                      const hasEnough = matched.currentBalance >= chargingOrder.total;
+                      return (
+                        <div className="p-2.5 bg-brand-card rounded-lg border border-brand-secondary space-y-1">
+                          <div className="flex justify-between font-bold text-[11px]">
+                            <span>Para: <strong>{matched.recipientName}</strong></span>
+                            <span className={hasEnough ? 'text-emerald-800' : 'text-rose-600'}>
+                              Saldo: {formatCurrency(matched.currentBalance)}
+                            </span>
+                          </div>
+                          {hasEnough ? (
+                            <p className="text-[10px] text-emerald-800 font-bold">
+                              ✓ Saldo suficiente para cubrir el pedido ({formatCurrency(chargingOrder.total)}).
+                            </p>
+                          ) : (
+                            <p className="text-[10px] text-rose-600 font-bold">
+                              ⚠️ Saldo insuficiente ({formatCurrency(matched.currentBalance)} disponible).
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={() => setChargingOrder(null)}
+                    onClick={() => {
+                      setChargingOrder(null);
+                      setGiftCardCodeInput('');
+                    }}
                     className="flex-1 py-2.5 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition"
                   >
                     Cancelar
@@ -1707,6 +1836,57 @@ export const TablesPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Confirmación de Cancelación de Pedido (Acción exclusiva Mozo / Personal) */}
+      {cancelingOrderConfirm && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-brand-dark/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-brand-card rounded-3xl border-2 border-rose-500 p-6 w-full max-w-md shadow-soft-lg space-y-4 text-center">
+            <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto border-2 border-rose-300">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+            <div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded-full border border-rose-200">
+                Acción de Mozo / Salón
+              </span>
+              <h3 className="text-lg font-extrabold text-brand-dark mt-2">
+                ¿Cancelar Pedido {cancelingOrderConfirm.code}?
+              </h3>
+              <p className="text-xs text-brand-brown/90 mt-2 leading-relaxed">
+                Estás a punto de anular el pedido de <strong>{cancelingOrderConfirm.customerName}</strong> ({cancelingOrderConfirm.tableName || 'Mesa'}).
+                Los clientes no pueden realizar cancelaciones desde su celular; esta acción es exclusiva del personal de atención.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setCancelingOrderConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition"
+              >
+                No, Volver
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  updateOrderStatus(cancelingOrderConfirm.id, 'cancelado');
+                  setCancelingOrderConfirm(null);
+                  setSelectedHistoryTable(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-rose-700 text-white font-extrabold text-xs hover:bg-rose-800 transition shadow-soft"
+              >
+                Sí, Anular Comanda
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Comprobante de Pago (A4 y 58mm) */}
+      <OrderReceiptModal
+        order={receiptOrder}
+        isOpen={!!receiptOrder}
+        onClose={() => setReceiptOrder(null)}
+        staffName={user ? `${user.name} (${user.role})` : undefined}
+      />
     </div>
   );
 };

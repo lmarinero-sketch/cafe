@@ -18,6 +18,9 @@ import {
   Branch,
   StaffUser,
   Sector,
+  GiftCard,
+  GiftCardStatus,
+  GiftCardUsage,
 } from '../types';
 import { initialCategories } from '../data/seeds/categories.seed';
 import { initialManuals } from '../data/manuals/systemManuals';
@@ -29,11 +32,12 @@ import { initialCustomers } from '../data/seeds/customers.seed';
 import { initialRewards } from '../data/seeds/rewards.seed';
 import { initialCampaigns } from '../data/seeds/campaigns.seed';
 import { initialAutomations } from '../data/seeds/automations.seed';
+import { initialGiftCards } from '../data/seeds/giftCards.seed';
 import { calculateNormalizedCost, calculateRecipeCostDetails } from '../utils/costEngine';
 import { formatCurrency } from '../utils/currency';
 import { useToast } from './ToastContext';
 import { useAuth } from './AuthContext';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 // Supabase Services
 import * as customersService from '../services/customers.service';
@@ -47,6 +51,12 @@ import * as productsService from '../services/products.service';
 import * as tablesService from '../services/tables.service';
 import * as ordersService from '../services/orders.service';
 import * as ingredientsService from '../services/ingredients.service';
+import * as cashRegistersService from '../services/cashRegisters.service';
+import * as giftCardsService from '../services/giftCards.service';
+import { mapRowToOrder } from '../services/orders.service';
+import { mapRowToTable } from '../services/tables.service';
+import { mapRowToRegister, mapRowToTransaction } from '../services/cashRegisters.service';
+import { mapRowToGiftCard } from '../services/giftCards.service';
 
 interface LockModalState {
   isOpen: boolean;
@@ -72,6 +82,7 @@ interface AppContextType {
   branches: Branch[];
   staffUsers: StaffUser[];
   tableSectors: Sector[];
+  giftCards: GiftCard[];
   cashRegisters: import('../types').CashRegister[];
   cashTransactions: import('../types').CashTransaction[];
   autoPriceUpdate: boolean;
@@ -108,6 +119,11 @@ interface AppContextType {
   updateIngredientPrice: (id: string, newPurchasePrice: number) => void;
   updateIngredient: (id: string, ingredientData: Partial<Ingredient>) => void;
   deleteIngredient: (id: string) => void;
+
+  // Gift Cards CRUD & Canje
+  createGiftCard: (giftCardData: Omit<GiftCard, 'id' | 'code' | 'createdAt' | 'usageHistory' | 'status' | 'currentBalance'> & { initialAmount: number }) => GiftCard;
+  redeemGiftCard: (code: string, amountToUse: number, orderId?: string, orderCode?: string, location?: string, notes?: string) => { success: boolean; amountDeducted: number; remainingBalance: number; message: string; card?: GiftCard };
+  getGiftCardByCode: (code: string) => GiftCard | undefined;
 
   // Customer CRUD (Supabase)
   addCustomer: (customer: Omit<Customer, 'id' | 'registrationDate' | 'points' | 'level' | 'purchaseCount' | 'totalSpent' | 'averageTicket' | 'lastPurchaseDate' | 'usedPromotionsCount'>) => Promise<Customer | null>;
@@ -181,6 +197,7 @@ const STORAGE_KEYS = {
   CASH_TRANSACTIONS: 'hilos_de_amor_cash_transactions',
   STAFF_USERS: 'hilos_de_amor_staff_users',
   TABLE_SECTORS: 'hilos_de_amor_table_sectors',
+  GIFT_CARDS: 'hilos_de_amor_gift_cards',
 };
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -326,6 +343,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [branches, setBranches] = useState<Branch[]>([]);
 
+  const [giftCards, setGiftCards] = useState<GiftCard[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.GIFT_CARDS);
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialGiftCards;
+    } catch {
+      return initialGiftCards;
+    }
+  });
+
   const [tickets, setTickets] = useState<SupportTicket[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TICKETS);
     return saved ? JSON.parse(saved) : [];
@@ -430,7 +457,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const openTutorialModal = () => setIsTutorialOpen(true);
   const closeTutorialModal = () => setIsTutorialOpen(false);
 
-  // Realtime Live Syncing across tabs & windows
+  // ============================================================
+  // SUPABASE REALTIME: Sincronización en vivo entre Celular, PC y Tablet
+  // ============================================================
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
   }, [orders]);
@@ -440,24 +469,197 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [tables]);
 
   useEffect(() => {
-    const handleSync = () => {
-      const savedOrders = localStorage.getItem(STORAGE_KEYS.ORDERS);
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
-      const savedTables = localStorage.getItem(STORAGE_KEYS.TABLES);
-      if (savedTables) setTables(JSON.parse(savedTables));
-    };
+    if (!isSupabaseConfigured) {
+      const handleSync = () => {
+        const savedOrders = localStorage.getItem(STORAGE_KEYS.ORDERS);
+        if (savedOrders) setOrders(JSON.parse(savedOrders));
+        const savedTables = localStorage.getItem(STORAGE_KEYS.TABLES);
+        if (savedTables) setTables(JSON.parse(savedTables));
+      };
+      window.addEventListener('storage', handleSync);
+      const interval = setInterval(handleSync, 2000);
+      return () => {
+        window.removeEventListener('storage', handleSync);
+        clearInterval(interval);
+      };
+    }
 
-    window.addEventListener('storage', handleSync);
-    const interval = setInterval(handleSync, 2000);
+    // 1. Canal Realtime para Pedidos (Orders)
+    const ordersChannel = supabase
+      .channel('realtime-orders-sync')
+      .on(
+        'postgres_changes' as any,
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload: any) => {
+          if (payload.eventType === 'INSERT') {
+            const newOrder = mapRowToOrder(payload.new);
+            setOrders((prev) => {
+              if (prev.some((o) => o.id === newOrder.id)) {
+                return prev.map((o) => (o.id === newOrder.id ? newOrder : o));
+              }
+              return [newOrder, ...prev];
+            });
+            if (newOrder.tableId) {
+              setTables((prev) =>
+                prev.map((t) => (t.id === newOrder.tableId ? { ...t, status: 'ocupada' } : t))
+              );
+            }
+            showToast('🔔 ¡Nuevo Pedido en Vivo!', `Pedido ${newOrder.code} recibido desde ${newOrder.tableName || newOrder.type}.`, 'success');
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedOrder = mapRowToOrder(payload.new);
+            setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
+          } else if (payload.eventType === 'DELETE') {
+            setOrders((prev) => prev.filter((o) => o.id !== (payload.old as any).id));
+          }
+        }
+      )
+      .subscribe();
+
+    // 2. Canal Realtime para Mesas (Tables)
+    const tablesChannel = supabase
+      .channel('realtime-tables-sync')
+      .on(
+        'postgres_changes' as any,
+        { event: '*', schema: 'public', table: 'tables' },
+        (payload: any) => {
+          if (payload.eventType === 'INSERT') {
+            const newTable = mapRowToTable(payload.new);
+            setTables((prev) => {
+              if (prev.some((t) => t.id === newTable.id)) {
+                return prev.map((t) => (t.id === newTable.id ? newTable : t));
+              }
+              return [...prev, newTable];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedTable = mapRowToTable(payload.new);
+            setTables((prev) => prev.map((t) => (t.id === updatedTable.id ? updatedTable : t)));
+          } else if (payload.eventType === 'DELETE') {
+            setTables((prev) => prev.filter((t) => t.id !== (payload.old as any).id));
+          }
+        }
+      )
+      .subscribe();
+
+    // 3. Canal Realtime para Cajas (Cash Registers)
+    const registersChannel = supabase
+      .channel('realtime-registers-sync')
+      .on(
+        'postgres_changes' as any,
+        { event: '*', schema: 'public', table: 'cash_registers' },
+        (payload: any) => {
+          if (payload.eventType === 'INSERT') {
+            const newReg = mapRowToRegister(payload.new);
+            setCashRegisters((prev) => {
+              if (prev.some((r) => r.id === newReg.id)) {
+                return prev.map((r) => (r.id === newReg.id ? newReg : r));
+              }
+              return [newReg, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedReg = mapRowToRegister(payload.new);
+            setCashRegisters((prev) => prev.map((r) => (r.id === updatedReg.id ? updatedReg : r)));
+          }
+        }
+      )
+      .subscribe();
+
+    // 4. Canal Realtime para Transacciones de Caja
+    const txChannel = supabase
+      .channel('realtime-transactions-sync')
+      .on(
+        'postgres_changes' as any,
+        { event: '*', schema: 'public', table: 'cash_transactions' },
+        (payload: any) => {
+          if (payload.eventType === 'INSERT') {
+            const newTx = mapRowToTransaction(payload.new);
+            setCashTransactions((prev) => {
+              if (prev.some((t) => t.id === newTx.id)) return prev;
+              return [newTx, ...prev];
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // 5. Canal Realtime para Gift Cards Virtuales
+    const giftCardsChannel = supabase
+      .channel('realtime-gift-cards-sync')
+      .on(
+        'postgres_changes' as any,
+        { event: '*', schema: 'public', table: 'gift_cards' },
+        (payload: any) => {
+          if (payload.eventType === 'INSERT') {
+            const newCard = mapRowToGiftCard(payload.new);
+            setGiftCards((prev) => {
+              if (prev.some((c) => c.id === newCard.id)) {
+                return prev.map((c) => (c.id === newCard.id ? newCard : c));
+              }
+              return [newCard, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedCard = mapRowToGiftCard(payload.new);
+            setGiftCards((prev) => prev.map((c) => (c.id === updatedCard.id ? updatedCard : c)));
+          } else if (payload.eventType === 'DELETE') {
+            setGiftCards((prev) => prev.filter((c) => c.id !== (payload.old as any).id));
+          }
+        }
+      )
+      .subscribe();
+
+    // 6. Polling de respaldo en la nube cada 3.5 segundos
+    const pollInterval = setInterval(async () => {
+      try {
+        const [freshOrders, freshTables, freshRegisters, freshGiftCards] = await Promise.all([
+          ordersService.getOrders(),
+          tablesService.getTables(),
+          cashRegistersService.getCashRegisters(),
+          giftCardsService.getGiftCards(),
+        ]);
+        if (freshOrders && freshOrders.length > 0) {
+          setOrders((prev) => {
+            const prevSign = prev.map((o) => `${o.id}:${o.status}:${o.total}`).join('|');
+            const freshSign = freshOrders.map((o) => `${o.id}:${o.status}:${o.total}`).join('|');
+            return prevSign === freshSign ? prev : freshOrders;
+          });
+        }
+        if (freshTables && freshTables.length > 0) {
+          setTables((prev) => {
+            const prevSign = prev.map((t) => `${t.id}:${t.status}`).join('|');
+            const freshSign = freshTables.map((t) => `${t.id}:${t.status}`).join('|');
+            return prevSign === freshSign ? prev : freshTables;
+          });
+        }
+        if (freshRegisters && freshRegisters.length > 0) {
+          setCashRegisters((prev) => {
+            const prevSign = prev.map((r) => `${r.id}:${r.status}`).join('|');
+            const freshSign = freshRegisters.map((r) => `${r.id}:${r.status}`).join('|');
+            return prevSign === freshSign ? prev : freshRegisters;
+          });
+        }
+        if (freshGiftCards && freshGiftCards.length > 0) {
+          setGiftCards((prev) => {
+            const prevSign = prev.map((c) => `${c.id}:${c.currentBalance}:${c.status}`).join('|');
+            const freshSign = freshGiftCards.map((c) => `${c.id}:${c.currentBalance}:${c.status}`).join('|');
+            return prevSign === freshSign ? prev : freshGiftCards;
+          });
+        }
+      } catch {
+        // error de red silencioso
+      }
+    }, 3500);
 
     return () => {
-      window.removeEventListener('storage', handleSync);
-      clearInterval(interval);
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(tablesChannel);
+      supabase.removeChannel(registersChannel);
+      supabase.removeChannel(txChannel);
+      supabase.removeChannel(giftCardsChannel);
+      clearInterval(pollInterval);
     };
   }, []);
 
   // ============================================================
-  // SUPABASE: Initial data fetch
+  // SUPABASE: Carga inicial de datos
   // ============================================================
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -470,7 +672,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsLoadingBranches(true);
 
       try {
-        const [dbCustomers, dbRewards, dbCampaigns, dbAutomations, dbBranches, dbStaff, dbProducts, dbTables, dbOrders, dbIngredients] = await Promise.all([
+        const [
+          dbCustomers,
+          dbRewards,
+          dbCampaigns,
+          dbAutomations,
+          dbBranches,
+          dbStaff,
+          dbProducts,
+          dbTables,
+          dbOrders,
+          dbIngredients,
+          dbRegisters,
+          dbTransactions,
+          dbGiftCards,
+        ] = await Promise.all([
           customersService.getCustomers(),
           rewardsService.getRewards(),
           campaignsService.getCampaigns(),
@@ -481,6 +697,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           tablesService.getTables(),
           ordersService.getOrders(),
           ingredientsService.getIngredients(),
+          cashRegistersService.getCashRegisters(),
+          cashRegistersService.getCashTransactions(),
+          giftCardsService.getGiftCards(),
         ]);
 
         if (dbCustomers && dbCustomers.length > 0) setCustomers(dbCustomers);
@@ -510,6 +729,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
         if (dbOrders && dbOrders.length > 0) setOrders(dbOrders);
         if (dbIngredients && dbIngredients.length > 0) setIngredients(dbIngredients);
+        if (dbRegisters && dbRegisters.length > 0) setCashRegisters(dbRegisters);
+        if (dbTransactions && dbTransactions.length > 0) setCashTransactions(dbTransactions);
+        if (dbGiftCards && dbGiftCards.length > 0) setGiftCards(dbGiftCards);
       } catch (err) {
         console.error('Error fetching data from Supabase:', err);
       } finally {
@@ -536,6 +758,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CASH_TRANSACTIONS, JSON.stringify(cashTransactions)); }, [cashTransactions]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.STAFF_USERS, JSON.stringify(staffUsers)); }, [staffUsers]);
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.TABLE_SECTORS, JSON.stringify(tableSectors)); }, [tableSectors]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.GIFT_CARDS, JSON.stringify(giftCards)); }, [giftCards]);
 
   // Also keep localStorage as cache for Supabase entities (offline fallback)
   useEffect(() => { localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers)); }, [customers]);
@@ -866,6 +1089,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     setOrders((prev) => [newOrder, ...prev]);
 
+    if (isSupabaseConfigured) {
+      ordersService.createOrderDB(newOrder).catch(console.error);
+    }
+
     // If order linked to table, update table status to 'ocupada'
     if (newOrder.tableId) {
       setTables((prev) =>
@@ -887,6 +1114,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return ord;
       })
     );
+
+    if (isSupabaseConfigured) {
+      ordersService.updateOrderStatusDB(orderId, status).catch(console.error);
+    }
   };
 
   // ============================================================
@@ -1502,6 +1733,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       status: 'abierta',
     };
     setCashRegisters((prev) => [newRegister, ...prev]);
+    if (isSupabaseConfigured) {
+      cashRegistersService.createCashRegister(newRegister).catch(console.error);
+    }
     showToast('Caja abierta', `Turno iniciado por ${openedBy} con ${formatCurrency(initialBalance)}`, 'success');
   };
 
@@ -1513,16 +1747,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     difference?: number,
     notes?: string
   ) => {
+    const closedAt = new Date().toISOString();
+    const resolvedClosedBy = closedBy || 'Cajero';
     setCashRegisters((prev) =>
       prev.map((reg) => {
         if (reg.id === registerId) {
           return {
             ...reg,
             status: 'cerrada',
-            closedAt: new Date().toISOString(),
+            closedAt,
             finalBalance,
             cashPhysicalCount: finalBalance,
-            closedBy: closedBy || reg.openedBy,
+            closedBy: resolvedClosedBy,
             expectedBalance,
             difference,
             notes,
@@ -1531,6 +1767,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return reg;
       })
     );
+    if (isSupabaseConfigured) {
+      cashRegistersService.updateCashRegister(registerId, {
+        status: 'cerrada',
+        closedAt,
+        finalBalance,
+        cashPhysicalCount: finalBalance,
+        closedBy: resolvedClosedBy,
+        expectedBalance,
+        difference,
+        notes,
+      }).catch(console.error);
+    }
     showToast('Caja cerrada', 'El turno ha sido cerrado correctamente y el comprobante está listo.', 'success');
   };
 
@@ -1542,6 +1790,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       timestamp: new Date().toISOString(),
     };
     setCashTransactions((prev) => [newTx, ...prev]);
+    if (isSupabaseConfigured) {
+      cashRegistersService.createCashTransaction(newTx).catch(console.error);
+    }
   };
 
   const getRecipeCostForProduct = (productId: string): RecipeCost | null => {
@@ -1561,6 +1812,109 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
+  // ============================================================
+  // GIFT CARDS VIRTUALES (Dinero a gastar)
+  // ============================================================
+
+  const createGiftCard = (
+    giftCardData: Omit<GiftCard, 'id' | 'code' | 'createdAt' | 'usageHistory' | 'status' | 'currentBalance'> & { initialAmount: number }
+  ): GiftCard => {
+    const id = `gc-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const code = `GIFT-${randomSuffix}-MAG`;
+    const createdAt = new Date().toISOString();
+    const expiresAt = giftCardData.expiresAt || new Date(Date.now() + 365 * 86400000).toISOString();
+
+    const newCard: GiftCard = {
+      ...giftCardData,
+      id,
+      code,
+      initialAmount: giftCardData.initialAmount,
+      currentBalance: giftCardData.initialAmount,
+      status: 'activa',
+      createdAt,
+      expiresAt,
+      usageHistory: [],
+    };
+
+    setGiftCards((prev) => [newCard, ...prev]);
+
+    if (isSupabaseConfigured) {
+      giftCardsService.createGiftCardDB(newCard).catch(console.error);
+    }
+
+    showToast('¡Gift Card Emitida!', `Tarjeta ${code} por ${formatCurrency(newCard.initialAmount)} generada para ${newCard.recipientName}.`, 'success');
+    return newCard;
+  };
+
+  const getGiftCardByCode = (code: string): GiftCard | undefined => {
+    const cleanCode = (code || '').trim().toUpperCase();
+    return giftCards.find((c) => c.code.trim().toUpperCase() === cleanCode);
+  };
+
+  const redeemGiftCard = (
+    code: string,
+    amountToUse: number,
+    orderId?: string,
+    orderCode?: string,
+    location?: string,
+    notes?: string
+  ): { success: boolean; amountDeducted: number; remainingBalance: number; message: string; card?: GiftCard } => {
+    const card = getGiftCardByCode(code);
+    if (!card) {
+      return { success: false, amountDeducted: 0, remainingBalance: 0, message: 'Código de Gift Card no encontrado.' };
+    }
+
+    if (card.status === 'cancelada') {
+      return { success: false, amountDeducted: 0, remainingBalance: card.currentBalance, message: 'Esta Gift Card ha sido cancelada.' };
+    }
+
+    if (card.status === 'agotada' || card.currentBalance <= 0) {
+      return { success: false, amountDeducted: 0, remainingBalance: 0, message: 'La Gift Card no posee saldo disponible (Saldo: $0).' };
+    }
+
+    if (card.expiresAt && new Date(card.expiresAt).getTime() < Date.now()) {
+      return { success: false, amountDeducted: 0, remainingBalance: card.currentBalance, message: 'Esta Gift Card ha expirado.' };
+    }
+
+    const amountDeducted = Math.min(amountToUse, card.currentBalance);
+    const newBalance = card.currentBalance - amountDeducted;
+    const newStatus: GiftCardStatus = newBalance === 0 ? 'agotada' : 'canjeada_parcial';
+
+    const usageEntry: GiftCardUsage = {
+      id: `gcu-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+      date: new Date().toISOString(),
+      orderId,
+      orderCode: orderCode || 'Consumo Salón/QR',
+      amountUsed: amountDeducted,
+      remainingBalance: newBalance,
+      location: location || 'Salón Principal',
+      notes: notes || 'Canje de saldo en comanda',
+    };
+
+    const updatedCard: GiftCard = {
+      ...card,
+      currentBalance: newBalance,
+      status: newStatus,
+      usageHistory: [usageEntry, ...(card.usageHistory || [])],
+    };
+
+    setGiftCards((prev) => prev.map((c) => (c.id === card.id ? updatedCard : c)));
+
+    if (isSupabaseConfigured) {
+      giftCardsService.updateGiftCardDB(card.id, updatedCard).catch(console.error);
+    }
+
+    showToast('Gift Card Canjeada', `Se descontaron ${formatCurrency(amountDeducted)} de la tarjeta ${card.code}. Saldo restante: ${formatCurrency(newBalance)}.`, 'success');
+
+    return {
+      success: true,
+      amountDeducted,
+      remainingBalance: newBalance,
+      message: `Descuento aplicado: ${formatCurrency(amountDeducted)}.`,
+      card: updatedCard,
+    };
+  };
 
   return (
     <AppContext.Provider
@@ -1582,6 +1936,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         branches,
         staffUsers,
         tableSectors,
+        giftCards,
         cashRegisters,
         cashTransactions,
         autoPriceUpdate,
@@ -1611,6 +1966,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateIngredientPrice,
         updateIngredient,
         deleteIngredient,
+        createGiftCard,
+        redeemGiftCard,
+        getGiftCardByCode,
         addCustomer,
         updateCustomerData,
         deleteCustomer,

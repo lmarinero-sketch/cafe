@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Order } from '../types';
 
-function mapRowToOrder(row: any): Order {
+export function mapRowToOrder(row: any): Order {
   return {
     id: row.id,
     code: row.code,
@@ -27,6 +27,7 @@ function mapRowToOrder(row: any): Order {
 
 function mapOrderToRow(order: Partial<Order>): Record<string, any> {
   const row: Record<string, any> = {};
+  if (order.id !== undefined) row.id = order.id;
   if (order.code !== undefined) row.code = order.code;
   if (order.type !== undefined) row.type = order.type;
   if (order.status !== undefined) row.status = order.status;
@@ -41,6 +42,7 @@ function mapOrderToRow(order: Partial<Order>): Record<string, any> {
   if (order.customerName !== undefined) row.customer_name = order.customerName;
   if (order.customerPhone !== undefined) row.customer_phone = order.customerPhone;
   if (order.address !== undefined) row.address = order.address;
+  if (order.addressRef !== undefined) row.address_ref = order.addressRef;
   if (order.waiterName !== undefined) row.waiter_name = order.waiterName;
   if (order.registerId !== undefined) row.register_id = order.registerId;
   if (order.pointsEarned !== undefined) row.points_earned = order.pointsEarned;
