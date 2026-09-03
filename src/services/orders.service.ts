@@ -89,3 +89,18 @@ export async function updateOrderStatusDB(id: string, status: Order['status']): 
   }
   return mapRowToOrder(data);
 }
+
+export async function getOrderByCode(code: string): Promise<Order | null> {
+  if (!isSupabaseConfigured) return null;
+  const cleanCode = code.trim().toUpperCase();
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .ilike('code', cleanCode)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+  return mapRowToOrder(data);
+}

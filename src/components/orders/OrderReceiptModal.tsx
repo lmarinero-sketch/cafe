@@ -69,8 +69,8 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
 
   // Generate Clean HTML for Thermal 58mm Printing
   const generateThermal58mmHTML = (ord: Order) => {
-    const qrData = encodeURIComponent(`COMPROBANTE:${ord.code}:${ord.total}`);
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${qrData}`;
+    const publicTicketUrl = `${window.location.origin}/ticket/${ord.code}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(publicTicketUrl)}`;
 
     const itemsHtml = ord.items
       .map(
@@ -219,8 +219,8 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
 
   // Generate Clean HTML for Full A4 PDF / Printing
   const generateA4HTML = (ord: Order) => {
-    const qrData = encodeURIComponent(`COMPROBANTE:${ord.code}:${ord.total}`);
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${qrData}`;
+    const publicTicketUrl = `${window.location.origin}/ticket/${ord.code}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(publicTicketUrl)}`;
 
     const itemsRows = ord.items
       .map(
@@ -444,8 +444,9 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
   };
 
   const handleShareWhatsApp = () => {
+    const publicTicketUrl = `${window.location.origin}/ticket/${order.code}`;
     const itemsList = order.items.map((i) => `• ${i.quantity}x ${i.productName} (${formatCurrency(i.unitPrice * i.quantity)})`).join('\n');
-    const msg = `🧾 *COMPROBANTE DE CONSUMO #${order.code}*\n*Café Magnolia - Hilos de Amor*\n_(Documento no válido como factura)_\n\n📅 Fecha: ${orderDateStr} ${orderTimeStr}\n👤 Cliente: ${order.customerName}\n📍 Modalidad: ${order.tableName || order.type.toUpperCase()}\n\n*Detalle del Pedido:*\n${itemsList}\n\n💰 *TOTAL ABONADO:* ${formatCurrency(order.total)}\n💳 *Medio de Pago:* ${getPaymentMethodLabel(order.paymentMethod)}\n⭐ *Puntos Club Ganados:* +${pointsEarned} pts\n\n¡Muchas gracias por tu visita! ☕✨`;
+    const msg = `🧾 *COMPROBANTE DE CONSUMO #${order.code}*\n*Café Magnolia - Hilos de Amor*\n_(Documento no válido como factura)_\n\n📅 Fecha: ${orderDateStr} ${orderTimeStr}\n👤 Cliente: ${order.customerName}\n📍 Modalidad: ${order.tableName || order.type.toUpperCase()}\n\n*Detalle del Pedido:*\n${itemsList}\n\n💰 *TOTAL ABONADO:* ${formatCurrency(order.total)}\n💳 *Medio de Pago:* ${getPaymentMethodLabel(order.paymentMethod)}\n⭐ *Puntos Club Ganados:* +${pointsEarned} pts\n\n🔗 *Ver Comprobante Digital:* ${publicTicketUrl}\n\n¡Muchas gracias por tu visita! ☕✨`;
     const cleanPhone = (order.customerPhone || '').replace(/\D/g, '');
     const url = cleanPhone
       ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`
@@ -587,12 +588,20 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                 <div className="w-16 h-16 bg-white p-1 border border-gray-300 mx-auto rounded">
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(
-                      `COMPROBANTE:${order.code}:${order.total}`
+                      `${window.location.origin}/ticket/${order.code}`
                     )}`}
                     alt="QR"
                     className="w-full h-full object-contain"
                   />
                 </div>
+                <a
+                  href={`/ticket/${order.code}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-bold text-[9px] text-amber-800 hover:text-amber-950 underline block"
+                >
+                  Tocar o escanear para ver Ticket Digital ↗
+                </a>
                 <p className="font-bold text-[10px]">¡GRACIAS POR TU VISITA!</p>
                 <p className="text-[8px] text-gray-500">Comprobante de consumo interno sin validez fiscal</p>
               </div>
@@ -680,10 +689,10 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
               {/* Totals Breakdown */}
               <div className="flex justify-between items-end pt-2 border-t border-gray-200">
                 <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 bg-white p-1 border border-gray-300 rounded-lg">
+                  <div className="w-14 h-14 bg-white p-1 border border-gray-300 rounded-lg shrink-0">
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(
-                        `COMPROBANTE:${order.code}:${order.total}`
+                        `${window.location.origin}/ticket/${order.code}`
                       )}`}
                       alt="QR"
                       className="w-full h-full object-contain"
@@ -691,6 +700,14 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                   </div>
                   <div className="text-[11px] text-gray-600">
                     <span className="font-bold text-gray-900 block">Comprobante Digital Verificado</span>
+                    <a
+                      href={`/ticket/${order.code}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-amber-800 font-bold hover:underline text-[10px] block"
+                    >
+                      Abrir Ticket Digital en el Celular ↗
+                    </a>
                     ⭐ Sumaste <strong>+{pointsEarned} Puntos</strong> en el Club.
                   </div>
                 </div>

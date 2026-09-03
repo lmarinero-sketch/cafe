@@ -30,6 +30,7 @@ import { ManualsPage } from '../pages/ManualsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { WebsiteEditorPage } from '../pages/WebsiteEditorPage';
 import { AuditPage } from '../pages/AuditPage';
+import { PublicTicketPage } from '../pages/PublicTicketPage';
 
 export const router = createBrowserRouter([
   // ============================================================
@@ -54,6 +55,14 @@ export const router = createBrowserRouter([
   {
     path: '/sitio-promocional',
     element: <PromotionalWebsitePage />,
+  },
+  {
+    path: '/ticket/:code',
+    element: <PublicTicketPage />,
+  },
+  {
+    path: '/comprobante/:code',
+    element: <PublicTicketPage />,
   },
 
   // ============================================================
