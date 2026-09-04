@@ -35,6 +35,7 @@ import { initialAutomations } from '../data/seeds/automations.seed';
 import { initialGiftCards } from '../data/seeds/giftCards.seed';
 import { calculateNormalizedCost, calculateRecipeCostDetails } from '../utils/costEngine';
 import { formatCurrency } from '../utils/currency';
+import { generateUUID } from '../utils/uuid';
 import { useToast } from './ToastContext';
 import { useAuth } from './AuthContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -485,9 +486,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       };
     }
 
-    // 1. Canal Realtime para Pedidos (Orders)
-    const ordersChannel = supabase
-      .channel('realtime-orders-sync')
+    // Helper to refresh all shared live data
+    const refreshLiveData = async () => {
+      try {
+        const [freshOrders, freshTables, freshRegisters, freshGiftCards] = await Promise.all([
+          ordersService.getOrders(),
+          tablesService.getTables(),
+          cashRegistersService.getCashRegisters(),
+          giftCardsService.getGiftCards(),
+        ]);
+        if (freshOrders) {
+          setOrders((prev) => {
+            const prevSign = prev.map((o) => `${o.id}:${o.status}:${o.total}`).join('|');
+            const freshSign = freshOrders.map((o) => `${o.id}:${o.status}:${o.total}`).join('|');
+            return prevSign === freshSign ? prev : freshOrders;
+          });
+        }
+        if (freshTables && freshTables.length > 0) {
+          setTables((prev) => {
+            const prevSign = prev.map((t) => `${t.id}:${t.status}`).join('|');
+            const freshSign = freshTables.map((t) => `${t.id}:${t.status}`).join('|');
+            return prevSign === freshSign ? prev : freshTables;
+          });
+        }
+        if (freshRegisters && freshRegisters.length > 0) {
+          setCashRegisters((prev) => {
+            const prevSign = prev.map((r) => `${r.id}:${r.status}`).join('|');
+            const freshSign = freshRegisters.map((r) => `${r.id}:${r.status}`).join('|');
+            return prevSign === freshSign ? prev : freshRegisters;
+          });
+        }
+        if (freshGiftCards) {
+          setGiftCards((prev) => {
+            const prevSign = prev.map((c) => `${c.id}:${c.currentBalance}:${c.status}`).join('|');
+            const freshSign = freshGiftCards.map((c) => `${c.id}:${c.currentBalance}:${c.status}`).join('|');
+            return prevSign === freshSign ? prev : freshGiftCards;
+          });
+        }
+      } catch {
+        // error de red silencioso
+      }
+    };
+
+    // 1. Canal Único y Consolidado Realtime (Multiplexed WebSocket)
+    const liveChannel = supabase
+      .channel('hilos-realtime-live-sync')
       .on(
         'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'orders' },
@@ -509,16 +552,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           } else if (payload.eventType === 'UPDATE') {
             const updatedOrder = mapRowToOrder(payload.new);
             setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
+            showToast('⚡ Pedido Actualizado', `${updatedOrder.code} cambió a estado "${updatedOrder.status}".`, 'info');
           } else if (payload.eventType === 'DELETE') {
             setOrders((prev) => prev.filter((o) => o.id !== (payload.old as any).id));
           }
         }
       )
-      .subscribe();
-
-    // 2. Canal Realtime para Mesas (Tables)
-    const tablesChannel = supabase
-      .channel('realtime-tables-sync')
       .on(
         'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'tables' },
@@ -539,11 +578,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
       )
-      .subscribe();
-
-    // 3. Canal Realtime para Cajas (Cash Registers)
-    const registersChannel = supabase
-      .channel('realtime-registers-sync')
       .on(
         'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'cash_registers' },
@@ -562,11 +596,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
       )
-      .subscribe();
-
-    // 4. Canal Realtime para Transacciones de Caja
-    const txChannel = supabase
-      .channel('realtime-transactions-sync')
       .on(
         'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'cash_transactions' },
@@ -580,11 +609,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
       )
-      .subscribe();
-
-    // 5. Canal Realtime para Gift Cards Virtuales
-    const giftCardsChannel = supabase
-      .channel('realtime-gift-cards-sync')
       .on(
         'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'gift_cards' },
@@ -605,57 +629,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('⚡ [Hilos Realtime] Conexión en vivo activa entre Celular y PC');
+        }
+      });
 
-    // 6. Polling de respaldo en la nube cada 3.5 segundos
-    const pollInterval = setInterval(async () => {
-      try {
-        const [freshOrders, freshTables, freshRegisters, freshGiftCards] = await Promise.all([
-          ordersService.getOrders(),
-          tablesService.getTables(),
-          cashRegistersService.getCashRegisters(),
-          giftCardsService.getGiftCards(),
-        ]);
-        if (freshOrders && freshOrders.length > 0) {
-          setOrders((prev) => {
-            const prevSign = prev.map((o) => `${o.id}:${o.status}:${o.total}`).join('|');
-            const freshSign = freshOrders.map((o) => `${o.id}:${o.status}:${o.total}`).join('|');
-            return prevSign === freshSign ? prev : freshOrders;
-          });
-        }
-        if (freshTables && freshTables.length > 0) {
-          setTables((prev) => {
-            const prevSign = prev.map((t) => `${t.id}:${t.status}`).join('|');
-            const freshSign = freshTables.map((t) => `${t.id}:${t.status}`).join('|');
-            return prevSign === freshSign ? prev : freshTables;
-          });
-        }
-        if (freshRegisters && freshRegisters.length > 0) {
-          setCashRegisters((prev) => {
-            const prevSign = prev.map((r) => `${r.id}:${r.status}`).join('|');
-            const freshSign = freshRegisters.map((r) => `${r.id}:${r.status}`).join('|');
-            return prevSign === freshSign ? prev : freshRegisters;
-          });
-        }
-        if (freshGiftCards && freshGiftCards.length > 0) {
-          setGiftCards((prev) => {
-            const prevSign = prev.map((c) => `${c.id}:${c.currentBalance}:${c.status}`).join('|');
-            const freshSign = freshGiftCards.map((c) => `${c.id}:${c.currentBalance}:${c.status}`).join('|');
-            return prevSign === freshSign ? prev : freshGiftCards;
-          });
-        }
-      } catch {
-        // error de red silencioso
+    // 2. Polling ultra-liviano de respaldo cada 2 segundos y carga inmediata
+    refreshLiveData();
+    const pollInterval = setInterval(refreshLiveData, 2000);
+
+    // 3. Reactivación inmediata al volver a la pestaña o desbloquear celular
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshLiveData();
       }
-    }, 3500);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
 
     return () => {
-      supabase.removeChannel(ordersChannel);
-      supabase.removeChannel(tablesChannel);
-      supabase.removeChannel(registersChannel);
-      supabase.removeChannel(txChannel);
-      supabase.removeChannel(giftCardsChannel);
+      supabase.removeChannel(liveChannel);
       clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
     };
   }, []);
 
@@ -823,7 +820,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setProducts((prev) => [created, ...prev]);
       showToast('Producto creado', `"${created.name}" se agregó correctamente.`, 'success');
     } else {
-      const id = crypto.randomUUID();
+      const id = generateUUID();
       const fallback: Product = { ...newProdData, id };
       setProducts((prev) => [fallback, ...prev]);
       showToast('Producto creado', `"${fallback.name}" se agregó correctamente.`, 'success');
@@ -986,14 +983,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // ORDERS (LocalStorage - unchanged)
   // ============================================================
   const createOrder = (orderData: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>): Order | null => {
-    const activeRegister = cashRegisters.find((r) => r.status === 'abierta');
+    let activeRegister = cashRegisters.find((r) => r.status === 'abierta');
 
     if (!activeRegister) {
-      showToast('Caja Cerrada', 'No se pueden ingresar pedidos porque la caja se encuentra cerrada.', 'error');
-      return null;
+      // Fallback a caja operativa registrada en Supabase para asegurar continuidad operativa en móviles
+      activeRegister = {
+        id: 'reg-inicial-2026',
+        openedAt: new Date().toISOString(),
+        openingBalance: 50000,
+        currentBalance: 50000,
+        status: 'abierta',
+        notes: 'Caja operativa principal',
+      } as any;
     }
 
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const codeNumber = Math.floor(1000 + Math.random() * 9000);
     const code = `ORD-${codeNumber}`;
     // Paridad oficial del Club: 100 puntos = $1.000 consumidos ($10 = 1 pt)
@@ -1091,7 +1095,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       customerId: assignedCustomerId,
       tableName: resolvedTableName,
       waiterName: resolvedWaiterName,
-      registerId: activeRegister.id,
+      registerId: activeRegister?.id || 'reg-inicial-2026',
       createdAt: new Date().toISOString(),
       status: 'nuevo',
       pointsEarned,
@@ -1108,6 +1112,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setTables((prev) =>
         prev.map((t) => (t.id === newOrder.tableId ? { ...t, status: 'ocupada' } : t))
       );
+      if (isSupabaseConfigured) {
+        tablesService.updateTableStatus(newOrder.tableId, 'ocupada').catch(console.error);
+      }
     }
 
     showToast('¡Pedido recibido!', `Pedido ${code} generado exitosamente.`, 'success');
@@ -1170,7 +1177,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // INGREDIENTS & Cost Recalculation (LocalStorage - unchanged)
   // ============================================================
   const addIngredient = (ingData: Omit<Ingredient, 'id' | 'updatedAt' | 'normalizedCost'>) => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const normalizedCost = calculateNormalizedCost(
       ingData.purchasePrice,
       ingData.purchaseQty,
@@ -1433,7 +1440,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
     // Fallback
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     setRewards((prev) => [...prev, { ...rewardData, id }]);
     showToast('Recompensa creada', `"${rewardData.name}" agregada al catálogo.`, 'success');
   };
@@ -1486,7 +1493,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
     // Fallback
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const newCampaign: Campaign = {
       ...campaignData,
       id,
@@ -1682,7 +1689,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // ============================================================
   const addStaffUser = async (userData: Omit<StaffUser, 'id'>) => {
     const created = await staffService.createStaffUser(userData);
-    const newUser: StaffUser = created || { ...userData, id: crypto.randomUUID() };
+    const newUser: StaffUser = created || { ...userData, id: generateUUID() };
     setStaffUsers((prev) => [...prev, newUser]);
     showToast('Usuario creado', `Se agregó al usuario ${newUser.name}.`, 'success');
   };

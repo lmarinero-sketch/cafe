@@ -18,6 +18,8 @@ export function mapRowToOrder(row: any): Order {
     customerName: row.customer_name || 'Cliente de Salón',
     customerPhone: row.customer_phone || '',
     address: row.address || undefined,
+    addressRef: row.address_ref || undefined,
+    notes: row.notes || '',
     waiterName: row.waiter_name || undefined,
     registerId: row.register_id || undefined,
     createdAt: row.created_at,
@@ -47,6 +49,7 @@ function mapOrderToRow(order: Partial<Order>): Record<string, any> {
   if (order.customerPhone !== undefined) row.customer_phone = order.customerPhone;
   if (order.address !== undefined) row.address = order.address;
   if (order.addressRef !== undefined) row.address_ref = order.addressRef;
+  if (order.notes !== undefined) row.notes = order.notes;
   if (order.waiterName !== undefined) row.waiter_name = order.waiterName;
   if (order.registerId !== undefined) row.register_id = order.registerId;
   if (order.pointsEarned !== undefined) row.points_earned = order.pointsEarned;

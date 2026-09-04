@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Store, MapPin, Phone, Clock, Plus, Trash2, Edit3, Save, X, 
-  ShieldCheck, Instagram, MessageCircle, CheckCircle2, Tag, Sparkles, User, Users
+  ShieldCheck, Instagram, MessageCircle, CheckCircle2, Tag, Sparkles, User, Users, Receipt
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth, getBonificationDaysRemaining, getBonificationProgress } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Branch, StaffUser } from '../types';
 import { formatCurrency } from '../utils/currency';
+import { DeveloperInvoicesTab } from '../components/settings/DeveloperInvoicesTab';
 
 const EMPTY_BRANCH: Omit<Branch, 'id' | 'createdAt'> = {
   name: '', address: '', zone: '', phone: '', whatsapp: '', instagram: '',
@@ -131,6 +133,17 @@ export const SettingsPage: React.FC = () => {
     setStaffDeleteConfirm(null);
   };
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab');
+  const activeTab: 'general' | 'sucursales' | 'personal' | 'facturas' = 
+    rawTab === 'sucursales' || rawTab === 'personal' || rawTab === 'facturas' 
+      ? rawTab 
+      : 'general';
+
+  const handleTabChange = (tab: 'general' | 'sucursales' | 'personal' | 'facturas') => {
+    setSearchParams(tab === 'general' ? {} : { tab });
+  };
+
   const isEditing = editingId !== null || showAddForm;
   const isEditingStaff = editingStaffId !== null || showStaffForm;
 
@@ -141,7 +154,7 @@ export const SettingsPage: React.FC = () => {
         <div>
           <h2 className="text-2xl font-extrabold text-brand-dark">Configuración General</h2>
           <p className="text-xs text-brand-brown/80 mt-1">
-            Gestión de sucursales, datos del comercio y plan contratado.
+            Gestión de plan, comercio, sucursales, equipo y facturas de desarrollo.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -151,108 +164,186 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Tabs Navigation */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-brand-secondary/70 pb-3">
+        <button
+          onClick={() => handleTabChange('general')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'general'
+              ? 'bg-brand-brown text-brand-card shadow-soft'
+              : 'bg-brand-card text-brand-brown hover:bg-brand-secondary/40 border border-brand-secondary'
+          }`}
+        >
+          <Store className="w-3.5 h-3.5" /> General y Plan
+        </button>
+
+        <button
+          onClick={() => handleTabChange('sucursales')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'sucursales'
+              ? 'bg-brand-brown text-brand-card shadow-soft'
+              : 'bg-brand-card text-brand-brown hover:bg-brand-secondary/40 border border-brand-secondary'
+          }`}
+        >
+          <MapPin className="w-3.5 h-3.5" /> Sucursales
+          <span
+            className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+              activeTab === 'sucursales'
+                ? 'bg-white/20 text-white'
+                : 'bg-brand-secondary text-brand-dark'
+            }`}
+          >
+            {branches.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('personal')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'personal'
+              ? 'bg-brand-brown text-brand-card shadow-soft'
+              : 'bg-brand-card text-brand-brown hover:bg-brand-secondary/40 border border-brand-secondary'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" /> Personal y Roles
+          <span
+            className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+              activeTab === 'personal'
+                ? 'bg-white/20 text-white'
+                : 'bg-brand-secondary text-brand-dark'
+            }`}
+          >
+            {staffUsers.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('facturas')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'facturas'
+              ? 'bg-blue-950 text-white shadow-soft'
+              : 'bg-brand-card text-blue-950 hover:bg-blue-50 border border-blue-200'
+          }`}
+        >
+          <Receipt className="w-3.5 h-3.5" /> Mis Facturas
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+              activeTab === 'facturas'
+                ? 'bg-blue-800 text-blue-100'
+                : 'bg-blue-100 text-blue-900 border border-blue-200'
+            }`}
+          >
+            Grow Labs
+          </span>
+        </button>
+      </div>
+
       <div className="max-w-4xl space-y-6">
         {/* ============================================================ */}
-        {/* PLAN CONTRATADO */}
+        {/* TAB 1: GENERAL & PLAN */}
         {/* ============================================================ */}
-        {sub && (
-          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4">
-            <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-700" /> Plan Contratado
-            </h3>
+        {activeTab === 'general' && (
+          <div className="space-y-6 animate-fade-in">
+            {/* PLAN CONTRATADO */}
+            {sub && (
+              <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4">
+                <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-700" /> Plan Contratado
+                </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="bg-brand-bg p-3 rounded-xl border border-brand-secondary">
-                <span className="text-[10px] font-bold text-brand-brown uppercase">Plan Activo</span>
-                <p className="text-sm font-extrabold text-brand-dark">{sub.planLabel}</p>
-                {sub.isBonified && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 mt-1 inline-block">
-                    ✨ Bonificado
-                  </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-brand-bg p-3 rounded-xl border border-brand-secondary">
+                    <span className="text-[10px] font-bold text-brand-brown uppercase">Plan Activo</span>
+                    <p className="text-sm font-extrabold text-brand-dark">{sub.planLabel}</p>
+                    {sub.isBonified && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 mt-1 inline-block">
+                        ✨ Bonificado
+                      </span>
+                    )}
+                  </div>
+                  <div className="bg-brand-bg p-3 rounded-xl border border-brand-secondary">
+                    <span className="text-[10px] font-bold text-brand-brown uppercase">Pagás</span>
+                    <p className="text-sm font-extrabold text-brand-dark">{sub.payingPlanLabel}</p>
+                    <p className="text-[10px] text-brand-brown font-mono">{formatCurrency(sub.monthlyPrice)}/mes</p>
+                  </div>
+                  <div className="bg-brand-bg p-3 rounded-xl border border-brand-secondary">
+                    <span className="text-[10px] font-bold text-brand-brown uppercase">Bonificación</span>
+                    <p className="text-sm font-extrabold text-brand-dark">{daysRemaining} días restantes</p>
+                    <div className="w-full h-1.5 bg-brand-secondary/50 rounded-full overflow-hidden mt-1">
+                      <div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${100 - progress}%` }} />
+                    </div>
+                    <p className="text-[10px] text-brand-brown mt-0.5">Vence: {sub.endDate.split('-').reverse().join('/')}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* DATOS DEL COMERCIO */}
+            <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
+                  <Store className="w-4 h-4 text-brand-brown" /> Datos del Comercio
+                </h3>
+                {isEditingBusiness ? (
+                  <button onClick={handleSaveBusiness} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-brand-brown text-brand-card hover:bg-brand-dark flex items-center gap-1.5">
+                    <Save className="w-3.5 h-3.5" /> Guardar
+                  </button>
+                ) : (
+                  <button onClick={() => setIsEditingBusiness(true)} className="text-xs font-bold px-3 py-1.5 rounded-lg border border-brand-secondary text-brand-dark hover:bg-brand-secondary/40 flex items-center gap-1.5">
+                    <Edit3 className="w-3.5 h-3.5" /> Editar
+                  </button>
                 )}
               </div>
-              <div className="bg-brand-bg p-3 rounded-xl border border-brand-secondary">
-                <span className="text-[10px] font-bold text-brand-brown uppercase">Pagás</span>
-                <p className="text-sm font-extrabold text-brand-dark">{sub.payingPlanLabel}</p>
-                <p className="text-[10px] text-brand-brown font-mono">{formatCurrency(sub.monthlyPrice)}/mes</p>
-              </div>
-              <div className="bg-brand-bg p-3 rounded-xl border border-brand-secondary">
-                <span className="text-[10px] font-bold text-brand-brown uppercase">Bonificación</span>
-                <p className="text-sm font-extrabold text-brand-dark">{daysRemaining} días restantes</p>
-                <div className="w-full h-1.5 bg-brand-secondary/50 rounded-full overflow-hidden mt-1">
-                  <div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${100 - progress}%` }} />
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block font-bold text-brand-dark mb-1">Nombre Comercial</label>
+                  <input
+                    type="text" disabled={!isEditingBusiness}
+                    value={businessData.name}
+                    onChange={e => setBusinessData({ ...businessData, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold disabled:text-brand-brown/70"
+                  />
                 </div>
-                <p className="text-[10px] text-brand-brown mt-0.5">Vence: {sub.endDate.split('-').reverse().join('/')}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-bold text-brand-dark mb-1">Moneda del Sistema</label>
+                    <input type="text" disabled={!isEditingBusiness} value={businessData.currency}
+                      onChange={e => setBusinessData({ ...businessData, currency: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold disabled:text-brand-brown/70"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-brand-dark mb-1">Email de contacto</label>
+                    <input type="text" disabled={!isEditingBusiness} value={businessData.email}
+                      onChange={e => setBusinessData({ ...businessData, email: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold disabled:text-brand-brown/70"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {/* ============================================================ */}
-        {/* DATOS DEL COMERCIO */}
+        {/* TAB 2: PERSONAL Y ROLES */}
         {/* ============================================================ */}
-        <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
-              <Store className="w-4 h-4 text-brand-brown" /> Datos del Comercio
-            </h3>
-            {isEditingBusiness ? (
-              <button onClick={handleSaveBusiness} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-brand-brown text-brand-card hover:bg-brand-dark flex items-center gap-1.5">
-                <Save className="w-3.5 h-3.5" /> Guardar
-              </button>
-            ) : (
-              <button onClick={() => setIsEditingBusiness(true)} className="text-xs font-bold px-3 py-1.5 rounded-lg border border-brand-secondary text-brand-dark hover:bg-brand-secondary/40 flex items-center gap-1.5">
-                <Edit3 className="w-3.5 h-3.5" /> Editar
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <div>
-              <label className="block font-bold text-brand-dark mb-1">Nombre Comercial</label>
-              <input
-                type="text" disabled={!isEditingBusiness}
-                value={businessData.name}
-                onChange={e => setBusinessData({ ...businessData, name: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold disabled:text-brand-brown/70"
-              />
+        {activeTab === 'personal' && (
+          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
+                <Users className="w-4 h-4 text-brand-brown" /> Personal y Roles ({staffUsers.length})
+              </h3>
+              {!isEditingStaff && (
+                <button
+                  onClick={() => { setShowStaffForm(true); setStaffForm({ name: '', role: 'cajero', email: '', status: 'active' }); setEditingStaffId(null); }}
+                  className="py-1.5 px-3 rounded-lg bg-brand-brown text-brand-card font-bold text-xs flex items-center gap-1.5 hover:bg-brand-dark transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Agregar Usuario
+                </button>
+              )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <label className="block font-bold text-brand-dark mb-1">Moneda del Sistema</label>
-                <input type="text" disabled={!isEditingBusiness} value={businessData.currency}
-                  onChange={e => setBusinessData({ ...businessData, currency: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold disabled:text-brand-brown/70"
-                />
-              </div>
-              <div>
-                <label className="block font-bold text-brand-dark mb-1">Email de contacto</label>
-                <input type="text" disabled={!isEditingBusiness} value={businessData.email}
-                  onChange={e => setBusinessData({ ...businessData, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold disabled:text-brand-brown/70"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ============================================================ */}
-        {/* PERSONAL Y ROLES */}
-        {/* ============================================================ */}
-        <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
-              <Users className="w-4 h-4 text-brand-brown" /> Personal y Roles ({staffUsers.length})
-            </h3>
-            {!isEditingStaff && (
-              <button
-                onClick={() => { setShowStaffForm(true); setStaffForm({ name: '', role: 'cajero', email: '', status: 'active' }); setEditingStaffId(null); }}
-                className="py-1.5 px-3 rounded-lg bg-brand-brown text-brand-card font-bold text-xs flex items-center gap-1.5 hover:bg-brand-dark transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" /> Agregar Usuario
-              </button>
-            )}
-          </div>
 
           {showStaffForm && (
             <div className="bg-brand-bg rounded-xl border border-brand-secondary p-5 space-y-4 animate-fade-in">
@@ -365,16 +456,18 @@ export const SettingsPage: React.FC = () => {
             </div>
           )}
         </div>
+      )}
 
-        {/* ============================================================ */}
-        {/* SUCURSALES CRUD */}
-        {/* ============================================================ */}
-        <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-brand-brown" /> Sucursales ({branches.length})
-            </h3>
-            {!isEditing && (
+      {/* ============================================================ */}
+      {/* TAB 3: SUCURSALES CRUD */}
+      {/* ============================================================ */}
+      {activeTab === 'sucursales' && (
+          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 shadow-soft space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-brand-dark flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-brand-brown" /> Sucursales ({branches.length})
+              </h3>
+              {!isEditing && (
               <button
                 onClick={() => { setShowAddForm(true); setForm(EMPTY_BRANCH); }}
                 className="py-1.5 px-3 rounded-lg bg-brand-brown text-brand-card font-bold text-xs flex items-center gap-1.5 hover:bg-brand-dark transition-colors"
@@ -632,6 +725,14 @@ export const SettingsPage: React.FC = () => {
             </>
           )}
         </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* TAB 4: MIS FACTURAS (GROW LABS) */}
+      {/* ============================================================ */}
+      {activeTab === 'facturas' && (
+        <DeveloperInvoicesTab />
+      )}
       </div>
     </div>
   );

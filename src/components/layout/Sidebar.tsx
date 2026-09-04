@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   History,
   Gift,
+  Receipt,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { PlanType } from '../../types';
@@ -104,7 +105,8 @@ export const Sidebar: React.FC = () => {
     {
       title: 'Sistema & Personal',
       items: [
-        { name: 'Usuarios y Equipo', path: '/configuracion', icon: <Users className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
+        { name: 'Usuarios y Equipo', path: '/configuracion?tab=personal', icon: <Users className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
+        { name: 'Mis Facturas', path: '/configuracion?tab=facturas', icon: <Receipt className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
         { name: 'Auditoría y Actividad', path: '/auditoria', icon: <ShieldCheck className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
         { name: 'Manuales', path: '/manuales', icon: <BookOpen className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
         { name: 'Configuración', path: '/configuracion', icon: <Settings className="w-4 h-4" />, requiredPlan: 'esencial', allowedRoles: ['admin'] },
@@ -221,7 +223,10 @@ export const Sidebar: React.FC = () => {
 
                 {sec.items.map((item) => {
                   const locked = isPlanLocked(item.requiredPlan);
-                  const isActive = location.pathname === item.path;
+                  const [itemBase, itemQuery] = item.path.split('?');
+                  const isActive = itemQuery
+                    ? location.pathname === itemBase && location.search.includes(itemQuery)
+                    : location.pathname === itemBase && (!location.search || location.search === '');
                   return (
                     <NavLink
                       key={item.name + item.path}

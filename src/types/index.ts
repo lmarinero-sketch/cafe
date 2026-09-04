@@ -119,6 +119,7 @@ export interface Order {
   customerPhone: string;
   address?: string;
   addressRef?: string;
+  notes?: string;
   paymentMethod: PaymentMethod;
   customerId?: string;
   pointsEarned?: number;
@@ -408,3 +409,28 @@ export interface GiftCard {
   usageHistory: GiftCardUsage[];
 }
 
+// ============================================================
+// FACTURAS DEL EQUIPO DE DESARROLLO (MIS FACTURAS)
+// ============================================================
+
+export type InvoiceStatus = 'paid' | 'pending' | 'overdue';
+export type InvoiceCategory = 'abono_mensual' | 'desarrollo' | 'soporte' | 'infraestructura' | 'otro';
+
+export interface DeveloperInvoice {
+  id: string;
+  invoiceNumber: string; // ej. "FAC-2026-001" o "B-0001-00000042"
+  title: string; // ej. "Abono Mensual Plan Gestión - Marzo 2026"
+  category: InvoiceCategory;
+  amount: number;
+  issueDate: string; // "YYYY-MM-DD"
+  dueDate?: string; // "YYYY-MM-DD"
+  status: InvoiceStatus;
+  fileUrl?: string; // URL pública o base64 data URI del archivo PDF / Imagen
+  fileName?: string;
+  fileType?: 'pdf' | 'image';
+  notes?: string;
+  paidAt?: string;
+  uploadedBy?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
