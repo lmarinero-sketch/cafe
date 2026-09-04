@@ -26,6 +26,7 @@ export function mapRowToOrder(row: any): Order {
     pointsEarned: row.points_earned || 0,
     tipAmount: Number(row.tip_amount) || 0,
     tipPercentage: Number(row.tip_percentage) || 0,
+    tipPaymentMethod: row.tip_payment_method || undefined,
     tipRegisteredBy: row.tip_registered_by || undefined,
     tipRegisteredAt: row.tip_registered_at || undefined,
   };
@@ -55,6 +56,7 @@ function mapOrderToRow(order: Partial<Order>): Record<string, any> {
   if (order.pointsEarned !== undefined) row.points_earned = order.pointsEarned;
   if (order.tipAmount !== undefined) row.tip_amount = order.tipAmount;
   if (order.tipPercentage !== undefined) row.tip_percentage = order.tipPercentage;
+  if (order.tipPaymentMethod !== undefined) row.tip_payment_method = order.tipPaymentMethod;
   if (order.tipRegisteredBy !== undefined) row.tip_registered_by = order.tipRegisteredBy;
   if (order.tipRegisteredAt !== undefined) row.tip_registered_at = order.tipRegisteredAt;
   return row;
@@ -120,19 +122,26 @@ export async function updateOrderTipDB(
   orderId: string,
   tipAmount: number,
   tipPercentage: number,
+  tipPaymentMethod: string | undefined,
   registeredBy: string
 ): Promise<Order | null> {
   if (!isSupabaseConfigured) return null;
   const now = new Date().toISOString();
+  
+  const updatePayload: Record<string, any> = {
+    tip_amount: tipAmount,
+    tip_percentage: tipPercentage,
+    tip_registered_by: registeredBy,
+    tip_registered_at: now,
+    updated_at: now,
+  };
+  if (tipPaymentMethod) {
+    updatePayload.tip_payment_method = tipPaymentMethod;
+  }
+
   const { data, error } = await supabase
     .from('orders')
-    .update({
-      tip_amount: tipAmount,
-      tip_percentage: tipPercentage,
-      tip_registered_by: registeredBy,
-      tip_registered_at: now,
-      updated_at: now,
-    })
+    .update(updatePayload)
     .eq('id', orderId)
     .select()
     .single();

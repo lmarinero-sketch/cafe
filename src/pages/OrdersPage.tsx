@@ -41,6 +41,7 @@ export const OrdersPage: React.FC = () => {
   const [cancelingOrderConfirm, setCancelingOrderConfirm] = useState<Order | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('efectivo');
   const [tipMode, setTipMode] = useState<'none' | '10' | '15' | 'custom'>('10');
+  const [tipPaymentMethod, setTipPaymentMethod] = useState<PaymentMethod | 'mismo_medio'>('mismo_medio');
   const [customTipAmount, setCustomTipAmount] = useState<number>(0);
   const [giftCardCodeInput, setGiftCardCodeInput] = useState<string>('');
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
@@ -143,18 +144,16 @@ export const OrdersPage: React.FC = () => {
       }
     }
 
-    const isCashier = user?.role === 'cajero' || user?.role === 'admin' || !user?.role;
     const suggested10 = Math.round(chargingOrder.total * 0.1);
     const suggested15 = Math.round(chargingOrder.total * 0.15);
-    const tipAmount = isCashier
-      ? tipMode === '10'
+    const tipAmount =
+      tipMode === '10'
         ? suggested10
         : tipMode === '15'
         ? suggested15
         : tipMode === 'custom'
         ? customTipAmount
-        : 0
-      : 0;
+        : 0;
 
     const tipPercentage =
       tipAmount > 0 && chargingOrder.total > 0
@@ -165,22 +164,34 @@ export const OrdersPage: React.FC = () => {
           : Math.round((tipAmount / chargingOrder.total) * 100)
         : 0;
 
-    const tipRegisteredBy = user ? `${user.name} (${user.role || 'cajero'})` : 'Cajero de Turno';
-    const grandTotal = chargingOrder.total + tipAmount;
+    const tipRegisteredBy = user ? `${user.name} (${user.role || 'mozo'})` : 'Usuario de Turno';
+    const finalTipPaymentMethod = tipPaymentMethod === 'mismo_medio' ? selectedPayment : tipPaymentMethod;
 
     // Impact caja
     addTransaction({
       registerId: activeRegister.id,
       orderId: chargingOrder.id,
       type: 'ingreso',
-      amount: grandTotal,
+      amount: chargingOrder.total,
       paymentMethod: selectedPayment,
       description:
         selectedPayment === 'giftcard'
-          ? `Cobro Pedido ${chargingOrder.code} con Gift Card ${giftCardCodeInput.toUpperCase()}${tipAmount > 0 ? ` [Propina: ${formatCurrency(tipAmount)}]` : ''}`
-          : `Cobro Pedido ${chargingOrder.code}${tipAmount > 0 ? ` [Propina: ${formatCurrency(tipAmount)}]` : ''}`,
-      registeredBy: tipRegisteredBy,
+          ? `Cobro Pedido ${chargingOrder.code} con Gift Card ${giftCardCodeInput.toUpperCase()}`
+          : `Cobro Pedido ${chargingOrder.code}`,
+      registeredBy: user ? `${user.name} (${user.role || 'mozo'})` : 'Usuario de Turno',
     });
+
+    if (tipAmount > 0) {
+      addTransaction({
+        registerId: activeRegister.id,
+        orderId: chargingOrder.id,
+        type: 'ingreso',
+        amount: tipAmount,
+        paymentMethod: finalTipPaymentMethod,
+        description: `Propina del Pedido ${chargingOrder.code}`,
+        registeredBy: tipRegisteredBy,
+      });
+    }
 
     const orderPaid: Order = {
       ...chargingOrder,
@@ -188,13 +199,14 @@ export const OrdersPage: React.FC = () => {
       status: 'entregado',
       tipAmount,
       tipPercentage,
+      tipPaymentMethod: tipAmount > 0 ? finalTipPaymentMethod : undefined,
       tipRegisteredBy: tipAmount > 0 ? tipRegisteredBy : undefined,
       tipRegisteredAt: tipAmount > 0 ? new Date().toISOString() : undefined,
     };
 
     updateOrderStatus(chargingOrder.id, 'entregado');
     if (tipAmount > 0) {
-      updateOrderTip(chargingOrder.id, tipAmount, tipPercentage, tipRegisteredBy);
+      updateOrderTip(chargingOrder.id, tipAmount, tipPercentage, finalTipPaymentMethod, tipRegisteredBy);
     }
 
     setChargingOrder(null);
@@ -602,7 +614,6 @@ export const OrdersPage: React.FC = () => {
 
                 {/* ── PROPINA DEL SERVICIO (10% Sugerido) ── */}
                 {(() => {
-                  const isCashier = user?.role === 'cajero' || user?.role === 'admin' || !user?.role;
                   const suggested10 = Math.round(chargingOrder.total * 0.1);
                   const suggested15 = Math.round(chargingOrder.total * 0.15);
                   const currentTipValue =
@@ -624,17 +635,10 @@ export const OrdersPage: React.FC = () => {
                           </span>
                         </label>
                         <span className="text-[10px] text-amber-900 font-bold">
-                          {isCashier ? `Cajero: ${user?.name || 'En turno'}` : 'Solo Cajero'}
+                          Responsable: {user?.name || 'Mozo'}
                         </span>
                       </div>
 
-                      {!isCashier ? (
-                        <div className="bg-white/90 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-900 font-medium flex items-center gap-2">
-                          <span>🔒</span>
-                          <span>El registro de si hubo propina corresponde exclusivamente al Cajero al percibir el cobro.</span>
-                        </div>
-                      ) : (
-                        <>
                           <div className="grid grid-cols-4 gap-1.5 text-xs">
                             <button
                               type="button"
@@ -703,6 +707,22 @@ export const OrdersPage: React.FC = () => {
                             </div>
                           )}
 
+                          {currentTipValue > 0 && (
+                            <div className="pt-1 space-y-1">
+                              <label className="block text-[11px] font-bold text-amber-950">Medio de Pago de la Propina</label>
+                              <select
+                                value={tipPaymentMethod}
+                                onChange={(e) => setTipPaymentMethod(e.target.value as any)}
+                                className="w-full px-3 py-1.5 rounded-xl border border-amber-300 bg-white text-xs font-bold text-brand-dark focus:outline-none capitalize"
+                              >
+                                <option value="mismo_medio">Mismo que el Pedido</option>
+                                <option value="efectivo">💵 Efectivo</option>
+                                <option value="transferencia">🏦 Transferencia</option>
+                                <option value="mercadopago">📲 MercadoPago</option>
+                              </select>
+                            </div>
+                          )}
+
                           {/* Resumen Total con Propina */}
                           <div className="bg-white/90 p-2.5 rounded-xl border border-amber-200 text-xs space-y-1">
                             <div className="flex justify-between text-gray-600 text-[11px]">
@@ -722,8 +742,6 @@ export const OrdersPage: React.FC = () => {
                               </span>
                             </div>
                           </div>
-                        </>
-                      )}
                     </div>
                   );
                 })()}

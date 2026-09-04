@@ -21,6 +21,7 @@ import {
   GiftCard,
   GiftCardStatus,
   GiftCardUsage,
+  PaymentMethod,
 } from '../types';
 import { initialCategories } from '../data/seeds/categories.seed';
 import { initialManuals } from '../data/manuals/systemManuals';
@@ -115,7 +116,7 @@ interface AppContextType {
 
   createOrder: (order: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>) => Order | null;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  updateOrderTip: (orderId: string, tipAmount: number, tipPercentage: number, registeredBy: string) => Promise<boolean>;
+  updateOrderTip: (orderId: string, tipAmount: number, tipPercentage: number, tipPaymentMethod: PaymentMethod | undefined, registeredBy: string) => Promise<boolean>;
 
   addIngredient: (ingredient: Omit<Ingredient, 'id' | 'updatedAt' | 'normalizedCost'>) => void;
   updateIngredientPrice: (id: string, newPurchasePrice: number) => void;
@@ -1141,15 +1142,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     orderId: string,
     tipAmount: number,
     tipPercentage: number,
+    tipPaymentMethod: PaymentMethod | undefined,
     registeredBy: string
   ): Promise<boolean> => {
-    const currentRole = user?.role;
-    const canRegisterTip = currentRole === 'cajero' || currentRole === 'admin' || !currentRole;
-    if (!canRegisterTip) {
-      showToast('Permiso Denegado', 'Solo el perfil de Cajero o Administrador puede registrar propinas.', 'error');
-      return false;
-    }
-
     const now = new Date().toISOString();
     setOrders((prev) =>
       prev.map((ord) => {
@@ -1158,6 +1153,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             ...ord,
             tipAmount,
             tipPercentage,
+            tipPaymentMethod,
             tipRegisteredBy: registeredBy,
             tipRegisteredAt: now,
           };
@@ -1167,7 +1163,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
 
     if (isSupabaseConfigured) {
-      await ordersService.updateOrderTipDB(orderId, tipAmount, tipPercentage, registeredBy).catch(console.error);
+      await ordersService.updateOrderTipDB(orderId, tipAmount, tipPercentage, tipPaymentMethod, registeredBy).catch(console.error);
     }
 
     return true;

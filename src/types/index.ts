@@ -126,6 +126,7 @@ export interface Order {
   registerId?: string;
   tipAmount?: number;
   tipPercentage?: number;
+  tipPaymentMethod?: PaymentMethod;
   tipRegisteredBy?: string;
   tipRegisteredAt?: string;
 }
