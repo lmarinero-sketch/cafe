@@ -15,56 +15,83 @@ import {
 import { AuditLogEntry, UserActivityStats, ModuleUsage } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-// ============================================================
-// MOCK DATA (Contextualizado a Hilos de Amor - Cafetería)
-// ============================================================
-
-const MOCK_STATS = {
-  onlineNow: 3,
-  activeUsers: 8,
-  totalSessions: 142,
-  totalHours: '840h 15m'
-};
-
-const MOCK_USER_ACTIVITY: UserActivityStats[] = [
-  { userId: 'u1', userName: 'Lucas Marinero', totalSessions: 45, totalHours: '120h 30m', lastActive: 'hace 10 min', clicksLast24h: 34, hoursLast24h: '5h 20m' },
-  { userId: 'u2', userName: 'Victoria Giménez', totalSessions: 38, totalHours: '95h 15m', lastActive: 'hace 2h', clicksLast24h: 12, hoursLast24h: '3h 45m' },
-  { userId: 'u3', userName: 'Cajero Principal', totalSessions: 60, totalHours: '350h 40m', lastActive: 'hace 5 min', clicksLast24h: 120, hoursLast24h: '7h 10m' },
-  { userId: 'u4', userName: 'Mozo 1', totalSessions: 85, totalHours: '210h 05m', lastActive: 'hace 1h', clicksLast24h: 56, hoursLast24h: '6h 30m' },
-  { userId: 'u5', userName: 'Cocina Central', totalSessions: 110, totalHours: '480h 20m', lastActive: 'hace 15 min', clicksLast24h: 40, hoursLast24h: '8h 00m' },
-].sort((a, b) => parseInt(b.totalHours) - parseInt(a.totalHours)); // Simple sort mock
-
-const MOCK_MODULE_USAGE: ModuleUsage[] = [
-  { moduleName: 'Caja', hours: '450h', minutes: '12m', userCount: 3 },
-  { moduleName: 'Mesas', hours: '320h', minutes: '45m', userCount: 5 },
-  { moduleName: 'Pedidos', hours: '280h', minutes: '10m', userCount: 6 },
-  { moduleName: 'Menú Digital', hours: '150h', minutes: '05m', userCount: 2 },
-  { moduleName: 'Productos', hours: '85h', minutes: '30m', userCount: 2 },
-  { moduleName: 'Clientes', hours: '45h', minutes: '20m', userCount: 2 },
-  { moduleName: 'Recetas y Costos', hours: '30h', minutes: '15m', userCount: 1 },
-  { moduleName: 'Métricas', hours: '15h', minutes: '50m', userCount: 2 },
-];
-
-const MOCK_AUDIT_LOGS: AuditLogEntry[] = [
-  { id: '1', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(), userId: 'u1', userName: 'Lucas Marinero', module: 'actividad_usuarios', action: 'Visualizar', details: 'Acceso a panel de auditoría' },
-  { id: '2', timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(), userId: 'u3', userName: 'Cajero Principal', module: 'caja', action: 'Crear', details: 'Apertura de caja diaria' },
-  { id: '3', timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(), userId: 'u4', userName: 'Mozo 1', module: 'mesas', action: 'Actualizar', details: 'Estado de Mesa 04 cambiado a Ocupada' },
-  { id: '4', timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), userId: 'u2', userName: 'Victoria Giménez', module: 'productos', action: 'Actualizar', details: 'Precio actualizado: Tostón de Palta' },
-  { id: '5', timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(), userId: 'u5', userName: 'Cocina Central', module: 'pedidos', action: 'Clic', details: 'Pedido #482 marcado en preparación' },
-  { id: '6', timestamp: new Date(Date.now() - 1000 * 60 * 130).toISOString(), userId: 'u1', userName: 'Lucas Marinero', module: 'login', action: 'login', details: '{"dispositivo":"Chrome Windows","ip":"192.168.1.45"}' },
-  { id: '7', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), userId: 'u3', userName: 'Cajero Principal', module: 'caja', action: 'logout', details: 'Cierre de sesión' },
-];
-
-// ============================================================
-// COMPONENT
-// ============================================================
+import { useApp } from '../context/AppContext';
 
 export const AuditPage: React.FC = () => {
+  const { auditLogs } = useApp();
   const [activeTab, setActiveTab] = useState<'resumen' | 'log'>('resumen');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredLogs = MOCK_AUDIT_LOGS.filter(log => 
+  // Cálculos Dinámicos
+  const onlineNow = new Set(auditLogs.filter(log => new Date(log.timestamp).getTime() > Date.now() - 1000 * 60 * 15).map(log => log.userId)).size;
+  const activeUsers = new Set(auditLogs.filter(log => new Date(log.timestamp).getTime() > Date.now() - 1000 * 60 * 60 * 24).map(log => log.userId)).size;
+  const totalClicksLast24h = auditLogs.filter(log => log.action === 'Clic' && new Date(log.timestamp).getTime() > Date.now() - 1000 * 60 * 60 * 24).length;
+  const totalSessions = activeUsers; // Aproximación básica
+  const totalHoursStr = `${Math.floor(totalClicksLast24h / 10)}h 15m`; // Mock hasta tener un tracking de tiempo real
+
+  const DYNAMIC_STATS = {
+    onlineNow,
+    activeUsers,
+    totalSessions,
+    totalHours: totalHoursStr
+  };
+
+  const calculateUserActivity = (): UserActivityStats[] => {
+    const userMap = new Map<string, any>();
+    auditLogs.forEach(log => {
+      if (!userMap.has(log.userId)) {
+        userMap.set(log.userId, { userId: log.userId, userName: log.userName, clicks: 0, lastActive: 0 });
+      }
+      const data = userMap.get(log.userId);
+      data.clicks++;
+      const time = new Date(log.timestamp).getTime();
+      if (time > data.lastActive) data.lastActive = time;
+    });
+
+    return Array.from(userMap.values())
+      .sort((a, b) => b.clicks - a.clicks)
+      .map(data => {
+        const timeDiff = Math.round((Date.now() - data.lastActive) / 60000);
+        const lastActiveStr = timeDiff < 60 ? `hace ${timeDiff} min` : `hace ${Math.round(timeDiff / 60)}h`;
+        return {
+          userId: data.userId,
+          userName: data.userName,
+          totalSessions: Math.max(1, Math.floor(data.clicks / 10)),
+          totalHours: `${Math.max(1, Math.floor(data.clicks / 5))}h 00m`,
+          lastActive: lastActiveStr,
+          clicksLast24h: data.clicks,
+          hoursLast24h: `${Math.max(1, Math.floor(data.clicks / 10))}h 30m`
+        };
+      });
+  };
+
+  const calculateModuleUsage = (): ModuleUsage[] => {
+    const moduleMap = new Map<string, Set<string>>();
+    const moduleClicks = new Map<string, number>();
+
+    auditLogs.forEach(log => {
+      if (!moduleMap.has(log.module)) {
+        moduleMap.set(log.module, new Set());
+        moduleClicks.set(log.module, 0);
+      }
+      moduleMap.get(log.module)!.add(log.userId);
+      moduleClicks.set(log.module, moduleClicks.get(log.module)! + 1);
+    });
+
+    return Array.from(moduleClicks.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([moduleName, clicks]) => ({
+        moduleName,
+        hours: `${Math.floor(clicks / 5)}h`,
+        minutes: `${clicks % 60}m`,
+        userCount: moduleMap.get(moduleName)!.size
+      }));
+  };
+
+  const DYNAMIC_USER_ACTIVITY = calculateUserActivity();
+  const DYNAMIC_MODULE_USAGE = calculateModuleUsage();
+
+  const filteredLogs = auditLogs.filter(log => 
     log.userName.toLowerCase().includes(searchTerm.toLowerCase()) || 
     log.module.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.action.toLowerCase().includes(searchTerm.toLowerCase())
@@ -134,7 +161,7 @@ export const AuditPage: React.FC = () => {
                 <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <div>
-                <p className="text-2xl font-extrabold text-brand-dark">{MOCK_STATS.onlineNow}</p>
+                <p className="text-2xl font-extrabold text-brand-dark">{DYNAMIC_STATS.onlineNow}</p>
                 <p className="text-xs text-brand-dark/60 font-bold uppercase tracking-wide">Online Ahora</p>
               </div>
             </div>
@@ -144,7 +171,7 @@ export const AuditPage: React.FC = () => {
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-2xl font-extrabold text-brand-dark">{MOCK_STATS.activeUsers}</p>
+                <p className="text-2xl font-extrabold text-brand-dark">{DYNAMIC_STATS.activeUsers}</p>
                 <p className="text-xs text-brand-dark/60 font-bold uppercase tracking-wide">Usuarios Activos</p>
               </div>
             </div>
@@ -154,7 +181,7 @@ export const AuditPage: React.FC = () => {
                 <Monitor className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-2xl font-extrabold text-brand-dark">{MOCK_STATS.totalSessions}</p>
+                <p className="text-2xl font-extrabold text-brand-dark">{DYNAMIC_STATS.totalSessions}</p>
                 <p className="text-xs text-brand-dark/60 font-bold uppercase tracking-wide">Sesiones Totales</p>
               </div>
             </div>
@@ -164,7 +191,7 @@ export const AuditPage: React.FC = () => {
                 <Clock className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-2xl font-extrabold text-brand-dark">{MOCK_STATS.totalHours}</p>
+                <p className="text-2xl font-extrabold text-brand-dark">{DYNAMIC_STATS.totalHours}</p>
                 <p className="text-xs text-brand-dark/60 font-bold uppercase tracking-wide">Horas Totales</p>
               </div>
             </div>
@@ -178,7 +205,7 @@ export const AuditPage: React.FC = () => {
               </h3>
               
               <div className="space-y-1 flex-1">
-                {MOCK_USER_ACTIVITY.map((user, idx) => (
+                {DYNAMIC_USER_ACTIVITY.length > 0 ? DYNAMIC_USER_ACTIVITY.map((user, idx) => (
                   <div key={user.userId} className="flex items-center justify-between p-3 rounded-xl hover:bg-brand-secondary/20 transition-colors border-b border-brand-secondary/30 last:border-0 group cursor-pointer">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center justify-center w-6">
@@ -201,7 +228,9 @@ export const AuditPage: React.FC = () => {
                       <ChevronRight className="w-4 h-4 text-brand-dark/30 group-hover:text-brand-brown transition-colors" />
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-sm text-brand-dark/50 text-center py-4">No hay datos de actividad para mostrar.</p>
+                )}
               </div>
             </div>
 
@@ -212,9 +241,9 @@ export const AuditPage: React.FC = () => {
               </h3>
               
               <div className="space-y-5 flex-1">
-                {MOCK_MODULE_USAGE.map((mod, idx) => {
-                  const maxHours = parseInt(MOCK_MODULE_USAGE[0].hours);
-                  const currentHours = parseInt(mod.hours);
+                {DYNAMIC_MODULE_USAGE.length > 0 ? DYNAMIC_MODULE_USAGE.map((mod, idx) => {
+                  const maxHours = parseInt(DYNAMIC_MODULE_USAGE[0].hours) || 1;
+                  const currentHours = parseInt(mod.hours) || 0;
                   const percentage = Math.max(10, Math.round((currentHours / maxHours) * 100));
                   
                   return (
@@ -237,7 +266,9 @@ export const AuditPage: React.FC = () => {
                       </div>
                     </div>
                   );
-                })}
+                }) : (
+                  <p className="text-sm text-brand-dark/50 text-center py-4">No hay datos de uso por módulo.</p>
+                )}
               </div>
             </div>
           </div>
@@ -251,7 +282,7 @@ export const AuditPage: React.FC = () => {
             </h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-2">
-              {MOCK_USER_ACTIVITY.slice(0, 4).map(user => (
+              {DYNAMIC_USER_ACTIVITY.slice(0, 4).map(user => (
                 <div key={user.userId} className="border border-brand-secondary/50 rounded-xl p-4 bg-brand-bg/50">
                   <p className="font-bold text-brand-dark text-sm mb-3 truncate">{user.userName.toLowerCase().replace(' ', '')}</p>
                   <div className="flex gap-4 text-xs font-semibold text-brand-dark/80 mb-3">

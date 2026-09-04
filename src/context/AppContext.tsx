@@ -22,6 +22,7 @@ import {
   GiftCardStatus,
   GiftCardUsage,
   PaymentMethod,
+  AuditLogEntry,
 } from '../types';
 import { initialCategories } from '../data/seeds/categories.seed';
 import { initialManuals } from '../data/manuals/systemManuals';
@@ -55,6 +56,7 @@ import * as ordersService from '../services/orders.service';
 import * as ingredientsService from '../services/ingredients.service';
 import * as cashRegistersService from '../services/cashRegisters.service';
 import * as giftCardsService from '../services/giftCards.service';
+import * as auditService from '../services/audit.service';
 import { mapRowToOrder } from '../services/orders.service';
 import { mapRowToTable } from '../services/tables.service';
 import { mapRowToRegister, mapRowToTransaction } from '../services/cashRegisters.service';
@@ -96,6 +98,8 @@ interface AppContextType {
   isTutorialOpen: boolean;
   openTutorialModal: () => void;
   closeTutorialModal: () => void;
+  auditLogs: AuditLogEntry[];
+  logActivity: (module: string, action: string, details?: string) => void;
 
   // Loading states
   isLoadingCustomers: boolean;
@@ -206,6 +210,67 @@ const STORAGE_KEYS = {
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { showToast } = useToast();
   const { user } = useAuth();
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+
+  // Load Audit Logs
+  useEffect(() => {
+    const loadLogs = async () => {
+      const logs = await auditService.fetchAuditLogs(200);
+      setAuditLogs(logs);
+    };
+    if (isSupabaseConfigured) {
+      loadLogs();
+    }
+  }, []);
+
+  const logActivity = useCallback((module: string, action: string, details: string = '') => {
+    if (!user) return;
+    const userName = user.name || user.email || 'Usuario de Turno';
+    
+    // Optimistic UI
+    const newLog: AuditLogEntry = {
+      id: generateUUID(),
+      timestamp: new Date().toISOString(),
+      userId: user.id || 'local',
+      userName,
+      module,
+      action: action as any,
+      details
+    };
+    
+    setAuditLogs(prev => [newLog, ...prev].slice(0, 500));
+    
+    if (isSupabaseConfigured) {
+      auditService.insertAuditLog(user.id || 'local', userName, module, action, details);
+    }
+  }, [user]);
+
+  // Global click tracker
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (!user) return; // Only log if authenticated
+      
+      const target = e.target as HTMLElement;
+      // Find the closest button or anchor
+      const clickable = target.closest('button, a, select, input[type="submit"], [role="button"]');
+      
+      if (clickable) {
+        let text = clickable.textContent?.trim().slice(0, 50) || '';
+        let ariaLabel = clickable.getAttribute('aria-label') || '';
+        const id = clickable.id ? `#${clickable.id}` : '';
+        const actionDetails = ariaLabel || text || id || 'Clic en elemento';
+        
+        // Evitar logging excesivo de cosas vacías
+        if (actionDetails && actionDetails !== 'Clic en elemento') {
+          // Debounce manual simple or just log (Supabase can handle decent load, but we throttle if needed)
+          logActivity('Navegación / UI', 'Clic', actionDetails);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClick, { capture: true });
+    return () => document.removeEventListener('click', handleClick, { capture: true });
+  }, [user, logActivity]);
 
   // Plan comes from authenticated user's subscription, fallback to fidelizacion
   const [plan, setPlanState] = useState<PlanType>(() => {
@@ -2049,6 +2114,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateSector,
         deleteSector,
         getRecipeCostForProduct,
+        auditLogs,
+        logActivity,
       }}
     >
       {children}
