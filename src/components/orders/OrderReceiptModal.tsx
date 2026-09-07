@@ -33,7 +33,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
   onClose,
   staffName,
 }) => {
-  const [format, setFormat] = useState<'58mm' | 'a4'>('58mm');
+  const [format, setFormat] = useState<'58mm' | 'comanda' | 'a4'>('58mm');
 
   if (!isOpen || !order) return null;
 
@@ -67,7 +67,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
     }
   };
 
-  // Generate Clean HTML for Thermal 58mm Printing
+  // Generate Clean HTML for Thermal 58mm Printing (All Bold / Extra Dark)
   const generateThermal58mmHTML = (ord: Order) => {
     const publicTicketUrl = `${window.location.origin}/ticket/${ord.code}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(publicTicketUrl)}`;
@@ -75,18 +75,18 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
     const itemsHtml = ord.items
       .map(
         (it) => `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 10px;">
-          <div style="padding-right: 4px;">
-            <strong>${it.quantity}x</strong> ${it.productName}
-            ${it.isComposite ? ' <span style="font-size: 8px; border: 1px solid #000; padding: 0 2px;">[COMBO]</span>' : ''}
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 11px; font-weight: 900;">
+          <div style="padding-right: 4px; font-weight: 900;">
+            <span style="font-size: 12px; font-weight: 900;">${it.quantity}x</span> <span style="font-weight: 900;">${it.productName}</span>
+            ${it.isComposite ? ' <span style="font-size: 8.5px; border: 1.5px solid #000; padding: 0 2px; font-weight: 900;">[COMBO]</span>' : ''}
             ${it.compositeItems && it.compositeItems.length > 0 ? `
-              <div style="font-size: 8.5px; color: #333; padding-left: 8px;">
+              <div style="font-size: 9.5px; font-weight: 900; color: #000 !important; padding-left: 8px; margin-top: 1px;">
                 ${it.compositeItems.map((ci) => `+ ${ci.quantity * it.quantity}x ${ci.productName}`).join('<br/>')}
               </div>
             ` : ''}
-            ${it.notes ? `<div style="font-size: 9px; color: #555; padding-left: 10px;">• ${it.notes}</div>` : ''}
+            ${it.notes ? `<div style="font-size: 10px; font-weight: 900; color: #000 !important; padding-left: 6px; border-left: 2px solid #000; margin-top: 2px;">• NOTA: ${it.notes.toUpperCase()}</div>` : ''}
           </div>
-          <div style="text-align: right; white-space: nowrap; font-weight: bold;">
+          <div style="text-align: right; white-space: nowrap; font-weight: 900; font-size: 11.5px;">
             ${formatCurrency(it.unitPrice * it.quantity)}
           </div>
         </div>
@@ -105,29 +105,39 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             size: 58mm auto;
             margin: 0mm;
           }
+          * {
+            box-sizing: border-box;
+            color: #000000 !important;
+            font-weight: 800 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body {
-            font-family: 'Courier New', Courier, monospace, ui-monospace;
+            font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace;
             width: 58mm;
             max-width: 58mm;
             margin: 0 auto;
-            padding: 8px 6px 16px 6px;
-            color: #000;
-            background: #fff;
+            padding: 6px 3px 16px 3px;
+            color: #000000 !important;
+            background: #ffffff !important;
             font-size: 11px;
+            font-weight: 800 !important;
             line-height: 1.25;
-            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: geometricPrecision;
           }
           .text-center { text-align: center; }
           .text-right { text-align: right; }
-          .font-bold { font-weight: bold; }
-          .divider { border-top: 1px dashed #000; margin: 6px 0; }
-          .double-divider { border-top: 2px solid #000; margin: 6px 0; }
+          .font-bold { font-weight: 800 !important; }
+          .font-black { font-weight: 900 !important; }
+          .divider { border-top: 1.5px dashed #000000; margin: 6px 0; }
+          .double-divider { border-top: 2px solid #000000; margin: 6px 0; }
           .non-fiscal-banner {
-            border: 1px solid #000;
+            border: 1.5px solid #000000;
             padding: 4px 2px;
             margin: 6px 0;
             font-size: 10px;
-            font-weight: 900;
+            font-weight: 900 !important;
             text-align: center;
             letter-spacing: 0.5px;
           }
@@ -136,8 +146,9 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             margin: 8px 0;
           }
           .qr-container img {
-            width: 80px;
-            height: 80px;
+            width: 85px;
+            height: 85px;
+            image-rendering: pixelated;
           }
           @media print {
             body { padding: 4px 2px; }
@@ -146,27 +157,27 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
         </style>
       </head>
       <body>
-        <div class="text-center font-bold" style="font-size: 14px; letter-spacing: 1px;">CAFÉ MAGNOLIA</div>
-        <div class="text-center" style="font-size: 10px;">Hilos de Amor Resto & Café</div>
-        <div class="text-center" style="font-size: 9px; color: #333;">Av. Principal 1234 • CABA</div>
-        <div class="text-center" style="font-size: 9px;">Tel: (011) 5432-1980</div>
+        <div class="text-center font-black" style="font-size: 15px; letter-spacing: 1px;">CAFÉ MAGNOLIA</div>
+        <div class="text-center font-black" style="font-size: 11px;">Hilos de Amor Resto & Café</div>
+        <div class="text-center font-bold" style="font-size: 9.5px;">Av. Principal 1234 • CABA</div>
+        <div class="text-center font-bold" style="font-size: 9.5px;">Tel: (011) 5432-1980</div>
         
-        <div class="non-fiscal-banner">
+        <div class="non-fiscal-banner font-black">
           *** COMPROBANTE NO FISCAL ***<br/>
           DOCUMENTO NO VÁLIDO COMO FACTURA
         </div>
 
-        <div style="font-size: 10px;">
-          <div><strong>Ticket:</strong> #${ord.code}</div>
-          <div><strong>Fecha:</strong> ${orderDateStr} ${orderTimeStr}</div>
-          <div><strong>Tipo:</strong> ${ord.tableName ? `Mesa: ${ord.tableName}` : ord.type.toUpperCase()}</div>
-          <div><strong>Cliente:</strong> ${ord.customerName || 'Consumidor Final'}</div>
-          ${ord.customerPhone ? `<div><strong>Tel:</strong> ${ord.customerPhone}</div>` : ''}
-          ${staffName ? `<div><strong>Atendido:</strong> ${staffName}</div>` : ''}
+        <div style="font-size: 10.5px; font-weight: 800;">
+          <div><strong style="font-weight: 900;">Ticket:</strong> #${ord.code}</div>
+          <div><strong style="font-weight: 900;">Fecha:</strong> ${orderDateStr} ${orderTimeStr}</div>
+          <div><strong style="font-weight: 900;">Tipo:</strong> ${ord.tableName ? `Mesa: ${ord.tableName}` : ord.type.toUpperCase()}</div>
+          <div><strong style="font-weight: 900;">Cliente:</strong> ${ord.customerName || 'Consumidor Final'}</div>
+          ${ord.customerPhone ? `<div><strong style="font-weight: 900;">Tel:</strong> ${ord.customerPhone}</div>` : ''}
+          ${staffName ? `<div><strong style="font-weight: 900;">Atendido:</strong> ${staffName}</div>` : ''}
         </div>
 
         <div class="divider"></div>
-        <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; margin-bottom: 4px;">
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; margin-bottom: 4px;">
           <span>CANT / ARTICULO</span>
           <span>IMPORTE</span>
         </div>
@@ -175,49 +186,164 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
         ${itemsHtml}
 
         <div class="divider"></div>
-        <div style="display: flex; justify-content: space-between; font-size: 10px;">
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900;">
           <span>SUBTOTAL:</span>
           <span>${formatCurrency(ord.subtotal || ord.total)}</span>
         </div>
         ${ord.deliveryFee ? `
-          <div style="display: flex; justify-content: space-between; font-size: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900;">
             <span>ENVÍO:</span>
             <span>${formatCurrency(ord.deliveryFee)}</span>
           </div>
         ` : ''}
         ${ord.tipAmount && ord.tipAmount > 0 ? `
-          <div style="display: flex; justify-content: space-between; font-size: 10px; color: #111;">
+          <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900;">
             <span>PROPINA SUG. (${ord.tipPercentage || 10}%):</span>
             <span>+${formatCurrency(ord.tipAmount)}</span>
           </div>
         ` : ''}
         
         <div class="double-divider"></div>
-        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900;">
+        <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900;">
           <span>TOTAL:</span>
           <span>${formatCurrency(ord.total + (ord.tipAmount || 0))}</span>
         </div>
         <div class="double-divider"></div>
 
-        <div style="font-size: 10px; margin-top: 4px;">
-          <div><strong>FORMA DE PAGO:</strong> ${getPaymentMethodLabel(ord.paymentMethod).toUpperCase()}</div>
-          ${ord.tipRegisteredBy ? `<div style="font-size: 9px; color: #444;">Propina reg. por: ${ord.tipRegisteredBy}</div>` : ''}
-          <div style="color: #222; margin-top: 2px;">⭐ Puntos del Club: +${pointsEarned} pts</div>
+        <div style="font-size: 10.5px; font-weight: 900; margin-top: 4px;">
+          <div><strong style="font-weight: 900;">FORMA DE PAGO:</strong> ${getPaymentMethodLabel(ord.paymentMethod).toUpperCase()}</div>
+          ${ord.tipRegisteredBy ? `<div style="font-size: 9.5px; font-weight: 900;">Propina reg. por: ${ord.tipRegisteredBy}</div>` : ''}
+          <div style="margin-top: 2px; font-weight: 900;">⭐ Puntos del Club: +${pointsEarned} pts</div>
         </div>
 
         <div class="qr-container">
           <img src="${qrUrl}" alt="QR Comprobante" />
-          <div style="font-size: 8px; color: #555;">Verificación Digital</div>
+          <div style="font-size: 9px; font-weight: 900; margin-top: 2px;">Verificación Digital</div>
         </div>
 
         <div class="divider"></div>
-        <div class="text-center font-bold" style="font-size: 10px;">¡GRACIAS POR TU VISITA!</div>
-        <div class="text-center" style="font-size: 9px; color: #444; margin-top: 2px;">
+        <div class="text-center font-black" style="font-size: 11px;">¡GRACIAS POR TU VISITA!</div>
+        <div class="text-center font-bold" style="font-size: 9.5px; margin-top: 2px;">
           Seguinos en Instagram: @cafemagnolia
         </div>
-        <div class="text-center" style="font-size: 8px; color: #666; margin-top: 6px;">
+        <div class="text-center font-bold" style="font-size: 8.5px; margin-top: 5px;">
           Comprobante de consumo interno.<br/>
           Sin validez tributaria.
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `;
+  };
+
+  // Generate Clean HTML for Kitchen / Bar Comanda Thermal 58mm Printing
+  const generateKitchenComanda58mmHTML = (ord: Order) => {
+    const itemsHtml = ord.items
+      .map(
+        (it) => `
+        <div style="margin-bottom: 8px; border-bottom: 1.5px dashed #000; padding-bottom: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="font-size: 14px; font-weight: 900;">
+              [ ${it.quantity}x ] ${it.productName}
+            </div>
+            ${it.isComposite ? '<span style="font-size: 8.5px; border: 1.5px solid #000; padding: 1px 3px; font-weight: 900;">COMBO</span>' : ''}
+          </div>
+          ${it.compositeItems && it.compositeItems.length > 0 ? `
+            <div style="font-size: 10.5px; font-weight: 900; padding-left: 10px; margin-top: 3px;">
+              ${it.compositeItems.map((ci) => `↳ ${ci.quantity * it.quantity}x ${ci.productName}`).join('<br/>')}
+            </div>
+          ` : ''}
+          ${it.notes ? `
+            <div style="font-size: 11px; font-weight: 900; border: 1.5px solid #000; padding: 2px 4px; margin-top: 3px; display: inline-block;">
+              ⚠️ NOTA: ${it.notes.toUpperCase()}
+            </div>
+          ` : ''}
+        </div>
+      `
+      )
+      .join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Comanda #${ord.code}</title>
+        <style>
+          @page {
+            size: 58mm auto;
+            margin: 0mm;
+          }
+          * {
+            box-sizing: border-box;
+            color: #000000 !important;
+            font-weight: 800 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body {
+            font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace;
+            width: 58mm;
+            max-width: 58mm;
+            margin: 0 auto;
+            padding: 6px 3px 16px 3px;
+            color: #000000 !important;
+            background: #ffffff !important;
+            font-size: 12px;
+            font-weight: 800 !important;
+            line-height: 1.25;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: geometricPrecision;
+          }
+          .text-center { text-align: center; }
+          .font-black { font-weight: 900 !important; }
+          .divider { border-top: 2px solid #000; margin: 6px 0; }
+          .box-table {
+            border: 2px solid #000;
+            padding: 6px 4px;
+            margin: 6px 0;
+            text-align: center;
+          }
+          @media print {
+            body { padding: 4px 2px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="text-center font-black" style="font-size: 16px; letter-spacing: 1px;">
+          *** COMANDA COCINA / BAR ***
+        </div>
+        
+        <div class="box-table">
+          <div style="font-size: 11px; font-weight: 900;">UBICACIÓN / DESTINO:</div>
+          <div style="font-size: 18px; font-weight: 900; letter-spacing: 0.5px;">
+            ${ord.tableName ? ord.tableName.toUpperCase() : ord.type.toUpperCase()}
+          </div>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 900; margin-bottom: 6px;">
+          <div><strong>PEDIDO:</strong> #${ord.code}</div>
+          <div><strong>HORA:</strong> ${orderTimeStr} | <strong>FECHA:</strong> ${orderDateStr}</div>
+          <div><strong>MOZO:</strong> ${(ord.waiterName || staffName || 'Personal de Salón').toUpperCase()}</div>
+          ${ord.customerName ? `<div><strong>CLIENTE:</strong> ${ord.customerName.toUpperCase()}</div>` : ''}
+        </div>
+
+        <div class="divider"></div>
+        <div class="text-center font-black" style="font-size: 12px; margin-bottom: 4px;">
+          DETALLE DE PREPARACIÓN
+        </div>
+        <div class="divider"></div>
+
+        ${itemsHtml}
+
+        <div style="border-top: 2px solid #000; margin-top: 8px; padding-top: 4px; font-size: 12px; font-weight: 900; text-align: center;">
+          TOTAL ARTÍCULOS: ${ord.items.reduce((acc, it) => acc + it.quantity, 0)} U.
         </div>
 
         <script>
@@ -470,7 +596,15 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const htmlContent = format === '58mm' ? generateThermal58mmHTML(order) : generateA4HTML(order);
+    let htmlContent = '';
+    if (format === '58mm') {
+      htmlContent = generateThermal58mmHTML(order);
+    } else if (format === 'comanda') {
+      htmlContent = generateKitchenComanda58mmHTML(order);
+    } else {
+      htmlContent = generateA4HTML(order);
+    }
+
     printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
@@ -501,13 +635,13 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-extrabold text-brand-dark font-serif">Comprobante de Pago</h3>
+                <h3 className="text-base font-extrabold text-brand-dark font-serif">Impresión de Comprobante / Comanda</h3>
                 <span className="font-mono text-xs font-black bg-brand-secondary/60 text-brand-dark px-2 py-0.5 rounded-md border border-brand-secondary">
                   #{order.code}
                 </span>
               </div>
               <p className="text-xs text-brand-brown/80">
-                Seleccioná el formato para imprimir o compartir
+                Seleccioná el formato para imprimir con fuente en negrita de alta visibilidad
               </p>
             </div>
           </div>
@@ -535,7 +669,19 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                 }`}
               >
                 <Receipt className="w-3.5 h-3.5" />
-                Ticket Térmico (58mm)
+                Ticket Cliente (58mm)
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormat('comanda')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  format === 'comanda'
+                    ? 'bg-amber-700 text-white shadow-xs'
+                    : 'text-brand-brown hover:text-brand-dark'
+                }`}
+              >
+                <UtensilsCrossed className="w-3.5 h-3.5" />
+                Comanda Cocina (58mm)
               </button>
               <button
                 type="button"
@@ -547,70 +693,76 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                Hoja A4 (PDF Estándar)
+                Hoja A4 (PDF)
               </button>
             </div>
           </div>
 
           <div className="flex items-center gap-2 text-[11px] font-extrabold text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-lg">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-            <span>Documento No Válido Como Factura</span>
+            <span>Fuente Gruesa / Térmica 100% Negrita</span>
           </div>
         </div>
 
         {/* Document Live Preview Canvas */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-brand-bg/50 space-y-4 flex justify-center">
           {format === '58mm' ? (
-            /* ── PREVIEW TICKET TÉRMICO 58MM ── */
-            <div className="w-[300px] bg-white text-black p-5 rounded-2xl shadow-md border border-gray-300 font-mono text-[11px] space-y-3 leading-tight select-none">
+            /* ── PREVIEW TICKET TÉRMICO 58MM (ALL BOLD / BLACK) ── */
+            <div className="w-[300px] bg-white text-black p-5 rounded-2xl shadow-md border-2 border-black font-mono text-[11.5px] space-y-3 leading-tight select-none font-bold">
               <div className="text-center space-y-0.5">
-                <h4 className="text-sm font-black tracking-wider">CAFÉ MAGNOLIA</h4>
-                <p className="text-[10px] text-gray-700">Hilos de Amor Resto & Café</p>
-                <p className="text-[9px] text-gray-500">Av. Principal 1234 • CABA</p>
-                <p className="text-[9px] text-gray-500">Tel: (011) 5432-1980</p>
+                <h4 className="text-base font-black tracking-wider">CAFÉ MAGNOLIA</h4>
+                <p className="text-[11px] font-black">Hilos de Amor Resto & Café</p>
+                <p className="text-[10px] font-extrabold">Av. Principal 1234 • CABA</p>
+                <p className="text-[10px] font-extrabold">Tel: (011) 5432-1980</p>
               </div>
 
-              <div className="border border-dashed border-black p-2 text-center text-[10px] font-black my-2 tracking-tight">
+              <div className="border-2 border-black p-2 text-center text-[10px] font-black my-2 tracking-tight">
                 *** COMPROBANTE NO FISCAL ***<br />
                 DOCUMENTO NO VÁLIDO COMO FACTURA
               </div>
 
-              <div className="text-[10px] space-y-0.5">
+              <div className="text-[10.5px] space-y-0.5 font-extrabold">
                 <div><strong>Ticket:</strong> #{order.code}</div>
                 <div><strong>Fecha:</strong> {orderDateStr} {orderTimeStr}</div>
-                <div><strong>Ubicación:</strong> {order.tableName || order.type.toUpperCase()}</div>
+                <div><strong>Ubicación:</strong> {order.tableName ? `Mesa: ${order.tableName}` : order.type.toUpperCase()}</div>
                 <div><strong>Cliente:</strong> {order.customerName || 'Consumidor Final'}</div>
                 {order.customerPhone && <div><strong>Tel:</strong> {order.customerPhone}</div>}
+                {staffName && <div><strong>Atendido:</strong> {staffName}</div>}
               </div>
 
-              <div className="border-t border-dashed border-gray-400 pt-2 space-y-1">
-                <div className="flex justify-between font-bold text-[10px] pb-1 border-b border-gray-200">
+              <div className="border-t-2 border-dashed border-black pt-2 space-y-1">
+                <div className="flex justify-between font-black text-[11px] pb-1 border-b border-black">
                   <span>CANT ARTICULO</span>
                   <span>IMPORTE</span>
                 </div>
                 {order.items.map((it, idx) => (
-                  <div key={idx} className="space-y-0.5 text-[11px]">
+                  <div key={idx} className="space-y-0.5 text-[11.5px] font-black">
                     <div className="flex justify-between">
                       <span className="pr-2">
-                        <strong>{it.quantity}x</strong> {it.productName}
+                        <strong className="text-xs">[ {it.quantity}x ]</strong> {it.productName}
                         {it.isComposite && (
-                          <span className="ml-1 text-[8px] border border-black px-1 font-mono">[COMBO]</span>
+                          <span className="ml-1 text-[8.5px] border border-black px-1 font-mono font-black">[COMBO]</span>
                         )}
                       </span>
-                      <span className="font-bold shrink-0">{formatCurrency(it.unitPrice * it.quantity)}</span>
+                      <span className="font-black shrink-0">{formatCurrency(it.unitPrice * it.quantity)}</span>
                     </div>
                     {it.compositeItems && it.compositeItems.length > 0 && (
-                      <div className="text-[9px] text-gray-700 pl-3">
+                      <div className="text-[10px] font-extrabold pl-3">
                         {it.compositeItems.map((ci, cidx) => (
                           <div key={cidx}>+ {ci.quantity * it.quantity}x {ci.productName}</div>
                         ))}
+                      </div>
+                    )}
+                    {it.notes && (
+                      <div className="text-[10px] font-black border-l-2 border-black pl-2 mt-0.5">
+                        • NOTA: {it.notes.toUpperCase()}
                       </div>
                     )}
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-dashed border-gray-400 pt-2 space-y-1 text-[11px]">
+              <div className="border-t-2 border-dashed border-black pt-2 space-y-1 text-[11.5px] font-black">
                 <div className="flex justify-between">
                   <span>SUBTOTAL:</span>
                   <span>{formatCurrency(order.subtotal || order.total)}</span>
@@ -622,27 +774,27 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                   </div>
                 ) : null}
                 {order.tipAmount && order.tipAmount > 0 ? (
-                  <div className="flex justify-between font-bold text-gray-800">
+                  <div className="flex justify-between font-black">
                     <span>PROPINA ({order.tipPercentage || 10}%):</span>
                     <span>+{formatCurrency(order.tipAmount)}</span>
                   </div>
                 ) : null}
-                <div className="flex justify-between text-sm font-black border-t-2 border-black pt-1">
+                <div className="flex justify-between text-base font-black border-t-2 border-b-2 border-black py-1">
                   <span>TOTAL FINAL:</span>
                   <span>{formatCurrency(order.total + (order.tipAmount || 0))}</span>
                 </div>
               </div>
 
-              <div className="border-t border-dashed border-gray-400 pt-2 text-[10px] space-y-0.5">
+              <div className="border-t-2 border-dashed border-black pt-2 text-[10.5px] space-y-0.5 font-black">
                 <div><strong>MEDIO DE PAGO:</strong> {getPaymentMethodLabel(order.paymentMethod).toUpperCase()}</div>
                 {order.tipRegisteredBy && (
-                  <div className="text-gray-600 font-semibold">Propina reg. por: {order.tipRegisteredBy}</div>
+                  <div className="font-black">Propina reg. por: {order.tipRegisteredBy}</div>
                 )}
-                <div className="text-gray-700">⭐ Puntos Club Fidelización: +{pointsEarned} pts</div>
+                <div>⭐ Puntos Club Fidelización: +{pointsEarned} pts</div>
               </div>
 
-              <div className="text-center pt-2 space-y-1">
-                <div className="w-16 h-16 bg-white p-1 border border-gray-300 mx-auto rounded">
+              <div className="text-center pt-2 space-y-1 font-black">
+                <div className="w-18 h-18 bg-white p-1 border-2 border-black mx-auto rounded">
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(
                       `${window.location.origin}/ticket/${order.code}`
@@ -651,16 +803,63 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <a
-                  href={`/ticket/${order.code}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-bold text-[9px] text-amber-800 hover:text-amber-950 underline block"
-                >
-                  Tocar o escanear para ver Ticket Digital ↗
-                </a>
-                <p className="font-bold text-[10px]">¡GRACIAS POR TU VISITA!</p>
-                <p className="text-[8px] text-gray-500">Comprobante de consumo interno sin validez fiscal</p>
+                <p className="font-black text-[11px] pt-1">¡GRACIAS POR TU VISITA!</p>
+                <p className="text-[9.5px] font-bold">Seguinos en Instagram: @cafemagnolia</p>
+                <p className="text-[8.5px] font-bold">Comprobante de consumo interno sin validez fiscal</p>
+              </div>
+            </div>
+          ) : format === 'comanda' ? (
+            /* ── PREVIEW COMANDA COCINA / BAR 58MM ── */
+            <div className="w-[300px] bg-white text-black p-5 rounded-2xl shadow-md border-2 border-black font-mono text-[12px] space-y-3 leading-tight select-none font-black">
+              <div className="text-center">
+                <h4 className="text-base font-black tracking-wider">*** COMANDA COCINA / BAR ***</h4>
+              </div>
+
+              <div className="border-2 border-black p-2.5 text-center my-1">
+                <div className="text-[11px] font-black">UBICACIÓN / DESTINO:</div>
+                <div className="text-xl font-black">
+                  {order.tableName ? order.tableName.toUpperCase() : order.type.toUpperCase()}
+                </div>
+              </div>
+
+              <div className="text-[11px] space-y-0.5 font-black">
+                <div><strong>PEDIDO:</strong> #{order.code}</div>
+                <div><strong>HORA:</strong> {orderTimeStr} | <strong>FECHA:</strong> {orderDateStr}</div>
+                <div><strong>MOZO:</strong> {(order.waiterName || staffName || 'Personal').toUpperCase()}</div>
+                {order.customerName && <div><strong>CLIENTE:</strong> {order.customerName.toUpperCase()}</div>}
+              </div>
+
+              <div className="border-t-2 border-b-2 border-black py-1 text-center text-xs font-black">
+                DETALLE DE PREPARACIÓN
+              </div>
+
+              <div className="space-y-2">
+                {order.items.map((it, idx) => (
+                  <div key={idx} className="border-b border-dashed border-black pb-2 space-y-1">
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-sm font-black">[ {it.quantity}x ] {it.productName}</span>
+                      {it.isComposite && (
+                        <span className="text-[8.5px] border border-black px-1 font-black">COMBO</span>
+                      )}
+                    </div>
+                    {it.compositeItems && it.compositeItems.length > 0 && (
+                      <div className="text-[10.5px] font-black pl-3">
+                        {it.compositeItems.map((ci, cidx) => (
+                          <div key={cidx}>↳ {ci.quantity * it.quantity}x {ci.productName}</div>
+                        ))}
+                      </div>
+                    )}
+                    {it.notes && (
+                      <div className="text-[11px] font-black border border-black p-1">
+                        ⚠️ NOTA: {it.notes.toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t-2 border-black pt-2 text-center text-xs font-black">
+                TOTAL ARTÍCULOS: {order.items.reduce((acc, it) => acc + it.quantity, 0)} U.
               </div>
             </div>
           ) : (
@@ -690,7 +889,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
               </div>
 
               {/* Metadata Grid */}
-              <div className="grid grid-cols-3 gap-3 bg-gray-50 p-3.5 rounded-xl border border-gray-200 text-xs">
+              <div className="grid grid-cols-3 gap-3 bg-gray-50 p-3.5 rounded-xl border border-gray-200 text-xs font-bold">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-gray-500 block">Cliente</span>
                   <span className="font-extrabold text-gray-900 text-sm">{order.customerName || 'Consumidor Final'}</span>
@@ -716,7 +915,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
 
               {/* Table of items */}
               <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs font-bold">
                   <thead className="bg-brand-dark text-white uppercase text-[10px]">
                     <tr>
                       <th className="py-2.5 px-3 text-center w-12">Cant.</th>
@@ -728,9 +927,9 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                   <tbody className="divide-y divide-gray-200">
                     {order.items.map((it, idx) => (
                       <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'}>
-                        <td className="py-2 px-3 text-center font-bold">{it.quantity}</td>
+                        <td className="py-2 px-3 text-center font-black">[ {it.quantity}x ]</td>
                         <td className="py-2 px-3">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 font-bold">
                             <span className="font-bold text-gray-900">{it.productName}</span>
                             {it.isComposite && (
                               <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded">
@@ -739,14 +938,14 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                             )}
                           </div>
                           {it.compositeItems && it.compositeItems.length > 0 && (
-                            <div className="text-[10px] text-amber-900 font-medium bg-amber-50/80 p-1 rounded border border-amber-200/60 mt-0.5">
+                            <div className="text-[10px] text-amber-900 font-bold bg-amber-50/80 p-1 rounded border border-amber-200/60 mt-0.5">
                               <strong>Incluye:</strong> {it.compositeItems.map((ci) => `${ci.quantity * it.quantity}x ${ci.productName}`).join(' • ')}
                             </div>
                           )}
-                          {it.notes && <span className="text-[10px] text-gray-500 block">• {it.notes}</span>}
+                          {it.notes && <span className="text-[10px] text-amber-900 font-bold block">• NOTA: {it.notes}</span>}
                         </td>
-                        <td className="py-2 px-3 text-right text-gray-600">{formatCurrency(it.unitPrice)}</td>
-                        <td className="py-2 px-3 text-right font-extrabold text-gray-900">
+                        <td className="py-2 px-3 text-right text-gray-700 font-bold">{formatCurrency(it.unitPrice)}</td>
+                        <td className="py-2 px-3 text-right font-black text-gray-900">
                           {formatCurrency(it.unitPrice * it.quantity)}
                         </td>
                       </tr>
@@ -756,7 +955,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
               </div>
 
               {/* Totals Breakdown */}
-              <div className="flex justify-between items-end pt-2 border-t border-gray-200">
+              <div className="flex justify-between items-end pt-2 border-t border-gray-200 font-bold">
                 <div className="flex items-center gap-3">
                   <div className="w-14 h-14 bg-white p-1 border border-gray-300 rounded-lg shrink-0">
                     <img
@@ -767,7 +966,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                       className="w-full h-full object-contain"
                     />
                   </div>
-                  <div className="text-[11px] text-gray-600">
+                  <div className="text-[11px] text-gray-700 font-bold">
                     <span className="font-bold text-gray-900 block">Comprobante Digital Verificado</span>
                     <a
                       href={`/ticket/${order.code}`}
@@ -782,12 +981,12 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                 </div>
 
                 <div className="w-56 space-y-1 text-xs">
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-gray-700 font-bold">
                     <span>Subtotal:</span>
                     <span className="font-bold text-gray-900">{formatCurrency(order.subtotal || order.total)}</span>
                   </div>
                   {order.deliveryFee ? (
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-gray-700 font-bold">
                       <span>Costo de Envío:</span>
                       <span className="font-bold text-gray-900">{formatCurrency(order.deliveryFee)}</span>
                     </div>
@@ -803,7 +1002,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                     <span className="text-emerald-800">{formatCurrency(order.total + (order.tipAmount || 0))}</span>
                   </div>
                   {order.tipRegisteredBy && (
-                    <div className="text-[10px] text-gray-500 text-right pt-0.5">
+                    <div className="text-[10px] text-gray-500 text-right pt-0.5 font-bold">
                       Propina reg. por: <strong>{order.tipRegisteredBy}</strong>
                     </div>
                   )}
@@ -839,7 +1038,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
               className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-800 hover:from-amber-800 hover:to-amber-900 text-white font-extrabold text-xs shadow-soft transition flex items-center justify-center gap-2"
             >
               <Printer className="w-4 h-4 text-brand-yellow" />
-              Imprimir ({format === '58mm' ? 'Ticket 58mm' : 'Hoja A4'})
+              Imprimir ({format === '58mm' ? 'Ticket Térmico' : format === 'comanda' ? 'Comanda Cocina' : 'Hoja A4'})
             </button>
           </div>
         </div>

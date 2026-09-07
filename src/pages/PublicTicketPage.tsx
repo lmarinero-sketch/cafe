@@ -152,6 +152,22 @@ export const PublicTicketPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f3efe6] text-gray-900 font-sans p-3 sm:p-6 flex flex-col items-center justify-center print:bg-white print:p-0">
+      <style>{`
+        @media print {
+          @page { margin: 4mm; }
+          * {
+            color: #000000 !important;
+            font-weight: 800 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body {
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace !important;
+          }
+        }
+      `}</style>
       <div className="w-full max-w-md space-y-4">
         {/* Top Floating App Bar */}
         <div className="flex items-center justify-between px-2 print:hidden">
