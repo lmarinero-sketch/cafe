@@ -772,7 +772,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAutomations(dbAutomations);
         setBranches(dbBranches);
         if (dbStaff && dbStaff.length > 0) setStaffUsers(dbStaff);
-        if (dbProducts && dbProducts.length > 0) setProducts(dbProducts);
+        if (dbProducts && dbProducts.length > 0) {
+          const existingIds = new Set(dbProducts.map((p) => p.id));
+          const missingBase = initialProducts.filter((ip) => !existingIds.has(ip.id));
+          setProducts([...dbProducts, ...missingBase]);
+        }
         if (dbTables && dbTables.length > 0) {
           setTables(dbTables);
           setTableSectors((prev) => {

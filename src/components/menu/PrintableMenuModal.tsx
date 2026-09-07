@@ -137,36 +137,39 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
             /* Categories */
             .category-section {
-              margin-bottom: 16px;
-              break-inside: avoid;
-              page-break-inside: avoid;
+              margin-bottom: 14px;
+              break-inside: auto;
+              page-break-inside: auto;
             }
 
             .category-header {
               display: flex;
               align-items: center;
               gap: 10px;
+              margin-top: 10px;
               margin-bottom: 8px;
               break-inside: avoid;
               page-break-inside: avoid;
+              break-after: avoid;
+              page-break-after: avoid;
             }
 
             .category-header .line {
               flex: 1;
-              height: 2px;
+              height: 1.5px;
               background: #2F5233;
               opacity: 0.35;
             }
 
             .category-title {
               font-family: 'Playfair Display', Georgia, serif;
-              font-size: 13px;
+              font-size: 12.5px;
               font-weight: 800;
               text-transform: uppercase;
               letter-spacing: 1.5px;
               color: #FFF;
               background-color: #2F5233;
-              padding: 3px 14px;
+              padding: 2.5px 14px;
               border-radius: 20px;
             }
 
@@ -174,15 +177,15 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             .products-grid {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 6px 10px;
+              gap: 5px 10px;
               width: 100%;
             }
 
             .product-card {
               background-color: #FFFFFF;
               border: 1px solid #D8CEBA;
-              border-radius: 8px;
-              padding: 8px 10px;
+              border-radius: 7px;
+              padding: 6px 10px;
               display: flex;
               flex-direction: column;
               justify-content: center;
@@ -196,11 +199,11 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               justify-content: space-between;
               align-items: baseline;
               gap: 6px;
-              margin-bottom: 2px;
+              margin-bottom: 1px;
             }
 
             .product-name {
-              font-size: 11.5px;
+              font-size: 11px;
               font-weight: 700;
               color: #1A2E1E;
             }
@@ -213,27 +216,27 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
             .product-price {
               font-family: monospace;
-              font-size: 12px;
+              font-size: 11.5px;
               font-weight: 800;
               color: #2F5233;
               white-space: nowrap;
             }
 
             .product-desc {
-              font-size: 10px;
+              font-size: 9.5px;
               color: #6B5B52;
-              line-height: 1.25;
+              line-height: 1.2;
             }
 
             /* Footer */
             .menu-footer {
-              margin-top: 18px;
-              padding-top: 10px;
+              margin-top: 14px;
+              padding-top: 8px;
               border-top: 1.5px solid #2F5233;
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 10px;
+              font-size: 9.5px;
               color: #2F5233;
               break-inside: avoid;
               page-break-inside: avoid;
@@ -266,7 +269,17 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 margin: 0 !important;
                 padding: 0 !important;
               }
-              .category-section, .product-card, .header-banner, .menu-footer {
+              .category-section {
+                break-inside: auto !important;
+                page-break-inside: auto !important;
+              }
+              .category-header {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                break-after: avoid !important;
+                page-break-after: avoid !important;
+              }
+              .product-card, .header-banner, .menu-footer {
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
               }
