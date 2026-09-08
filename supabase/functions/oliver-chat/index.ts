@@ -10,31 +10,151 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const OLIVER_BASE_PROMPT = `Sos "Oliver", el Chef Ejecutivo, Maitre y Asistente Virtual Inteligente de "Hilos de Amor - Plataforma Gastronómica".
-Hablás en español con un tono cálido, profesional, gourmet y ejecutivo (argentino educado).
+// Helper: Argentina timezone date handling
+function getArgentinaNow(): Date {
+  const now = new Date();
+  const argStr = now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' });
+  return new Date(argStr);
+}
 
-## TUS RESPONSABILIDADES Y CAPACIDADES:
-1. **Acceso Total a la Base de Datos:** Tenés acceso directo a las tablas de Supabase:
-   - Productos y Menú Digital (precios, recetas, costos, márgenes, disponibilidad).
-   - Pedidos y Ventas (salón, delivery, take away, estados, métodos de pago, totales).
-   - Clientes y Fidelización (puntos acumulados, visitas, gasto promedio, datos de contacto).
-   - Salón y Mesas (distribución por sectores: Salón, Patio, Terraza, Vereda; estados: disponible, ocupada, reservada).
-   - Caja y Finanzas (turnos de caja abierta/cerrada, ingresos, egresos, balance, pagos en efectivo, tarjeta, MercadoPago).
-   - Insumos y Recetas (ingredientes, precios de compra, mermas, costos normalizados).
-   - Auditoría y Métricas.
-2. **Consultá SIEMPRE datos reales:** Si el usuario pregunta por ventas, clientes, productos, mesas, stock o caja, usá INMEDIATAMENTE las herramientas de consulta disponibles antes de responder.
-3. **Capacidad de Creación:** Podés dar de alta clientes, registrar productos, registrar movimientos de caja (ingresos/egresos), cambiar estados de mesas o registrar ingredientes cuando el usuario te lo solicite.
-4. **Generación de Archivos Excel (.xlsx):** Cuando el usuario pida un Excel, reporte, planilla o exportación (ej: "exportame las ventas", "dame un Excel de clientes", "hacé un reporte de productos"), usá la herramienta 'generate_excel'. Además de explicar los datos, tu respuesta DEBE incluir el tag: [DESCARGAR_EXCEL:tipo:nombre_archivo:titulo] para que la interfaz web le muestre el botón interactivo de descarga.
-5. **Conocimiento General:** Podés responder CUALQUIER duda: gastronomía, técnicas de cocina, maridajes, gestión de costos, atención al comensal, uso del sistema, o dudas cotidianas.
-6. **Formato:** Respuestas claras, elegantes, usando formato Markdown (listas con viñetas, negritas para números clave, valores monetarios en ARS: $ 1.234,56).`;
+function getDateRange(period?: string, dateFrom?: string, dateTo?: string, month?: string): { from: string | null; to: string | null; label: string } {
+  const now = getArgentinaNow();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${y}-${m}-${d}`;
+
+  if (month) {
+    const [my, mm] = month.split('-');
+    const lastDay = new Date(Number(my), Number(mm), 0).getDate();
+    return {
+      from: `${month}-01T00:00:00.000Z`,
+      to: `${month}-${String(lastDay).padStart(2, '0')}T23:59:59.999Z`,
+      label: `Mes ${month}`
+    };
+  }
+
+  if (period === 'today' || period === 'hoy') {
+    return {
+      from: `${todayStr}T00:00:00.000Z`,
+      to: `${todayStr}T23:59:59.999Z`,
+      label: `Hoy (${todayStr})`
+    };
+  }
+
+  if (period === 'yesterday' || period === 'ayer') {
+    const yest = new Date(now.getTime() - 86400000);
+    const yStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+    return {
+      from: `${yStr}T00:00:00.000Z`,
+      to: `${yStr}T23:59:59.999Z`,
+      label: `Ayer (${yStr})`
+    };
+  }
+
+  if (period === 'this_month' || period === 'mes' || period === 'este_mes') {
+    const lastDay = new Date(y, Number(m), 0).getDate();
+    return {
+      from: `${y}-${m}-01T00:00:00.000Z`,
+      to: `${y}-${m}-${String(lastDay).padStart(2, '0')}T23:59:59.999Z`,
+      label: `Mes en curso (${y}-${m})`
+    };
+  }
+
+  if (period === 'this_week' || period === 'semana') {
+    const day = now.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const fmt = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    return {
+      from: `${fmt(monday)}T00:00:00.000Z`,
+      to: `${fmt(sunday)}T23:59:59.999Z`,
+      label: `Esta semana (${fmt(monday)} a ${fmt(sunday)})`
+    };
+  }
+
+  if (dateFrom || dateTo) {
+    return {
+      from: dateFrom ? `${dateFrom}T00:00:00.000Z` : null,
+      to: dateTo ? `${dateTo}T23:59:59.999Z` : null,
+      label: `${dateFrom || ''} a ${dateTo || ''}`
+    };
+  }
+
+  return { from: null, to: null, label: 'Histórico Completo' };
+}
+
+function formatARS(amount: number): string {
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(amount);
+}
+
+const OLIVER_BASE_PROMPT = `Sos "Oliver", el Chef Ejecutivo, Maitre y Asistente Virtual Inteligente de "Hilos de Amor - Plataforma Gastronómica".
+Hablás en español con un tono cálido, profesional, gourmet y ejecutivo (español argentino rioplatense educado).
+
+## REGLA DE ORO DE NEGOCIO (¡MUY IMPORTANTE!):
+1. **VENTAS = PEDIDOS (ORDERS):**
+   - En este restaurante y sistema, **LAS VENTAS SON LOS PEDIDOS**. No existe una tabla separada de ventas: toda la facturación, ventas de café, pastelería y delivery proviene de la tabla 'orders'.
+   - Cada pedido registrado en 'orders' representa una **venta**.
+   - Los pedidos válidos/concretados son todos aquellos que **NO están cancelados** (es decir, con estado 'entregado', 'en_camino', 'preparando', 'pendiente', 'cobrado').
+   - Los pedidos con estado 'cancelado' se informan por separado, pero no suman al monto total de recaudación.
+   - El monto de cada venta es el campo 'total' (o 'subtotal' + propinas).
+
+2. **CONSULTAS POR FECHA O PERÍODO:**
+   - Si te preguntan: "¿cómo fueron las ventas de ayer?", "¿cuánto vendimos hoy?", "¿y en el mes?", "¿cuáles son las ventas de la semana?", DEBES USAR la herramienta 'query_kpis' o 'query_orders' pasando el período ('yesterday', 'today', 'this_month', 'this_week') o el mes correspondiente.
+   - NUNCA digas que no hubo ventas si hay pedidos registrados. Mostrá siempre los datos reales con importes concretos en ARS ($).
+
+3. **CAPACIDADES ADICIONALES:**
+   - Podés consultar productos, clientes, mesas, caja diaria, insumos/recetas.
+   - Podés registrar nuevos clientes, productos, movimientos de caja o insumos.
+   - Podés generar archivos Excel (.xlsx) usando 'generate_excel'. Cuando lo hagas, incluí siempre el tag [DESCARGAR_EXCEL:tipo:nombre_archivo:titulo].
+   - Podés responder sobre gastronomía, recetas, costos y consejos operativos.`;
 
 const OLIVER_TOOLS = [
   {
     type: 'function',
     function: {
       name: 'query_kpis',
-      description: 'Obtener resumen ejecutivo general del restaurante: total de ventas, órdenes del día/históricas, clientes registrados, productos activos y mesas.',
-      parameters: { type: 'object', properties: {} }
+      description: 'Obtener métricas y KPIs de VENTAS Y PEDIDOS del restaurante para cualquier período (hoy, ayer, esta semana, este mes o histórico). RECUERDA: VENTAS = PEDIDOS.',
+      parameters: {
+        type: 'object',
+        properties: {
+          period: {
+            type: 'string',
+            enum: ['today', 'yesterday', 'this_week', 'this_month', 'all'],
+            description: 'Período a consultar: today (hoy), yesterday (ayer), this_week (esta semana), this_month (este mes), all (todo)'
+          },
+          month: {
+            type: 'string',
+            description: 'Mes específico en formato YYYY-MM (ej: 2026-09) para ver las ventas de ese mes'
+          },
+          date_from: { type: 'string', description: 'Fecha inicio YYYY-MM-DD' },
+          date_to: { type: 'string', description: 'Fecha fin YYYY-MM-DD' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'query_orders',
+      description: 'Consultar lista detallada de pedidos y comandas (ventas). Permite filtrar por período (ayer, hoy, mes actual), estado (entregado, cancelado, etc.) o tipo.',
+      parameters: {
+        type: 'object',
+        properties: {
+          period: {
+            type: 'string',
+            enum: ['today', 'yesterday', 'this_week', 'this_month', 'all'],
+            description: 'Período: today, yesterday, this_week, this_month, all'
+          },
+          month: { type: 'string', description: 'Mes YYYY-MM (ej: 2026-09)' },
+          status: { type: 'string', description: 'entregado, cancelado, en_camino, pendiente, preparando' },
+          type: { type: 'string', description: 'salon, delivery, retiro' },
+          limit: { type: 'number', description: 'Cantidad máxima de órdenes (default 25)' }
+        }
+      }
     }
   },
   {
@@ -48,21 +168,6 @@ const OLIVER_TOOLS = [
           search: { type: 'string', description: 'Nombre o ingrediente a buscar' },
           category: { type: 'string', description: 'Nombre de la categoría' },
           only_available: { type: 'boolean', description: 'Solo productos disponibles' }
-        }
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'query_orders',
-      description: 'Consultar pedidos y comandas. Permite filtrar por estado (pending, preparing, delivered, completed, cancelled), tipo (dine_in, delivery, take_away) o límite.',
-      parameters: {
-        type: 'object',
-        properties: {
-          status: { type: 'string', description: 'pending, preparing, delivered, completed, cancelled' },
-          type: { type: 'string', description: 'dine_in, delivery, take_away' },
-          limit: { type: 'number', description: 'Cantidad máxima de órdenes (default 20)' }
         }
       }
     }
@@ -218,41 +323,121 @@ const OLIVER_TOOLS = [
   }
 ];
 
-function formatARS(amount: number): string {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(amount);
-}
-
 async function executeTool(name: string, args: Record<string, any>, sb: any): Promise<{ text: string; exportTag?: string }> {
   try {
     switch (name) {
       case 'query_kpis': {
+        const { from, to, label } = getDateRange(args.period, args.date_from, args.date_to, args.month);
+
+        let qOrders = sb.from('orders').select('id, total, subtotal, tip_amount, status, type, payment_method, created_at, customer_name, items');
+        if (from) qOrders = qOrders.gte('created_at', from);
+        if (to) qOrders = qOrders.lte('created_at', to);
+
         const [ordersRes, custRes, prodRes, tablesRes, cashRes] = await Promise.all([
-          sb.from('orders').select('id, total, status, created_at'),
+          qOrders,
           sb.from('customers').select('id', { count: 'exact' }),
           sb.from('products').select('id, is_available', { count: 'exact' }),
           sb.from('tables').select('id, status'),
           sb.from('cash_registers').select('id, status, initial_balance, created_at').eq('status', 'open').order('created_at', { ascending: false }).limit(1)
         ]);
 
-        const orders = ordersRes.data || [];
-        const totalSales = orders.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
-        const completedOrders = orders.filter((o: any) => o.status === 'completed' || o.status === 'cobrado');
-        const avgTicket = completedOrders.length > 0
-          ? (completedOrders.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0) / completedOrders.length)
-          : (orders.length > 0 ? totalSales / orders.length : 0);
+        const allOrders = ordersRes.data || [];
+        // VENTAS = PEDIDOS: Valid sales are orders that are NOT cancelled!
+        const validSales = allOrders.filter((o: any) => o.status !== 'cancelado');
+        const cancelledOrders = allOrders.filter((o: any) => o.status === 'cancelado');
+        const deliveredSales = allOrders.filter((o: any) => o.status === 'entregado');
+
+        const totalVentas = validSales.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
+        const totalSubtotal = validSales.reduce((sum: number, o: any) => sum + (Number(o.subtotal) || Number(o.total) || 0), 0);
+        const totalPropinas = validSales.reduce((sum: number, o: any) => sum + (Number(o.tip_amount) || 0), 0);
+        const avgTicket = validSales.length > 0 ? (totalVentas / validSales.length) : 0;
+
+        // Breakdown by channel / type
+        const byChannel: Record<string, { cantidad: number; total: number }> = {};
+        validSales.forEach((o: any) => {
+          const ch = o.type === 'salon' ? 'Salón' : o.type === 'delivery' ? 'Delivery' : 'Para Llevar';
+          if (!byChannel[ch]) byChannel[ch] = { cantidad: 0, total: 0 };
+          byChannel[ch].cantidad++;
+          byChannel[ch].total += Number(o.total) || 0;
+        });
+
+        // Breakdown by payment method
+        const byPayment: Record<string, { cantidad: number; total: number }> = {};
+        validSales.forEach((o: any) => {
+          const pm = o.payment_method || 'Efectivo';
+          if (!byPayment[pm]) byPayment[pm] = { cantidad: 0, total: 0 };
+          byPayment[pm].cantidad++;
+          byPayment[pm].total += Number(o.total) || 0;
+        });
 
         const tables = tablesRes.data || [];
         const occupiedTables = tables.filter((t: any) => t.status === 'ocupada').length;
 
         return {
           text: JSON.stringify({
-            ventas_totales_acumuladas: formatARS(totalSales),
-            total_ordenes: orders.length,
-            ticket_promedio: formatARS(avgTicket),
-            clientes_registrados: custRes.count || 0,
-            productos_en_carta: prodRes.count || 0,
-            mesas: { total: tables.length, ocupadas: occupiedTables, disponibles: tables.length - occupiedTables },
-            caja_abierta: cashRes.data && cashRes.data.length > 0 ? 'Sí (Turno Activo)' : 'Caja Cerrada'
+            periodo_consultado: label,
+            ventas_y_pedidos: {
+              total_pedidos_registrados: allOrders.length,
+              ventas_efectivas_concretadas: validSales.length,
+              pedidos_entregados: deliveredSales.length,
+              pedidos_cancelados: cancelledOrders.length,
+              recaudacion_total_ventas: formatARS(totalVentas),
+              recaudacion_total_numero: totalVentas,
+              subtotal_bruto: formatARS(totalSubtotal),
+              total_propinas: formatARS(totalPropinas),
+              ticket_promedio: formatARS(avgTicket),
+              desglose_por_canal: Object.entries(byChannel).map(([canal, d]) => ({ canal, cantidad: d.cantidad, total: formatARS(d.total) })),
+              desglose_por_metodo_pago: Object.entries(byPayment).map(([metodo, d]) => ({ metodo, cantidad: d.cantidad, total: formatARS(d.total) })),
+              ejemplo_ultimos_pedidos: validSales.slice(0, 5).map((o: any) => ({
+                codigo: o.code || `#${o.id.slice(0, 5)}`,
+                cliente: o.customer_name || 'Cliente',
+                monto: formatARS(o.total),
+                estado: o.status
+              }))
+            },
+            contexto_general: {
+              clientes_registrados: custRes.count || 0,
+              productos_en_carta: prodRes.count || 0,
+              mesas: { total: tables.length, ocupadas: occupiedTables, disponibles: tables.length - occupiedTables },
+              caja_abierta: cashRes.data && cashRes.data.length > 0 ? 'Sí (Turno Activo)' : 'Caja Cerrada'
+            }
+          })
+        };
+      }
+
+      case 'query_orders': {
+        const { from, to, label } = getDateRange(args.period, null, null, args.month);
+        let q = sb.from('orders').select('id, code, customer_name, total, subtotal, status, type, payment_method, created_at, table_name, items');
+        if (from) q = q.gte('created_at', from);
+        if (to) q = q.lte('created_at', to);
+        if (args.status) q = q.eq('status', args.status);
+        if (args.type) q = q.eq('type', args.type);
+        const { data, error } = await q.order('created_at', { ascending: false }).limit(args.limit || 25);
+        if (error) return { text: JSON.stringify({ error: error.message }) };
+
+        const orders = data || [];
+        const validSales = orders.filter((o: any) => o.status !== 'cancelado');
+        const totalVentas = validSales.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
+
+        const mapped = orders.map((o: any) => ({
+          codigo: o.code || `#${o.id.slice(0, 5)}`,
+          cliente: o.customer_name || 'Consumidor Final',
+          mesa: o.table_name || 'N/A',
+          tipo: o.type === 'salon' ? 'Salón' : o.type === 'delivery' ? 'Delivery' : 'Para Llevar',
+          estado: o.status,
+          es_venta_valida: o.status !== 'cancelado' ? 'Sí' : 'No (Cancelado)',
+          metodo_pago: o.payment_method || 'No especificado',
+          total: formatARS(o.total || 0),
+          fecha: o.created_at ? new Date(o.created_at).toLocaleDateString('es-AR', { hour: '2-digit', minute: '2-digit' }) : ''
+        }));
+
+        return {
+          text: JSON.stringify({
+            periodo: label,
+            total_pedidos_encontrados: orders.length,
+            ventas_validas_concretadas: validSales.length,
+            total_recaudado: formatARS(totalVentas),
+            pedidos: mapped
           })
         };
       }
@@ -274,27 +459,6 @@ async function executeTool(name: string, args: Record<string, any>, sb: any): Pr
           descripcion: p.description
         }));
         return { text: JSON.stringify({ total_encontrados: mapped.length, productos: mapped }) };
-      }
-
-      case 'query_orders': {
-        let q = sb.from('orders').select('id, code, customer_name, total, status, type, payment_method, created_at, table_name');
-        if (args.status) q = q.eq('status', args.status);
-        if (args.type) q = q.eq('type', args.type);
-        const { data, error } = await q.order('created_at', { ascending: false }).limit(args.limit || 15);
-        if (error) return { text: JSON.stringify({ error: error.message }) };
-
-        const totalMonto = (data || []).reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
-        const mapped = (data || []).map((o: any) => ({
-          codigo: o.code || `#${o.id.slice(0, 5)}`,
-          cliente: o.customer_name || 'Consumidor Final',
-          mesa: o.table_name || 'N/A',
-          tipo: o.type === 'dine_in' ? 'Salón' : o.type === 'delivery' ? 'Delivery' : 'Take Away',
-          estado: o.status,
-          metodo_pago: o.payment_method || 'No especificado',
-          total: formatARS(o.total || 0),
-          fecha: o.created_at ? new Date(o.created_at).toLocaleDateString('es-AR', { hour: '2-digit', minute: '2-digit' }) : ''
-        }));
-        return { text: JSON.stringify({ total_monto: formatARS(totalMonto), cantidad: mapped.length, ordenes: mapped }) };
       }
 
       case 'query_customers': {
@@ -517,7 +681,7 @@ async function executeTool(name: string, args: Record<string, any>, sb: any): Pr
         return {
           text: JSON.stringify({
             success: true,
-            mensaje: `Reporte Excel preparado para descarga.`,
+            mensaje: `Reporte Excel de ${repType} preparado para descarga con datos de pedidos y ventas reales.`,
             tag_descarga: tag
           }),
           exportTag: tag
@@ -557,13 +721,23 @@ serve(async (req) => {
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const routeContext = `\n\n## CONTEXTO DE NAVEGACIÓN ACTUAL:
-El usuario está visualizando la ruta: "${activeRoute || '/dashboard'}".
-Ten en cuenta esta pantalla para ofrecer datos o sugerir acciones rápidas relevantes a esa área.`;
+    // Get current date in Argentina
+    const nowArg = getArgentinaNow();
+    const yestArg = new Date(nowArg.getTime() - 86400000);
+    const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+    const dateContext = `\n\n## FECHA Y HORA ACTUAL (ARGENTINA):
+- 📅 Hoy es ${dayNames[nowArg.getDay()]} ${nowArg.getDate()} de ${monthNames[nowArg.getMonth()]} de ${nowArg.getFullYear()} (${nowArg.toISOString().split('T')[0]}).
+- 📅 Ayer fue: ${dayNames[yestArg.getDay()]} ${yestArg.getDate()} de ${monthNames[yestArg.getMonth()]} de ${yestArg.getFullYear()} (${yestArg.toISOString().split('T')[0]}).
+- 📅 Mes actual: ${monthNames[nowArg.getMonth()]} de ${nowArg.getFullYear()} (${nowArg.getFullYear()}-${String(nowArg.getMonth() + 1).padStart(2, '0')}).
+
+## CONTEXTO DE NAVEGACIÓN:
+El usuario está en: "${activeRoute || '/dashboard'}".`;
 
     const systemMessage = {
       role: 'system',
-      content: OLIVER_BASE_PROMPT + routeContext,
+      content: OLIVER_BASE_PROMPT + dateContext,
     };
 
     const conversationHistory: any[] = [
@@ -589,7 +763,7 @@ Ten en cuenta esta pantalla para ofrecer datos o sugerir acciones rápidas relev
           messages: conversationHistory,
           tools: OLIVER_TOOLS,
           tool_choice: 'auto',
-          temperature: 0.7,
+          temperature: 0.6,
         }),
       });
 
