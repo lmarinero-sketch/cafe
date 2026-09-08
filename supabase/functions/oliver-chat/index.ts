@@ -106,10 +106,11 @@ Hablás en español con un tono cálido, profesional, gourmet y ejecutivo (espa�
    - Si te preguntan: "¿cómo fueron las ventas de ayer?", "¿cuánto vendimos hoy?", "¿y en el mes?", "¿cuáles son las ventas de la semana?", DEBES USAR la herramienta 'query_kpis' o 'query_orders' pasando el período ('yesterday', 'today', 'this_month', 'this_week') o el mes correspondiente.
    - NUNCA digas que no hubo ventas si hay pedidos registrados. Mostrá siempre los datos reales con importes concretos en ARS ($).
 
-3. **CAPACIDADES ADICIONALES:**
+3. **GENERACIÓN DE REPORTES (PDF Y EXCEL):**
+   - **REPORTES EN PDF:** Si el usuario te pide un **PDF** (ej: "puedes darme un pdf de las ventas?", "generame un reporte en pdf", "exportar en pdf", "descargar pdf"), DEBES USAR OBLIGATORIAMENTE la herramienta 'generate_pdf_report'. ¡NUNCA ofrezcas ni generes un Excel cuando te solicitaron un PDF!
+   - **PLANILLAS EXCEL:** Si el usuario te pide explícitamente un **Excel** o planilla (.xlsx), usá la herramienta 'generate_excel'.
    - Podés consultar productos, clientes, mesas, caja diaria, insumos/recetas.
    - Podés registrar nuevos clientes, productos, movimientos de caja o insumos.
-   - Podés generar archivos Excel (.xlsx) usando 'generate_excel'. Cuando lo hagas, incluí siempre el tag [DESCARGAR_EXCEL:tipo:nombre_archivo:titulo].
    - Podés responder sobre gastronomía, recetas, costos y consejos operativos.`;
 
 const OLIVER_TOOLS = [
@@ -316,6 +317,37 @@ const OLIVER_TOOLS = [
         properties: {
           report_type: { type: 'string', enum: ['sales', 'customers', 'products', 'ingredients', 'cash'], description: 'Tipo de reporte a exportar' },
           title: { type: 'string', description: 'Título personalizado para el reporte' }
+        },
+        required: ['report_type']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'generate_pdf_report',
+      description: 'Generar y preparar para ver/imprimir/guardar como PDF un reporte oficial formal con toda la estética institucional de Hilos de Amor (A4, encabezado de alta gama, métricas ejecutivas, desglose por medio de pago y tabla detallada de ventas). Soporta ventas (sales), clientes (customers), carta (products) y caja (cash). ¡Usar SIEMPRE que el usuario solicite un PDF!',
+      parameters: {
+        type: 'object',
+        properties: {
+          report_type: {
+            type: 'string',
+            enum: ['sales', 'customers', 'products', 'cash'],
+            description: 'Tipo de reporte para el PDF: sales (ventas y comandas), customers (clientes), products (carta), cash (caja)'
+          },
+          period: {
+            type: 'string',
+            enum: ['today', 'yesterday', 'this_week', 'this_month', 'all'],
+            description: 'Período temporal para filtrar las ventas: today (hoy), yesterday (ayer), this_week (esta semana), this_month (este mes), all (histórico completo)'
+          },
+          title: {
+            type: 'string',
+            description: 'Título formal del reporte (ej: Reporte Oficial de Ventas y Comandas)'
+          },
+          date_label: {
+            type: 'string',
+            description: 'Descripción legible del período o fecha (ej: Ayer 07/09/2026, Septiembre 2026, etc.)'
+          }
         },
         required: ['report_type']
       }
@@ -682,6 +714,25 @@ async function executeTool(name: string, args: Record<string, any>, sb: any): Pr
           text: JSON.stringify({
             success: true,
             mensaje: `Reporte Excel de ${repType} preparado para descarga con datos de pedidos y ventas reales.`,
+            tag_descarga: tag
+          }),
+          exportTag: tag
+        };
+      }
+
+      case 'generate_pdf_report': {
+        const repType = args.report_type || 'sales';
+        const period = args.period || 'all';
+        const nowStr = new Date().toISOString().split('T')[0];
+        const filename = `Reporte_${repType}_${period}_${nowStr}.pdf`;
+        const exportTitle = args.title || `Reporte Oficial de ${repType === 'sales' ? 'Ventas' : repType.toUpperCase()}`;
+        const dateLabel = args.date_label || (period === 'yesterday' ? 'Ayer' : period === 'today' ? 'Hoy' : period === 'this_month' ? 'Este Mes' : 'Histórico');
+        const tag = `[DESCARGAR_PDF:${repType}:${filename}:${exportTitle}:${period}:${encodeURIComponent(dateLabel)}]`;
+
+        return {
+          text: JSON.stringify({
+            success: true,
+            mensaje: `Reporte en formato PDF institucional preparado para "${exportTitle}" (${dateLabel}).`,
             tag_descarga: tag
           }),
           exportTag: tag

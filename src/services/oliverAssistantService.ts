@@ -13,6 +13,16 @@ export interface ExcelExportInfo {
   rowCount: number;
 }
 
+export interface PdfReportInfo {
+  type: 'sales' | 'customers' | 'products' | 'cash';
+  filename: string;
+  title: string;
+  period: string;
+  dateLabel: string;
+}
+
+export { openPdfSalesReport } from './reportPdfService';
+
 // Function to generate and trigger browser Excel file download using XLSX (SheetJS)
 export async function generateAndTriggerExcel(
   type: string, 

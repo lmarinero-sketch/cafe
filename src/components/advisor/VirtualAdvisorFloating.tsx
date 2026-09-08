@@ -11,11 +11,13 @@ import {
   Bot,
   CheckCircle2,
   FileSpreadsheet,
+  FileText,
+  Printer,
   HelpCircle,
   Minimize2,
   Maximize2
 } from 'lucide-react';
-import { askOliver, generateAndTriggerExcel, ChatMessage } from '../../services/oliverAssistantService';
+import { askOliver, generateAndTriggerExcel, openPdfSalesReport, ChatMessage, PdfReportInfo } from '../../services/oliverAssistantService';
 import { useApp } from '../../context/AppContext';
 import { Manual, SupportTicket } from '../../types';
 
@@ -39,7 +41,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
     {
       id: 'welcome',
       role: 'assistant',
-      content: '¡Hola! 👋 Soy **Oliver**, tu Maitre Ejecutivo y Asistente IA en **Hilos de Amor**.\n\nPuedo consultar cualquier dato en tiempo real de tu base de datos (ventas, stock, clientes, mesas, caja), registrar nuevos datos, generar planillas **Excel (.xlsx)** listas para descargar, o responder cualquier duda gastronómica y operativa.\n\n¿En qué te puedo asesorar hoy?',
+      content: '¡Hola! 👋 Soy **Oliver**, tu Maitre Ejecutivo y Asistente IA en **Hilos de Amor**.\n\nPuedo consultar cualquier dato en tiempo real de tu base de datos (ventas, pedidos, clientes, mesas, caja), registrar nuevos datos, generar **Reportes Oficiales en PDF** listos para imprimir o guardar con la estética del proyecto, exportar planillas **Excel (.xlsx)**, o responder cualquier duda gastronómica y operativa.\n\n¿En qué te puedo asesorar hoy?',
       time: 'Ahora'
     }
   ]);
@@ -81,6 +83,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
     }
     if (p.includes('order') || p.includes('delivery')) {
       return [
+        { label: '📄 Reporte PDF de Ventas', prompt: 'Generame un reporte en PDF de las ventas con la estética oficial del restaurante.' },
         { label: '🧾 Órdenes recientes', prompt: '¿Cuáles fueron los últimos pedidos registrados y cuál es el monto total?' },
         { label: '📥 Exportar Ventas a Excel', prompt: 'Generame un reporte Excel con todas las ventas y pedidos.' },
         { label: '⏳ Pedidos pendientes', prompt: '¿Hay algún pedido pendiente en preparación o entrega?' }
@@ -115,10 +118,10 @@ export const VirtualAdvisorFloating: React.FC = () => {
     }
     // Default dashboard actions
     return [
+      { label: '📄 Reporte PDF de Ventas', prompt: 'Generame un reporte en PDF de las ventas con toda la estética del proyecto.' },
       { label: '📊 Resumen ejecutivo y KPIs', prompt: '¿Cómo está el restaurante hoy? Dame un resumen ejecutivo de ventas y operaciones.' },
       { label: '📥 Exportar Ventas a Excel', prompt: 'Generame un reporte Excel con todas las ventas registradas.' },
-      { label: '🏆 Top clientes', prompt: '¿Quiénes son nuestros clientes más fieles por compras y puntos?' },
-      { label: '💡 ¿Qué podés hacer, Oliver?', prompt: 'Contame todo lo que podés hacer como asistente en Hilos de Amor.' }
+      { label: '🏆 Top clientes', prompt: '¿Quiénes son nuestros clientes más fieles por compras y puntos?' }
     ];
   };
 
@@ -148,7 +151,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
       const response = await askOliver(historyForService, location.pathname);
 
       let finalContent = response.reply;
-      if (response.exportTag && !finalContent.includes('[DESCARGAR_EXCEL:')) {
+      if (response.exportTag && !finalContent.includes(response.exportTag)) {
         finalContent += `\n\n${response.exportTag}`;
       }
 
@@ -186,12 +189,25 @@ export const VirtualAdvisorFloating: React.FC = () => {
     }
   };
 
+  const handlePdfReportClick = async (report: { type: string; filename: string; title: string; period: string; dateLabel: string }) => {
+    try {
+      await openPdfSalesReport({
+        type: report.type as any,
+        period: report.period,
+        title: report.title,
+        dateLabel: report.dateLabel
+      });
+    } catch (err) {
+      console.error('Error generating PDF report:', err);
+    }
+  };
+
   const handleClearChat = () => {
     setMessages([
       {
         id: 'reset',
         role: 'assistant',
-        content: '¡Conversación reiniciada! 👋 Soy **Oliver**, listo para responder consultas, consultar la base de datos o generar tus reportes en Excel.',
+        content: '¡Conversación reiniciada! 👋 Soy **Oliver**, listo para responder consultas, consultar la base de datos o generar tus reportes en PDF y Excel.',
         time: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
       }
     ]);
@@ -235,7 +251,24 @@ export const VirtualAdvisorFloating: React.FC = () => {
       });
     }
 
-    const cleanText = rawText.replace(excelTagRegex, '').trim();
+    const pdfTagRegex = /\[DESCARGAR_PDF:([^:]+):([^:]+):([^:]+):([^:]+):([^\]]+)\]/g;
+    const pdfMatches: { type: string; filename: string; title: string; period: string; dateLabel: string }[] = [];
+    let pdfMatch;
+
+    while ((pdfMatch = pdfTagRegex.exec(rawText)) !== null) {
+      pdfMatches.push({
+        type: pdfMatch[1],
+        filename: pdfMatch[2],
+        title: pdfMatch[3],
+        period: pdfMatch[4],
+        dateLabel: decodeURIComponent(pdfMatch[5])
+      });
+    }
+
+    const cleanText = rawText
+      .replace(excelTagRegex, '')
+      .replace(pdfTagRegex, '')
+      .trim();
 
     return (
       <div className="space-y-2 text-sm leading-relaxed">
@@ -259,6 +292,37 @@ export const VirtualAdvisorFloating: React.FC = () => {
             </div>
           );
         })}
+
+        {/* Render interactive PDF Report Cards if present */}
+        {pdfMatches.map((pm, idx) => (
+          <div key={`pdf-${idx}`} className="mt-3 p-3.5 bg-gradient-to-r from-blue-50/90 via-slate-50 to-indigo-50/90 border border-blue-200/90 rounded-xl shadow-sm">
+            <div className="flex items-start justify-between gap-3 mb-2.5">
+              <div className="flex items-start gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-blue-700 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <FileText size={19} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded">
+                      Reporte Oficial PDF
+                    </span>
+                    <span className="text-[10.5px] text-slate-500 font-medium">Formato A4 Auditado</span>
+                  </div>
+                  <div className="text-xs font-bold text-slate-900 mt-1">{pm.title}</div>
+                  <div className="text-[11px] text-blue-700 font-semibold">{pm.dateLabel}</div>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handlePdfReportClick(pm)}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white rounded-lg text-xs font-bold transition-all shadow shadow-blue-600/20 cursor-pointer"
+            >
+              <Printer size={14} className="shrink-0" />
+              <span>Ver e Imprimir / Guardar como PDF</span>
+            </button>
+          </div>
+        ))}
 
         {/* Render interactive Excel Download Cards if present */}
         {excelMatches.map((em, idx) => (
@@ -533,7 +597,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Preguntale lo que sea a Oliver o pedile un Excel..."
+                    placeholder="Preguntale lo que sea a Oliver o pedile un PDF/Excel..."
                     disabled={loading}
                     className="flex-1 py-2.5 px-3.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all disabled:opacity-60"
                   />
@@ -546,7 +610,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
                   </button>
                 </form>
                 <div className="text-[10px] text-slate-400 text-center mt-1.5">
-                  Oliver consulta la base de datos de Hilos de Amor y genera archivos .xlsx nativos.
+                  Oliver consulta la base de datos de Hilos de Amor y genera reportes oficiales en PDF y Excel.
                 </div>
               </div>
             </div>
