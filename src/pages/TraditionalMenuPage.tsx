@@ -95,6 +95,7 @@ export const TraditionalMenuPage: React.FC = () => {
       <main className="p-4 space-y-8">
         {categories.map((cat) => {
           const catProducts = products.filter((p) => {
+            if (!p.isAvailable) return false;
             const matchesCat = p.categoryId === cat.id;
             const matchesSearch =
               p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

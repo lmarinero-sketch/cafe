@@ -58,8 +58,9 @@ export const PublicMenuPage: React.FC = () => {
 
   const [orderSuccessCode, setOrderSuccessCode] = useState<string | null>(null);
 
-  // Filter products (Show available and unavailable items so user sees out-of-stock badges)
+  // Filter products: Only show products that are available (isAvailable === true)
   const filteredProducts = products.filter((p) => {
+    if (!p.isAvailable) return false;
     const matchesCat = selectedCategory === 'all' || p.categoryId === selectedCategory;
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -67,7 +68,7 @@ export const PublicMenuPage: React.FC = () => {
     return matchesCat && matchesSearch;
   });
 
-  const featuredProducts = products.filter((p) => p.isFeatured);
+  const featuredProducts = products.filter((p) => p.isFeatured && p.isAvailable);
 
   const addToCart = () => {
     if (!selectedProduct) return;

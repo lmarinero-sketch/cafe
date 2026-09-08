@@ -312,7 +312,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             <!-- Categories and Products -->
             ${cats
               .map((cat) => {
-                const catProds = prods.filter((p) => p.categoryId === cat.id);
+                const catProds = prods.filter((p) => p.categoryId === cat.id && p.isAvailable);
                 if (catProds.length === 0) return '';
 
                 return `
@@ -396,7 +396,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             </div>
             <div>
               <h2 className="font-bold text-base text-[#FFFDF8] font-serif">Carta Física para Imprimir / PDF</h2>
-              <p className="text-xs text-[#D8E4C3]/80">Formato A4 optimizado con todos los márgenes aprovechados ({products.length} productos)</p>
+              <p className="text-xs text-[#D8E4C3]/80">Formato A4 optimizado con todos los márgenes aprovechados ({products.filter(p => p.isAvailable).length} productos disponibles)</p>
             </div>
           </div>
 
@@ -462,7 +462,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             {/* Menu Items Grouped by Category */}
             <div className="space-y-6">
               {categories.map((cat) => {
-                const catProducts = products.filter((p) => p.categoryId === cat.id);
+                const catProducts = products.filter((p) => p.categoryId === cat.id && p.isAvailable);
                 if (catProducts.length === 0) return null;
 
                 return (

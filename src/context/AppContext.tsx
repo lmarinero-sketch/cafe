@@ -112,6 +112,7 @@ interface AppContextType {
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (id: string, product: Partial<Product>) => void;
   toggleProductStatus: (id: string) => void;
+  deleteProduct: (id: string) => Promise<boolean>;
   
   addTable: (table: Omit<Table, 'id' | 'qrCode'>) => boolean;
   updateTable: (id: string, table: Partial<Table>) => boolean;
@@ -905,21 +906,39 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast('Producto actualizado', 'Los cambios fueron guardados.', 'success');
   };
 
-  const toggleProductStatus = (id: string) => {
+  const toggleProductStatus = async (id: string) => {
+    let nextState = false;
+    let targetName = '';
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === id) {
-          const next = !p.isAvailable;
-          showToast(
-            next ? 'Producto disponible' : 'Producto no disponible',
-            `"${p.name}" ${next ? 'ahora es visible' : 'se ocultó'} en la carta digital.`,
-            next ? 'success' : 'warning'
-          );
-          return { ...p, isAvailable: next };
+          nextState = !p.isAvailable;
+          targetName = p.name;
+          return { ...p, isAvailable: nextState };
         }
         return p;
       })
     );
+    showToast(
+      nextState ? 'Producto disponible' : 'Producto no disponible',
+      `"${targetName}" ${nextState ? 'ahora es visible' : 'se ocultó'} en la carta digital.`,
+      nextState ? 'success' : 'warning'
+    );
+    await productsService.updateProduct(id, { isAvailable: nextState });
+    logActivity('Productos', 'update', `Producto "${targetName}" marcado como ${nextState ? 'disponible' : 'no disponible'}`);
+  };
+
+  const deleteProduct = async (id: string): Promise<boolean> => {
+    const prod = products.find((p) => p.id === id);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    const success = await productsService.deleteProduct(id);
+    if (success) {
+      showToast('Producto eliminado', `"${prod?.name || 'El producto'}" fue eliminado del catálogo.`, 'success');
+      logActivity('Productos', 'delete', `Producto "${prod?.name || id}" eliminado`);
+    } else {
+      showToast('Aviso', 'Se eliminó localmente.', 'info');
+    }
+    return success;
   };
 
   // ============================================================
@@ -2074,6 +2093,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addProduct,
         updateProduct,
         toggleProductStatus,
+        deleteProduct,
         addTable,
         updateTable,
         updateTableStatus,

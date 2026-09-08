@@ -6,7 +6,7 @@ import { formatCurrency } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 
 export const ProductsPage: React.FC = () => {
-  const { products, categories, addProduct, updateProduct, toggleProductStatus } = useApp();
+  const { products, categories, addProduct, updateProduct, toggleProductStatus, deleteProduct } = useApp();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [filterType, setFilterType] = useState<'all' | 'simple' | 'composite'>('all');
@@ -147,6 +147,16 @@ export const ProductsPage: React.FC = () => {
       ...prev,
       compositeItems: prev.compositeItems.filter((i) => i.productId !== productId),
     }));
+  };
+
+  const handleDeleteProduct = (product: Product) => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar el producto "${product.name}"? Esta acción lo removerá de la carta y del sistema.`)) {
+      deleteProduct(product.id);
+      if (editingProduct && editingProduct.id === product.id) {
+        setIsModalOpen(false);
+        setEditingProduct(null);
+      }
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -400,12 +410,22 @@ export const ProductsPage: React.FC = () => {
                 {p.isAvailable ? 'Disponible' : 'No disponible'}
               </span>
 
-              <button
-                onClick={() => handleOpenEditModal(p)}
-                className="py-1 px-3 rounded-lg bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark text-xs font-bold flex items-center gap-1 transition-colors"
-              >
-                <Edit className="w-3.5 h-3.5 text-brand-brown" /> Editar
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteProduct(p)}
+                  className="p-1.5 rounded-lg bg-brand-bg hover:bg-rose-50 text-rose-600 hover:text-rose-700 transition-colors border border-brand-secondary/40"
+                  title="Eliminar producto"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleOpenEditModal(p)}
+                  className="py-1 px-3 rounded-lg bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark text-xs font-bold flex items-center gap-1 transition-colors"
+                >
+                  <Edit className="w-3.5 h-3.5 text-brand-brown" /> Editar
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -816,6 +836,16 @@ export const ProductsPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 pt-3">
+                {editingProduct && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteProduct(editingProduct)}
+                    className="py-2.5 px-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 font-bold text-xs hover:bg-rose-100 transition-colors flex items-center gap-1"
+                    title="Eliminar este producto"
+                  >
+                    <Trash2 className="w-4 h-4" /> Eliminar
+                  </button>
+                )}
                 <button
                   type="submit"
                   className="flex-1 py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold hover:bg-brand-dark transition-colors"
