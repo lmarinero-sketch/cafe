@@ -1,42 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
-  HelpCircle,
   X,
   Send,
+  Sparkles,
+  Download,
+  RotateCcw,
   BookOpen,
   Headphones,
-  Search,
-  MessageSquare,
-  Sparkles,
+  Bot,
   CheckCircle2,
-  FileText,
-  PhoneCall,
+  FileSpreadsheet,
+  HelpCircle,
+  Minimize2,
+  Maximize2
 } from 'lucide-react';
+import { askOliver, generateAndTriggerExcel, ChatMessage } from '../../services/oliverAssistantService';
 import { useApp } from '../../context/AppContext';
 import { Manual, SupportTicket } from '../../types';
 
+interface DisplayMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  time: string;
+}
+
 export const VirtualAdvisorFloating: React.FC = () => {
-  const { manuals, createSupportTicket, tickets } = useApp();
+  const location = useLocation();
+  const { manuals, createSupportTicket } = useApp();
+
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'consultar' | 'manuales' | 'soporte'>('consultar');
-
-  // Consultar Chat state
-  const [chatMessages, setChatMessages] = useState<
-    { sender: 'bot' | 'user'; text: string; time: string }[]
-  >([
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<'oliver' | 'manuales' | 'soporte'>('oliver');
+  
+  // Chat state
+  const [messages, setMessages] = useState<DisplayMessage[]>([
     {
-      sender: 'bot',
-      text: '¡Hola! Soy el Asesor Virtual de Hilos de Amor. ¿En qué puedo ayudarte hoy? Podés seleccionar una de las preguntas frecuentes abajo o escribir tu duda.',
-      time: 'Ahora',
-    },
+      id: 'welcome',
+      role: 'assistant',
+      content: '¡Hola! 👋 Soy **Oliver**, tu Maitre Ejecutivo y Asistente IA en **Hilos de Amor**.\n\nPuedo consultar cualquier dato en tiempo real de tu base de datos (ventas, stock, clientes, mesas, caja), registrar nuevos datos, generar planillas **Excel (.xlsx)** listas para descargar, o responder cualquier duda gastronómica y operativa.\n\n¿En qué te puedo asesorar hoy?',
+      time: 'Ahora'
+    }
   ]);
-  const [queryInput, setQueryInput] = useState('');
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [downloadingType, setDownloadingType] = useState<string | null>(null);
 
-  // Manuals state
+  // Manuals and support state
   const [manualSearch, setManualSearch] = useState('');
   const [selectedManual, setSelectedManual] = useState<Manual | null>(null);
-
-  // Support Ticket Form state
   const [ticketForm, setTicketForm] = useState({
     name: '',
     email: '',
@@ -47,68 +60,141 @@ export const VirtualAdvisorFloating: React.FC = () => {
   });
   const [submittedTicketId, setSubmittedTicketId] = useState<string | null>(null);
 
-  // FAQ preset list
-  const presetQuestions = [
-    '¿Cómo creo un producto?',
-    '¿Cómo creo una mesa?',
-    '¿Cómo modifico el menú?',
-    '¿Cómo actualizo un ingrediente?',
-    '¿Cómo se calcula el precio sugerido?',
-    '¿Cómo funcionan los puntos?',
-    '¿Cómo creo una promoción?',
-    '¿Cómo programo un mensaje?',
-    '¿Cómo contacto a soporte?',
-  ];
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSendQuery = (textToSend?: string) => {
-    const text = textToSend || queryInput;
-    if (!text.trim()) return;
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (isOpen && activeTab === 'oliver') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isOpen, activeTab, loading]);
 
-    // Add user message
-    const userMsg = { sender: 'user' as const, text, time: 'Ahora' };
-    setChatMessages((prev) => [...prev, userMsg]);
-    if (!textToSend) setQueryInput('');
+  // Dynamic quick action suggestions based on active route
+  const getContextualQuickActions = () => {
+    const p = location.pathname;
+    if (p.includes('caja')) {
+      return [
+        { label: '💰 Balance de caja actual', prompt: '¿Cuál es el estado y balance actual de la caja?' },
+        { label: '📥 Exportar Arqueo a Excel', prompt: 'Generame un reporte Excel con todos los movimientos de caja.' },
+        { label: '💸 Registrar egreso', prompt: 'Quiero registrar un egreso de caja por compra de insumos.' }
+      ];
+    }
+    if (p.includes('order') || p.includes('delivery')) {
+      return [
+        { label: '🧾 Órdenes recientes', prompt: '¿Cuáles fueron los últimos pedidos registrados y cuál es el monto total?' },
+        { label: '📥 Exportar Ventas a Excel', prompt: 'Generame un reporte Excel con todas las ventas y pedidos.' },
+        { label: '⏳ Pedidos pendientes', prompt: '¿Hay algún pedido pendiente en preparación o entrega?' }
+      ];
+    }
+    if (p.includes('table')) {
+      return [
+        { label: '🪑 Mesas disponibles', prompt: '¿Cuántas mesas tenemos disponibles y cuántas están ocupadas?' },
+        { label: '🔄 Liberar mesa', prompt: 'Quiero cambiar el estado de una mesa a disponible.' }
+      ];
+    }
+    if (p.includes('product') || p.includes('menu')) {
+      return [
+        { label: '📋 Resumen de carta y precios', prompt: '¿Cuántos productos hay en la carta y cuáles son las categorías?' },
+        { label: '📥 Exportar Menú a Excel', prompt: 'Generá un archivo Excel de todos los productos de la carta y sus precios.' },
+        { label: '➕ Crear nuevo plato', prompt: 'Quiero crear un nuevo plato en la carta de Hilos de Amor.' }
+      ];
+    }
+    if (p.includes('customer') || p.includes('reward')) {
+      return [
+        { label: '👥 Cartera de clientes', prompt: '¿Cuántos clientes tenemos registrados y cuál es el promedio de visitas?' },
+        { label: '🏆 Top clientes por puntos', prompt: '¿Cuáles son los 5 clientes con mayor puntaje acumulado?' },
+        { label: '📥 Exportar Clientes a Excel', prompt: 'Exportame la cartera de clientes y sus puntos en formato Excel.' }
+      ];
+    }
+    if (p.includes('ingredient') || p.includes('recipe')) {
+      return [
+        { label: '📦 Stock de insumos', prompt: '¿Cuáles son los ingredientes con mayor costo de compra y mermas?' },
+        { label: '📥 Exportar Insumos a Excel', prompt: 'Generame un archivo Excel de insumos, costos normalizados y mermas.' },
+        { label: '➕ Dar de alta ingrediente', prompt: 'Quiero dar de alta un nuevo ingrediente.' }
+      ];
+    }
+    // Default dashboard actions
+    return [
+      { label: '📊 Resumen ejecutivo y KPIs', prompt: '¿Cómo está el restaurante hoy? Dame un resumen ejecutivo de ventas y operaciones.' },
+      { label: '📥 Exportar Ventas a Excel', prompt: 'Generame un reporte Excel con todas las ventas registradas.' },
+      { label: '🏆 Top clientes', prompt: '¿Quiénes son nuestros clientes más fieles por compras y puntos?' },
+      { label: '💡 ¿Qué podés hacer, Oliver?', prompt: 'Contame todo lo que podés hacer como asistente en Hilos de Amor.' }
+    ];
+  };
 
-    // Search answer in manuals base
-    setTimeout(() => {
-      const q = text.toLowerCase();
-      let foundAnswer = '';
+  const handleSendMessage = async (customText?: string) => {
+    const textToSend = customText || input;
+    if (!textToSend.trim() || loading) return;
 
-      if (q.includes('producto') || q.includes('creo un producto')) {
-        foundAnswer = 'Para crear un producto: Ingresá a la sección "Productos" en el menú lateral, hacé clic en "Nuevo producto", completá el nombre, categoría, precio, imagen y seleccioná si estará disponible para Salón, Retiro o Delivery.';
-      } else if (q.includes('mesa')) {
-        foundAnswer = 'Para crear una mesa: Accedé a "Mesas", hacé clic en "Agregar mesa", seleccioná el número, capacidad y sector (Salón, Patio, Terraza o Vereda). Desde allí podés generar su código QR interactivo.';
-      } else if (q.includes('menú') || q.includes('menu') || q.includes('carta')) {
-        foundAnswer = 'Para modificar el menú digital: Todos los cambios que realices en el módulo "Productos" (precios, descripciones, disponibilidad) se reflejan inmediatamente en la carta pública en tiempo real.';
-      } else if (q.includes('ingrediente')) {
-        foundAnswer = 'Para actualizar un ingrediente (Plan Gestión): Abrí "Ingredientes", editá el precio de compra o porcentaje de merma. Si tenés activa la actualización automática, se recalcularán los precios de venta de todos los productos afectados.';
-      } else if (q.includes('sugerido') || q.includes('precio sugerido') || q.includes('costo')) {
-        foundAnswer = 'El precio sugerido se calcula con la fórmula: Precio Sugerido = Costo Total / (1 - Margen Objetivo). Ejemplo: Costo de $2.000 con margen objetivo del 60% genera un precio sugerido de $5.000.';
-      } else if (q.includes('puntos')) {
-        foundAnswer = 'Los puntos se acumulan automáticamente por cada compra de un cliente registrado. Por defecto, cada $100 gastados otorgan 5 puntos. Luego el cliente puede canjearlos por premios en la sección "Puntos y Recompensas".';
-      } else if (q.includes('promoción') || q.includes('promocion')) {
-        foundAnswer = 'Para crear una promoción: Podés armar productos especiales en "Productos" (Categoría Promociones) o configurar recompensas en "Puntos y Recompensas".';
-      } else if (q.includes('mensaje') || q.includes('whatsapp')) {
-        foundAnswer = 'Para programar un mensaje por WhatsApp (Plan Fidelización): Ingresá al módulo "WhatsApp", seleccioná una plantilla (Bienvenida, Cumpleaños, etc.), elegí el segmento de clientes destinatarios y programá la fecha de envío.';
-      } else if (q.includes('soporte')) {
-        foundAnswer = 'Podés contactar a soporte desde la tercera pestaña "Soporte" de este Asesor Virtual o simulando un envío directo por WhatsApp.';
-      } else {
-        // Try searching in manuals steps
-        const matchingManual = manuals.find((m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.description.toLowerCase().includes(q) ||
-          m.steps.some((s) => s.toLowerCase().includes(q))
-        );
+    const userMessage: DisplayMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: textToSend.trim(),
+      time: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+    };
 
-        if (matchingManual) {
-          foundAnswer = `De acuerdo al manual "${matchingManual.title}": ${matchingManual.steps[0]}`;
-        } else {
-          foundAnswer = 'No encontré una respuesta específica en los manuales. Si querés, podés enviar esta consulta al equipo de soporte.';
-        }
+    const newDisplayMessages = [...messages, userMessage];
+    setMessages(newDisplayMessages);
+    if (!customText) setInput('');
+    setLoading(true);
+
+    try {
+      // Map to service ChatMessage format
+      const historyForService: ChatMessage[] = newDisplayMessages.map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      const response = await askOliver(historyForService, location.pathname);
+
+      let finalContent = response.reply;
+      if (response.exportTag && !finalContent.includes('[DESCARGAR_EXCEL:')) {
+        finalContent += `\n\n${response.exportTag}`;
       }
 
-      setChatMessages((prev) => [...prev, { sender: 'bot', text: foundAnswer, time: 'Ahora' }]);
-    }, 600);
+      const assistantMessage: DisplayMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: finalContent,
+        time: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (err: any) {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: '⚠️ Ocurrió un error inesperado al conectar con el servidor. Por favor reintentá en unos momentos.',
+          time: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExcelDownloadClick = async (type: string, filename: string, title: string) => {
+    setDownloadingType(type);
+    try {
+      await generateAndTriggerExcel(type, filename, title);
+    } catch (err) {
+      console.error('Error re-downloading Excel:', err);
+    } finally {
+      setDownloadingType(null);
+    }
+  };
+
+  const handleClearChat = () => {
+    setMessages([
+      {
+        id: 'reset',
+        role: 'assistant',
+        content: '¡Conversación reiniciada! 👋 Soy **Oliver**, listo para responder consultas, consultar la base de datos o generar tus reportes en Excel.',
+        time: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
   };
 
   const handleTicketSubmit = (e: React.FormEvent) => {
@@ -135,371 +221,452 @@ export const VirtualAdvisorFloating: React.FC = () => {
     });
   };
 
-  const filteredManuals = manuals.filter(
-    (m) =>
-      m.title.toLowerCase().includes(manualSearch.toLowerCase()) ||
-      m.category.toLowerCase().includes(manualSearch.toLowerCase()) ||
-      m.description.toLowerCase().includes(manualSearch.toLowerCase())
-  );
+  // Render markdown text with download card parsing
+  const renderMessageContent = (rawText: string) => {
+    const excelTagRegex = /\[DESCARGAR_EXCEL:([^:]+):([^:]+):([^\]]+)\]/g;
+    const excelMatches: { type: string; filename: string; title: string }[] = [];
+    let match;
+
+    while ((match = excelTagRegex.exec(rawText)) !== null) {
+      excelMatches.push({
+        type: match[1],
+        filename: match[2],
+        title: match[3]
+      });
+    }
+
+    const cleanText = rawText.replace(excelTagRegex, '').trim();
+
+    return (
+      <div className="space-y-2 text-sm leading-relaxed">
+        {cleanText.split('\n').map((line, i) => {
+          if (!line.trim()) return <div key={i} className="h-1.5" />;
+          
+          const isBullet = line.trim().startsWith('- ') || line.trim().startsWith('• ') || line.trim().startsWith('* ');
+          const lineContent = isBullet ? line.trim().substring(2) : line;
+
+          return (
+            <div key={i} className={isBullet ? 'flex items-start gap-2 ml-1 text-slate-700' : 'text-slate-800'}>
+              {isBullet && <span className="text-blue-600 font-bold mt-0.5">•</span>}
+              <div>
+                {lineContent.split(/(\*\*.*?\*\*)/).map((part, j) => {
+                  if (part.startsWith('**') && part.endsWith('**')) {
+                    return <strong key={j} className="font-semibold text-slate-900">{part.slice(2, -2)}</strong>;
+                  }
+                  return part;
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Render interactive Excel Download Cards if present */}
+        {excelMatches.map((em, idx) => (
+          <div key={idx} className="mt-3 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl shadow-sm">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <FileSpreadsheet size={18} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-emerald-950">{em.title}</div>
+                  <div className="text-[11px] text-emerald-700">{em.filename}</div>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleExcelDownloadClick(em.type, em.filename, em.title)}
+              disabled={downloadingType === em.type}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-lg text-xs font-bold transition-all shadow shadow-emerald-700/20 cursor-pointer disabled:opacity-50"
+            >
+              <Download size={14} className="shrink-0" />
+              <span>{downloadingType === em.type ? 'Generando archivo...' : 'Descargar Archivo Excel (.xlsx)'}</span>
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const quickActions = getContextualQuickActions();
 
   return (
     <>
-      {/* Floating Button */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-5 left-5 z-[9990] py-3 px-5 rounded-full bg-brand-brown text-brand-card font-bold text-sm shadow-soft-lg hover:bg-brand-dark hover:scale-105 transition-all duration-200 flex items-center gap-2.5 border-2 border-brand-yellow/60"
-      >
-        <Sparkles className="w-5 h-5 text-brand-yellow animate-pulse" />
-        <span>Asesor virtual</span>
-      </button>
+      {/* Floating Trigger Button with Oliver 3D Avatar */}
+      {!isOpen && (
+        <div className="fixed bottom-5 right-5 z-[9990] flex items-center gap-3">
+          {/* Subtle invitation chip */}
+          <div 
+            onClick={() => setIsOpen(true)}
+            className="hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-full shadow-lg border border-slate-200/80 text-xs font-semibold text-slate-700 hover:text-blue-700 cursor-pointer transition-all hover:scale-105"
+          >
+            <Sparkles size={14} className="text-amber-500 animate-pulse" />
+            <span>Consultale a Oliver</span>
+          </div>
 
-      {/* Slide-over Panel */}
+          <button
+            onClick={() => setIsOpen(true)}
+            className="relative group w-14 h-14 rounded-full bg-white p-0.5 shadow-xl border-2 border-blue-600/30 hover:border-blue-600 hover:scale-110 active:scale-95 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+            title="Abrir Asistente Virtual Oliver"
+          >
+            <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 relative">
+              <img
+                src="/oliver-avatar.jpg"
+                alt="Oliver - Chef Ejecutivo y Maitre IA"
+                className="w-full h-full object-cover object-top"
+              />
+            </div>
+
+            {/* Active Online Status Badge */}
+            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
+            
+            {/* Ping effect */}
+            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-400 rounded-full animate-ping opacity-75 pointer-events-none" />
+          </button>
+        </div>
+      )}
+
+      {/* Main Chat Drawer / Window */}
       {isOpen && (
-        <div className="fixed inset-0 z-[99999] flex justify-end bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-lg bg-brand-card h-full shadow-soft-lg flex flex-col justify-between border-l border-brand-secondary">
-            {/* Top Bar */}
-            <div className="p-4 border-b border-brand-secondary bg-brand-cream flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand-brown text-brand-card flex items-center justify-center font-bold">
-                  🤖
+        <div 
+          className={`fixed z-[9999] transition-all duration-300 flex flex-col bg-white shadow-2xl border border-slate-200/80 rounded-2xl overflow-hidden font-sans ${
+            isExpanded
+              ? 'inset-4 sm:inset-10 max-w-5xl mx-auto h-[calc(100vh-5rem)]'
+              : 'bottom-5 right-5 w-[94vw] sm:w-[460px] h-[640px] max-h-[88vh]'
+          }`}
+        >
+          {/* Header (Limpia y Clínica - Azul Institucional & Acentos Cálidos) */}
+          <div className="px-4 py-3.5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white flex items-center justify-between shrink-0 shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-amber-400/80 shadow-md bg-white shrink-0">
+                <img
+                  src="/oliver-avatar.jpg"
+                  alt="Oliver"
+                  className="w-full h-full object-cover object-top"
+                />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-white tracking-wide">Oliver</h3>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded border border-amber-400/30">
+                    Maitre IA
+                  </span>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-brand-dark leading-tight">Asesor Virtual</h3>
-                  <p className="text-xs text-brand-brown/80 font-medium">Asistencia 24/7 de Hilos de Amor</p>
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>En línea • Hilos de Amor</span>
                 </div>
               </div>
+            </div>
+
+            {/* Window Controls */}
+            <div className="flex items-center gap-1 text-slate-300">
               <button
+                type="button"
+                onClick={handleClearChat}
+                title="Reiniciar chat"
+                className="p-1.5 hover:bg-white/10 rounded-lg hover:text-white transition-colors"
+              >
+                <RotateCcw size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)}
+                title={isExpanded ? 'Reducir tamaño' : 'Maximizar'}
+                className="hidden sm:block p-1.5 hover:bg-white/10 rounded-lg hover:text-white transition-colors"
+              >
+                {isExpanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg text-brand-dark/60 hover:text-brand-dark hover:bg-brand-secondary/40 transition-colors"
+                title="Cerrar"
+                className="p-1.5 hover:bg-white/10 rounded-lg hover:text-white transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X size={18} />
               </button>
             </div>
+          </div>
 
-            {/* Tab Navigation Bar */}
-            <div className="flex items-center border-b border-brand-secondary bg-brand-bg px-4 py-2 gap-2">
-              <button
-                onClick={() => setActiveTab('consultar')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  activeTab === 'consultar'
-                    ? 'bg-brand-brown text-brand-card shadow-soft'
-                    : 'text-brand-dark/70 hover:bg-brand-secondary/40'
-                }`}
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                Consultar
-              </button>
-              <button
-                onClick={() => setActiveTab('manuales')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  activeTab === 'manuales'
-                    ? 'bg-brand-brown text-brand-card shadow-soft'
-                    : 'text-brand-dark/70 hover:bg-brand-secondary/40'
-                }`}
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                Manuales
-              </button>
-              <button
-                onClick={() => setActiveTab('soporte')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  activeTab === 'soporte'
-                    ? 'bg-brand-brown text-brand-card shadow-soft'
-                    : 'text-brand-dark/70 hover:bg-brand-secondary/40'
-                }`}
-              >
-                <Headphones className="w-3.5 h-3.5" />
-                Soporte
-              </button>
-            </div>
+          {/* Navigation Tabs (Oliver IA, Manuales, Soporte) */}
+          <div className="flex border-b border-slate-200 bg-slate-50/80 px-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('oliver')}
+              className={`flex-1 py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-all ${
+                activeTab === 'oliver'
+                  ? 'border-blue-600 text-blue-700 bg-white'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Bot size={14} />
+              <span>Oliver IA</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('manuales')}
+              className={`flex-1 py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-all ${
+                activeTab === 'manuales'
+                  ? 'border-blue-600 text-blue-700 bg-white'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <BookOpen size={14} />
+              <span>Manuales</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('soporte')}
+              className={`flex-1 py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-all ${
+                activeTab === 'soporte'
+                  ? 'border-blue-600 text-blue-700 bg-white'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Headphones size={14} />
+              <span>Soporte</span>
+            </button>
+          </div>
 
-            {/* Tab Content Body */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* TAB 1: CONSULTAR */}
-              {activeTab === 'consultar' && (
-                <div className="flex flex-col h-full justify-between space-y-4">
-                  {/* Chat Messages */}
-                  <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[380px]">
-                    {chatMessages.map((msg, index) => (
+          {/* Tab 1: Oliver IA Main Chat */}
+          {activeTab === 'oliver' && (
+            <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30">
+              {/* Message List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex items-start gap-2.5 ${
+                      msg.role === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    {msg.role === 'assistant' && (
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-white border border-slate-200 shadow-sm shrink-0 mt-0.5">
+                        <img
+                          src="/oliver-avatar.jpg"
+                          alt="Oliver"
+                          className="w-full h-full object-cover object-top"
+                        />
+                      </div>
+                    )}
+
+                    <div
+                      className={`max-w-[85%] rounded-2xl p-3.5 shadow-sm text-sm ${
+                        msg.role === 'user'
+                          ? 'bg-blue-600 text-white rounded-br-xs'
+                          : 'bg-white border border-slate-200/90 text-slate-800 rounded-bl-xs'
+                      }`}
+                    >
+                      {msg.role === 'assistant' ? (
+                        renderMessageContent(msg.content)
+                      ) : (
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      )}
                       <div
-                        key={index}
-                        className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`text-[10px] mt-1.5 flex justify-end font-medium ${
+                          msg.role === 'user' ? 'text-blue-200' : 'text-slate-400'
+                        }`}
                       >
-                        <div
-                          className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed ${
-                            msg.sender === 'user'
-                              ? 'bg-brand-brown text-brand-card rounded-br-none shadow-soft'
-                              : 'bg-brand-bg text-brand-dark border border-brand-secondary rounded-bl-none'
-                          }`}
-                        >
-                          <p>{msg.text}</p>
-                          <span className="block text-[9px] opacity-60 text-right mt-1">{msg.time}</span>
-                        </div>
+                        {msg.time}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Loading indicator with Oliver typing animation */}
+                {loading && (
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-white border border-slate-200 shadow-sm shrink-0 mt-0.5">
+                      <img
+                        src="/oliver-avatar.jpg"
+                        alt="Oliver"
+                        className="w-full h-full object-cover object-top"
+                      />
+                    </div>
+                    <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-xs p-3 shadow-sm flex items-center gap-2 text-xs text-slate-500 font-medium">
+                      <div className="flex gap-1 items-center">
+                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" />
+                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
+                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
+                      </div>
+                      <span className="text-slate-600 ml-1">Oliver está consultando la base de datos...</span>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Contextual Quick Actions Chips */}
+              {messages.length <= 4 && !loading && (
+                <div className="p-2.5 border-t border-slate-200/80 bg-white shrink-0">
+                  <div className="text-[11px] font-semibold text-slate-500 mb-1.5 px-1 flex items-center gap-1">
+                    <Sparkles size={12} className="text-amber-500" />
+                    <span>Sugerencias rápidas para esta pantalla:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {quickActions.map((qa, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleSendMessage(qa.prompt)}
+                        className="text-xs bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 border border-slate-200 hover:border-blue-300 py-1.5 px-2.5 rounded-lg transition-all text-left font-medium active:scale-98"
+                      >
+                        {qa.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Chat Input Bar */}
+              <div className="p-3 bg-white border-t border-slate-200 shrink-0">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Preguntale lo que sea a Oliver o pedile un Excel..."
+                    disabled={loading}
+                    className="flex-1 py-2.5 px-3.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all disabled:opacity-60"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || loading}
+                    className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl transition-all shadow-md shadow-blue-600/20 active:scale-95 cursor-pointer shrink-0"
+                  >
+                    <Send size={16} />
+                  </button>
+                </form>
+                <div className="text-[10px] text-slate-400 text-center mt-1.5">
+                  Oliver consulta la base de datos de Hilos de Amor y genera archivos .xlsx nativos.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 2: Manuales Base */}
+          {activeTab === 'manuales' && (
+            <div className="flex-1 overflow-y-auto p-4 bg-white flex flex-col min-h-0">
+              <input
+                type="text"
+                value={manualSearch}
+                onChange={(e) => setManualSearch(e.target.value)}
+                placeholder="Buscar manual o guía operativa..."
+                className="w-full py-2 px-3 mb-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+
+              {selectedManual ? (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedManual(null)}
+                    className="text-xs text-blue-600 hover:underline font-semibold flex items-center gap-1"
+                  >
+                    ← Volver a la lista de manuales
+                  </button>
+                  <h4 className="font-bold text-slate-900 text-sm">{selectedManual.title}</h4>
+                  <p className="text-xs text-slate-600">{selectedManual.description}</p>
+                  <div className="space-y-2 mt-2">
+                    {selectedManual.steps.map((step, idx) => (
+                      <div key={idx} className="p-2 bg-slate-50 border border-slate-100 rounded-lg text-xs text-slate-700">
+                        <strong className="text-blue-700">Paso {idx + 1}:</strong> {step}
                       </div>
                     ))}
                   </div>
-
-                  {/* Preset Questions Pills */}
-                  <div className="space-y-2 pt-2 border-t border-brand-secondary/60">
-                    <p className="text-[11px] font-semibold text-brand-brown/80">Preguntas sugeridas:</p>
-                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-                      {presetQuestions.map((q, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleSendQuery(q)}
-                          className="text-[11px] bg-brand-cream hover:bg-brand-secondary text-brand-dark px-2.5 py-1 rounded-full border border-brand-secondary/80 transition-colors text-left"
-                        >
-                          {q}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Input Box */}
-                  <div className="flex items-center gap-2 pt-2">
-                    <input
-                      type="text"
-                      value={queryInput}
-                      onChange={(e) => setQueryInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendQuery()}
-                      placeholder="Escribí tu consulta aquí..."
-                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand-brown/40"
-                    />
-                    <button
-                      onClick={() => handleSendQuery()}
-                      className="p-2.5 rounded-xl bg-brand-brown text-brand-card hover:bg-brand-dark transition-colors shrink-0"
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </div>
                 </div>
-              )}
-
-              {/* TAB 2: MANUALES */}
-              {activeTab === 'manuales' && (
-                <div className="space-y-4">
-                  {selectedManual ? (
-                    <div className="space-y-4 animate-fade-in">
-                      <button
-                        onClick={() => setSelectedManual(null)}
-                        className="text-xs font-bold text-brand-brown hover:underline flex items-center gap-1"
+              ) : (
+                <div className="space-y-2">
+                  {manuals
+                    .filter(m => m.title.toLowerCase().includes(manualSearch.toLowerCase()) || m.description.toLowerCase().includes(manualSearch.toLowerCase()))
+                    .map((m) => (
+                      <div
+                        key={m.id}
+                        onClick={() => setSelectedManual(m)}
+                        className="p-3 border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 rounded-xl cursor-pointer transition-all"
                       >
-                        ← Volver a la lista de manuales
-                      </button>
-
-                      <div className="bg-brand-cream rounded-xl p-4 border border-brand-secondary">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-brand-brown bg-brand-yellow/40 px-2 py-0.5 rounded">
-                          {selectedManual.category}
-                        </span>
-                        <h3 className="text-base font-bold text-brand-dark mt-2">{selectedManual.title}</h3>
-                        <p className="text-xs text-brand-brown/90 mt-1">{selectedManual.description}</p>
+                        <div className="font-semibold text-xs text-slate-800">{m.title}</div>
+                        <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{m.description}</div>
                       </div>
-
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-brand-brown">
-                          Pasos a seguir:
-                        </h4>
-                        {selectedManual.steps.map((step, idx) => (
-                          <div key={idx} className="flex items-start gap-3 p-3 bg-brand-bg rounded-xl border border-brand-secondary/60">
-                            <span className="w-5 h-5 rounded-full bg-brand-brown text-brand-card font-bold text-xs flex items-center justify-center shrink-0">
-                              {idx + 1}
-                            </span>
-                            <p className="text-xs text-brand-dark leading-relaxed">{step}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      {selectedManual.faqs.length > 0 && (
-                        <div className="space-y-2 pt-3 border-t border-brand-secondary/60">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-brand-brown">
-                            Preguntas frecuentes del tema:
-                          </h4>
-                          {selectedManual.faqs.map((faq, idx) => (
-                            <div key={idx} className="p-3 bg-brand-card rounded-xl border border-brand-secondary/60 text-xs">
-                              <p className="font-bold text-brand-dark">Q: {faq.question}</p>
-                              <p className="text-brand-brown/90 mt-1">A: {faq.answer}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {/* Search Bar */}
-                      <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-3 text-brand-brown/60" />
-                        <input
-                          type="text"
-                          value={manualSearch}
-                          onChange={(e) => setManualSearch(e.target.value)}
-                          placeholder="Buscar en los manuales..."
-                          className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand-brown/40"
-                        />
-                      </div>
-
-                      {/* Manual List Cards */}
-                      <div className="space-y-2.5">
-                        {filteredManuals.map((man) => (
-                          <div
-                            key={man.id}
-                            onClick={() => setSelectedManual(man)}
-                            className="p-3.5 rounded-xl bg-brand-bg border border-brand-secondary/70 hover:border-brand-brown/50 cursor-pointer transition-all duration-150 shadow-xs hover:shadow-soft"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[10px] font-bold text-brand-brown uppercase">
-                                {man.category}
-                              </span>
-                              <FileText className="w-3.5 h-3.5 text-brand-brown/70" />
-                            </div>
-                            <h4 className="text-xs font-bold text-brand-dark">{man.title}</h4>
-                            <p className="text-[11px] text-brand-brown/80 line-clamp-2 mt-0.5">
-                              {man.description}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TAB 3: SOPORTE */}
-              {activeTab === 'soporte' && (
-                <div className="space-y-4">
-                  {submittedTicketId ? (
-                    <div className="bg-brand-green/20 border border-brand-green p-4 rounded-xl text-center space-y-3 animate-fade-in">
-                      <CheckCircle2 className="w-10 h-10 text-emerald-800 mx-auto" />
-                      <h4 className="text-sm font-bold text-brand-dark">¡Consulta registrada con éxito!</h4>
-                      <p className="text-xs text-brand-dark/80">
-                        Se ha asignado el código de seguimiento:
-                      </p>
-                      <span className="inline-block px-3 py-1 bg-brand-card text-brand-brown font-mono font-bold text-sm rounded-lg border border-brand-secondary">
-                        #{submittedTicketId}
-                      </span>
-                      <p className="text-[11px] text-brand-brown/80">
-                        Un representante técnico responderá a tu correo a la brevedad.
-                      </p>
-                      <button
-                        onClick={() => setSubmittedTicketId(null)}
-                        className="py-2 px-4 bg-brand-brown text-brand-card text-xs font-bold rounded-xl hover:bg-brand-dark transition-colors"
-                      >
-                        Enviar otra consulta
-                      </button>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleTicketSubmit} className="space-y-3">
-                      <div className="bg-brand-cream p-3 rounded-xl border border-brand-secondary/60 text-xs">
-                        <p className="font-bold text-brand-dark">¿Necesitás ayuda personalizada?</p>
-                        <p className="text-brand-brown/80 mt-0.5">
-                          Enviá tu ticket de soporte simulado o contactá directamente por WhatsApp.
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-brand-dark mb-1">Nombre completo</label>
-                        <input
-                          type="text"
-                          required
-                          value={ticketForm.name}
-                          onChange={(e) => setTicketForm({ ...ticketForm, name: e.target.value })}
-                          placeholder="Ej. Juan Pérez"
-                          className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand-brown/40"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[11px] font-bold text-brand-dark mb-1">Correo electrónico</label>
-                          <input
-                            type="email"
-                            required
-                            value={ticketForm.email}
-                            onChange={(e) => setTicketForm({ ...ticketForm, email: e.target.value })}
-                            placeholder="juan@ejemplo.com"
-                            className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand-brown/40"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-brand-dark mb-1">Teléfono</label>
-                          <input
-                            type="tel"
-                            value={ticketForm.phone}
-                            onChange={(e) => setTicketForm({ ...ticketForm, phone: e.target.value })}
-                            placeholder="+54911..."
-                            className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand-brown/40"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-brand-dark mb-1">Motivo de consulta</label>
-                        <select
-                          value={ticketForm.reason}
-                          onChange={(e) => setTicketForm({ ...ticketForm, reason: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand-brown/40"
-                        >
-                          <option value="Consulta general">Consulta general</option>
-                          <option value="Duda sobre recetas y precios">Duda sobre recetas y precios</option>
-                          <option value="Problema con el menú digital">Problema con el menú digital</option>
-                          <option value="Solicitud de soporte o extensión de módulo">Solicitud de soporte o extensión de módulo</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-brand-dark mb-1">Descripción detallada</label>
-                        <textarea
-                          required
-                          rows={3}
-                          value={ticketForm.description}
-                          onChange={(e) => setTicketForm({ ...ticketForm, description: e.target.value })}
-                          placeholder="Explicá tu inquietud aquí..."
-                          className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand-brown/40"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-2">
-                        <button
-                          type="submit"
-                          className="flex-1 py-2.5 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          <Send className="w-3.5 h-3.5" /> Enviar consulta
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => window.open('https://wa.me/5491100000000', '_blank')}
-                          className="py-2.5 px-4 rounded-xl bg-emerald-700 text-white font-bold text-xs hover:bg-emerald-800 transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          <PhoneCall className="w-3.5 h-3.5" /> WhatsApp
-                        </button>
-                      </div>
-                    </form>
-                  )}
-
-                  {/* Ticket History */}
-                  {tickets.length > 0 && (
-                    <div className="space-y-2 pt-4 border-t border-brand-secondary/60">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-brand-brown">
-                        Historial de tickets simulados ({tickets.length}):
-                      </h4>
-                      <div className="space-y-2 max-h-36 overflow-y-auto">
-                        {tickets.map((tick) => (
-                          <div key={tick.id} className="p-2.5 rounded-xl bg-brand-bg border border-brand-secondary text-xs flex items-center justify-between">
-                            <div>
-                              <span className="font-mono font-bold text-brand-brown">#{tick.id}</span>
-                              <p className="text-[11px] text-brand-dark">{tick.reason}</p>
-                            </div>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-yellow/30 text-brand-dark uppercase">
-                              {tick.status}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    ))}
                 </div>
               )}
             </div>
-          </div>
+          )}
+
+          {/* Tab 3: Soporte Form */}
+          {activeTab === 'soporte' && (
+            <div className="flex-1 overflow-y-auto p-4 bg-white flex flex-col min-h-0">
+              {submittedTicketId ? (
+                <div className="my-auto text-center py-6 space-y-3">
+                  <CheckCircle2 size={40} className="text-emerald-600 mx-auto" />
+                  <h4 className="font-bold text-slate-900 text-base">¡Ticket Registrado!</h4>
+                  <p className="text-xs text-slate-600">
+                    Tu consulta fue ingresada con el código <strong>#{submittedTicketId.slice(0, 6)}</strong>. El equipo de soporte de Grow Labs te contactará a la brevedad.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSubmittedTicketId(null)}
+                    className="mt-2 py-2 px-4 bg-blue-600 text-white text-xs font-bold rounded-xl"
+                  >
+                    Enviar otra consulta
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleTicketSubmit} className="space-y-3">
+                  <div className="text-xs text-slate-500">
+                    ¿Tenés algún inconveniente que Oliver no pueda resolver? Escribinos y el equipo de Grow Labs te responderá de inmediato.
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">Nombre completo *</label>
+                    <input
+                      type="text"
+                      required
+                      value={ticketForm.name}
+                      onChange={(e) => setTicketForm({ ...ticketForm, name: e.target.value })}
+                      className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                      placeholder="Ej: Juan Pérez"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">Correo electrónico *</label>
+                    <input
+                      type="email"
+                      required
+                      value={ticketForm.email}
+                      onChange={(e) => setTicketForm({ ...ticketForm, email: e.target.value })}
+                      className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                      placeholder="tu@email.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">Descripción del problema *</label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={ticketForm.description}
+                      onChange={(e) => setTicketForm({ ...ticketForm, description: e.target.value })}
+                      className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                      placeholder="Detallanos qué sucedió..."
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all"
+                  >
+                    Enviar Ticket a Soporte
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
         </div>
       )}
     </>
