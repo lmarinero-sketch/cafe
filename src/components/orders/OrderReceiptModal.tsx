@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Order, PaymentMethod } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/currency';
+import { useApp } from '../../context/AppContext';
 
 interface OrderReceiptModalProps {
   order: Order | null;
@@ -33,9 +34,26 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
   onClose,
   staffName,
 }) => {
+  const { branches } = useApp();
   const [format, setFormat] = useState<'58mm' | 'comanda' | 'a4'>('58mm');
 
   if (!isOpen || !order) return null;
+
+  const activeBranch = branches?.find((b) => b.isActive) || branches?.[0];
+  const branchAddress = activeBranch?.address || 'Tucumán 145 Sur • San Juan';
+  const branchPhone = activeBranch?.phone || '(264) 422-8900';
+  const branchInstagram = activeBranch?.instagram
+    ? activeBranch.instagram.startsWith('@')
+      ? activeBranch.instagram
+      : `@${activeBranch.instagram}`
+    : '@hilosdeamor.sj';
+
+  const formatTableOrType = (tableName?: string, orderType?: string) => {
+    if (tableName) {
+      return tableName.toLowerCase().startsWith('mesa') ? tableName : `Mesa ${tableName}`;
+    }
+    return (orderType || 'SALÓN').toUpperCase();
+  };
 
   const pointsEarned = Math.floor(order.total / 10);
   const orderTimeStr = new Date(order.createdAt).toLocaleTimeString('es-AR', {
@@ -157,10 +175,10 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
         </style>
       </head>
       <body>
-        <div class="text-center font-black" style="font-size: 15px; letter-spacing: 1px;">CAFÉ MAGNOLIA</div>
-        <div class="text-center font-black" style="font-size: 11px;">Hilos de Amor Resto & Café</div>
-        <div class="text-center font-bold" style="font-size: 9.5px;">Av. Principal 1234 • CABA</div>
-        <div class="text-center font-bold" style="font-size: 9.5px;">Tel: (011) 5432-1980</div>
+        <div class="text-center font-black" style="font-size: 15px; letter-spacing: 1px;">HILOS DE AMOR</div>
+        <div class="text-center font-black" style="font-size: 11px;">Pastelería Artesanal & Café</div>
+        <div class="text-center font-bold" style="font-size: 9.5px;">${branchAddress}</div>
+        <div class="text-center font-bold" style="font-size: 9.5px;">Tel: ${branchPhone}</div>
         
         <div class="non-fiscal-banner font-black">
           *** COMPROBANTE NO FISCAL ***<br/>
@@ -170,7 +188,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
         <div style="font-size: 10.5px; font-weight: 800;">
           <div><strong style="font-weight: 900;">Ticket:</strong> #${ord.code}</div>
           <div><strong style="font-weight: 900;">Fecha:</strong> ${orderDateStr} ${orderTimeStr}</div>
-          <div><strong style="font-weight: 900;">Tipo:</strong> ${ord.tableName ? `Mesa: ${ord.tableName}` : ord.type.toUpperCase()}</div>
+          <div><strong style="font-weight: 900;">Ubicación:</strong> ${formatTableOrType(ord.tableName, ord.type)}</div>
           <div><strong style="font-weight: 900;">Cliente:</strong> ${ord.customerName || 'Consumidor Final'}</div>
           ${ord.customerPhone ? `<div><strong style="font-weight: 900;">Tel:</strong> ${ord.customerPhone}</div>` : ''}
           ${staffName ? `<div><strong style="font-weight: 900;">Atendido:</strong> ${staffName}</div>` : ''}
@@ -224,7 +242,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
         <div class="divider"></div>
         <div class="text-center font-black" style="font-size: 11px;">¡GRACIAS POR TU VISITA!</div>
         <div class="text-center font-bold" style="font-size: 9.5px; margin-top: 2px;">
-          Seguinos en Instagram: @cafemagnolia
+          Seguinos en Instagram: ${branchInstagram}
         </div>
         <div class="text-center font-bold" style="font-size: 8.5px; margin-top: 5px;">
           Comprobante de consumo interno.<br/>
@@ -390,7 +408,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
       <html>
       <head>
         <meta charset="utf-8" />
-        <title>Comprobante de Pago #${ord.code} - Café Magnolia</title>
+        <title>Comprobante de Pago #${ord.code} - Hilos de Amor</title>
         <style>
           @page {
             size: A4 portrait;
@@ -463,12 +481,12 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
           <tr>
             <td style="vertical-align: top; width: 60%;">
               <div style="font-size: 24px; font-weight: 900; color: #2b1810; font-family: serif; letter-spacing: -0.5px;">
-                CAFÉ MAGNOLIA
+                HILOS DE AMOR
               </div>
-              <div style="font-size: 13px; color: #78350f; font-weight: 700;">Hilos de Amor Gastro-Platform</div>
+              <div style="font-size: 13px; color: #78350f; font-weight: 700;">Pastelería Artesanal & Café</div>
               <div style="font-size: 12px; color: #4b5563; margin-top: 4px;">
-                Av. Principal 1234, Ciudad Autónoma de Buenos Aires<br/>
-                Tel: (011) 5432-1980 • Email: contacto@cafemagnolia.com.ar<br/>
+                ${branchAddress}<br/>
+                Tel: ${branchPhone} • Email: contacto@hilosdeamor.com.ar<br/>
                 IVA Responsable No Inscripto / Control Interno
               </div>
             </td>
@@ -616,7 +634,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
       ? `\n🪙 *Propina Sugerida (${order.tipPercentage || 10}%):* +${formatCurrency(order.tipAmount)}${order.tipRegisteredBy ? ` _(reg. por ${order.tipRegisteredBy})_` : ''}`
       : '';
     const totalAmount = order.total + (order.tipAmount || 0);
-    const msg = `🧾 *COMPROBANTE DE CONSUMO #${order.code}*\n*Café Magnolia - Hilos de Amor*\n_(Documento no válido como factura)_\n\n📅 Fecha: ${orderDateStr} ${orderTimeStr}\n👤 Cliente: ${order.customerName}\n📍 Modalidad: ${order.tableName || order.type.toUpperCase()}\n\n*Detalle del Pedido:*\n${itemsList}\n${tipText}\n\n💰 *TOTAL ABONADO:* ${formatCurrency(totalAmount)}\n💳 *Medio de Pago:* ${getPaymentMethodLabel(order.paymentMethod)}\n⭐ *Puntos Club Ganados:* +${pointsEarned} pts\n\n🔗 *Ver Comprobante Digital:* ${publicTicketUrl}\n\n¡Muchas gracias por tu visita! ☕✨`;
+    const msg = `🧾 *COMPROBANTE DE CONSUMO #${order.code}*\n*Hilos de Amor - Pastelería & Café*\n_(Documento no válido como factura)_\n\n📅 Fecha: ${orderDateStr} ${orderTimeStr}\n👤 Cliente: ${order.customerName}\n📍 Modalidad: ${order.tableName || order.type.toUpperCase()}\n\n*Detalle del Pedido:*\n${itemsList}\n${tipText}\n\n💰 *TOTAL ABONADO:* ${formatCurrency(totalAmount)}\n💳 *Medio de Pago:* ${getPaymentMethodLabel(order.paymentMethod)}\n⭐ *Puntos Club Ganados:* +${pointsEarned} pts\n\n🔗 *Ver Comprobante Digital:* ${publicTicketUrl}\n\n¡Muchas gracias por tu visita! ☕✨`;
     const cleanPhone = (order.customerPhone || '').replace(/\D/g, '');
     const url = cleanPhone
       ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`
@@ -710,10 +728,10 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             /* ── PREVIEW TICKET TÉRMICO 58MM (ALL BOLD / BLACK) ── */
             <div className="w-[300px] bg-white text-black p-5 rounded-2xl shadow-md border-2 border-black font-mono text-[11.5px] space-y-3 leading-tight select-none font-bold">
               <div className="text-center space-y-0.5">
-                <h4 className="text-base font-black tracking-wider">CAFÉ MAGNOLIA</h4>
-                <p className="text-[11px] font-black">Hilos de Amor Resto & Café</p>
-                <p className="text-[10px] font-extrabold">Av. Principal 1234 • CABA</p>
-                <p className="text-[10px] font-extrabold">Tel: (011) 5432-1980</p>
+                <h4 className="text-base font-black tracking-wider">HILOS DE AMOR</h4>
+                <p className="text-[11px] font-black">Pastelería Artesanal & Café</p>
+                <p className="text-[10px] font-extrabold">{branchAddress}</p>
+                <p className="text-[10px] font-extrabold">Tel: {branchPhone}</p>
               </div>
 
               <div className="border-2 border-black p-2 text-center text-[10px] font-black my-2 tracking-tight">
@@ -724,7 +742,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
               <div className="text-[10.5px] space-y-0.5 font-extrabold">
                 <div><strong>Ticket:</strong> #{order.code}</div>
                 <div><strong>Fecha:</strong> {orderDateStr} {orderTimeStr}</div>
-                <div><strong>Ubicación:</strong> {order.tableName ? `Mesa: ${order.tableName}` : order.type.toUpperCase()}</div>
+                <div><strong>Ubicación:</strong> {formatTableOrType(order.tableName, order.type)}</div>
                 <div><strong>Cliente:</strong> {order.customerName || 'Consumidor Final'}</div>
                 {order.customerPhone && <div><strong>Tel:</strong> {order.customerPhone}</div>}
                 {staffName && <div><strong>Atendido:</strong> {staffName}</div>}
@@ -804,7 +822,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                   />
                 </div>
                 <p className="font-black text-[11px] pt-1">¡GRACIAS POR TU VISITA!</p>
-                <p className="text-[9.5px] font-bold">Seguinos en Instagram: @cafemagnolia</p>
+                <p className="text-[9.5px] font-bold">Seguinos en Instagram: {branchInstagram}</p>
                 <p className="text-[8.5px] font-bold">Comprobante de consumo interno sin validez fiscal</p>
               </div>
             </div>
@@ -867,11 +885,11 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             <div className="w-full bg-white text-gray-900 p-6 sm:p-8 rounded-2xl shadow-md border border-gray-300 space-y-5 text-xs">
               <div className="flex justify-between items-start border-b border-gray-200 pb-4">
                 <div>
-                  <h3 className="text-xl font-black font-serif text-brand-dark">CAFÉ MAGNOLIA</h3>
-                  <p className="text-xs text-amber-900 font-bold">Hilos de Amor Gastro-Platform</p>
+                  <h3 className="text-xl font-black font-serif text-brand-dark">HILOS DE AMOR</h3>
+                  <p className="text-xs text-amber-900 font-bold">Pastelería Artesanal & Café</p>
                   <p className="text-[11px] text-gray-500 mt-1">
-                    Av. Principal 1234, CABA • Tel: (011) 5432-1980<br />
-                    contacto@cafemagnolia.com.ar
+                    {branchAddress} • Tel: {branchPhone}<br />
+                    contacto@hilosdeamor.com.ar
                   </p>
                 </div>
                 <div className="text-right bg-brand-dark text-white p-3 rounded-xl">

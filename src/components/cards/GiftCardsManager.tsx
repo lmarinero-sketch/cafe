@@ -64,7 +64,7 @@ export const GiftCardsManager: React.FC = () => {
     recipientName: '',
     recipientPhone: '',
     recipientEmail: '',
-    message: '¡Que disfrutes una experiencia deliciosa en Café Magnolia!',
+    message: '¡Que disfrutes una experiencia deliciosa en Hilos de Amor!',
     theme: 'cumpleanos',
     validityMonths: 12,
   });
@@ -183,7 +183,7 @@ export const GiftCardsManager: React.FC = () => {
   };
 
   const handleShareWhatsApp = (card: GiftCard) => {
-    const text = `🎁 *¡Tenés una Tarjeta de Regalo Virtual de Café Magnolia!* ☕✨\n\nHola *${card.recipientName}*, recibiste una Gift Card con saldo de *${formatCurrency(card.currentBalance)}*.\n\n🔑 *Código de Canje:* \`${card.code}\`\n💬 *Mensaje:* "${card.message || 'Que disfrutes una experiencia deliciosa'}"\n\nPodés presentar este código o canjearlo directo desde la mesa o takeaway.\n¡Te esperamos!`;
+    const text = `🎁 *¡Tenés una Tarjeta de Regalo Virtual de Hilos de Amor!* ☕✨\n\nHola *${card.recipientName}*, recibiste una Gift Card con saldo de *${formatCurrency(card.currentBalance)}*.\n\n🔑 *Código de Canje:* \`${card.code}\`\n💬 *Mensaje:* "${card.message || 'Que disfrutes una experiencia deliciosa'}"\n\nPodés presentar este código o canjearlo directo desde la mesa o takeaway.\n¡Te esperamos!`;
     const cleanPhone = (card.recipientPhone || '').replace(/\D/g, '');
     const url = cleanPhone
       ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`
@@ -229,7 +229,7 @@ export const GiftCardsManager: React.FC = () => {
       recipientName: '',
       recipientPhone: '',
       recipientEmail: '',
-      message: '¡Que disfrutes una experiencia deliciosa en Café Magnolia!',
+      message: '¡Que disfrutes una experiencia deliciosa en Hilos de Amor!',
       theme: 'cumpleanos',
       validityMonths: 12,
     });
@@ -406,7 +406,7 @@ export const GiftCardsManager: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] font-black uppercase tracking-widest ${themeStyles.accent}`}>
-                            CAFÉ MAGNOLIA
+                            HILOS DE AMOR
                           </span>
                           <span className="text-[9px] bg-white/20 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
                             GIFT CARD VIRTUAL
@@ -455,7 +455,7 @@ export const GiftCardsManager: React.FC = () => {
                       <div className="w-16 h-16 bg-white p-1 rounded-xl shadow-md shrink-0 flex items-center justify-center">
                         <img
                           src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-                            `MAGNOLIA-GIFT:${activeCard.code}:${activeCard.currentBalance}`
+                            `HILOS-GIFT:${activeCard.code}:${activeCard.currentBalance}`
                           )}`}
                           alt="QR Canje"
                           className="w-full h-full object-contain"
@@ -987,7 +987,7 @@ export const GiftCardsManager: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Gift className="w-6 h-6 text-amber-600" />
                 <div>
-                  <h3 className="text-lg font-black font-serif tracking-wide text-gray-900">Café Magnolia</h3>
+                  <h3 className="text-lg font-black font-serif tracking-wide text-gray-900">Hilos de Amor</h3>
                   <span className="text-[10px] uppercase font-bold tracking-widest text-amber-700">
                     VOUCHER DE REGALO OFICIAL
                   </span>
@@ -1030,7 +1030,7 @@ export const GiftCardsManager: React.FC = () => {
               <div className="w-16 h-16 bg-white p-1 rounded-lg border border-gray-200 flex items-center justify-center">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-                    `MAGNOLIA-GIFT:${activeCard.code}`
+                    `HILOS-GIFT:${activeCard.code}`
                   )}`}
                   alt="QR"
                   className="w-full h-full object-contain"

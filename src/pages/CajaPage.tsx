@@ -479,7 +479,7 @@ export const CajaPage: React.FC = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Reporte de Propinas - Café Magnolia</title>
+        <title>Reporte de Propinas - Hilos de Amor</title>
         <style>
           body { font-family: system-ui, -apple-system, sans-serif; padding: 24px; color: #111827; font-size: 12px; }
           h1 { font-size: 20px; margin: 0 0 4px 0; color: #2b1810; }
@@ -494,8 +494,8 @@ export const CajaPage: React.FC = () => {
       </head>
       <body>
         <div class="header">
-          <h1>CAFÉ MAGNOLIA - PLANILLA DE CONTROL DE PROPINAS</h1>
-          <div style="font-size: 11px; color: #4b5563;">Hilos de Amor Resto & Café • Área de Tesorería & Salón</div>
+          <h1>HILOS DE AMOR - PLANILLA DE CONTROL DE PROPINAS</h1>
+          <div style="font-size: 11px; color: #4b5563;">Pastelería Artesanal & Café • Área de Tesorería & Salón</div>
           <div style="font-size: 11px; color: #4b5563; margin-top: 3px;">
             <strong>Emisión:</strong> ${new Date().toLocaleString()} | <strong>Alcance:</strong> ${
       tipsScope === 'turno' ? 'Turno Actual de Caja' : tipsScope === 'hoy' ? 'Jornada de Hoy' : 'Histórico Total'

@@ -49,10 +49,10 @@ export const initialGiftCards: GiftCard[] = [
   },
   {
     id: 'gc-003',
-    code: 'GIFT-3105-MAG',
+    code: 'GIFT-3105-HLA',
     initialAmount: 10000,
     currentBalance: 10000,
-    purchaserName: 'Café Magnolia Club',
+    purchaserName: 'Hilos de Amor Club',
     recipientName: 'Valentina Díaz',
     recipientPhone: '1133445566',
     recipientEmail: 'valentina.diaz@gmail.com',

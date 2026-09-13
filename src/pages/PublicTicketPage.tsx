@@ -23,9 +23,18 @@ import { getOrderByCode } from '../services/orders.service';
 
 export const PublicTicketPage: React.FC = () => {
   const { code } = useParams<{ code: string }>();
-  const { orders } = useApp();
+  const { orders, branches } = useApp();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const activeBranch = branches?.find((b) => b.isActive) || branches?.[0];
+  const branchAddress = activeBranch?.address || 'Tucumán 145 Sur • San Juan';
+  const branchPhone = activeBranch?.phone || '(264) 422-8900';
+  const branchInstagram = activeBranch?.instagram
+    ? activeBranch.instagram.startsWith('@')
+      ? activeBranch.instagram
+      : `@${activeBranch.instagram}`
+    : '@hilosdeamor.sj';
 
   useEffect(() => {
     let isMounted = true;
@@ -100,7 +109,11 @@ export const PublicTicketPage: React.FC = () => {
       .map((i) => `• ${i.quantity}x ${i.productName} (${formatCurrency(i.unitPrice * i.quantity)})`)
       .join('\n');
 
-    const msg = `🧾 *COMPROBANTE DE CONSUMO #${order.code}*\n*Café Magnolia - Hilos de Amor*\n_(Documento no válido como factura)_\n\n👤 Cliente: ${order.customerName}\n📍 Modalidad: ${order.tableName || order.type.toUpperCase()}\n\n*Detalle del Pedido:*\n${itemsList}\n\n💰 *TOTAL:* ${formatCurrency(order.total)}\n💳 *Medio de Pago:* ${getPaymentMethodLabel(order.paymentMethod)}\n\n👉 *Ver Comprobante Digital:* ${url}\n\n¡Gracias por tu visita! ☕✨`;
+    const tableOrType = order.tableName
+      ? (order.tableName.toLowerCase().startsWith('mesa') ? order.tableName : `Mesa ${order.tableName}`)
+      : order.type.toUpperCase();
+
+    const msg = `🧾 *COMPROBANTE DE CONSUMO #${order.code}*\n*Hilos de Amor - Pastelería & Café*\n_(Documento no válido como factura)_\n\n👤 Cliente: ${order.customerName}\n📍 Modalidad: ${tableOrType}\n\n*Detalle del Pedido:*\n${itemsList}\n\n💰 *TOTAL:* ${formatCurrency(order.total)}\n💳 *Medio de Pago:* ${getPaymentMethodLabel(order.paymentMethod)}\n\n👉 *Ver Comprobante Digital:* ${url}\n\n¡Gracias por tu visita! ☕✨`;
 
     const cleanPhone = (order.customerPhone || '').replace(/\D/g, '');
     const waUrl = cleanPhone
@@ -172,7 +185,7 @@ export const PublicTicketPage: React.FC = () => {
         {/* Top Floating App Bar */}
         <div className="flex items-center justify-between px-2 print:hidden">
           <div className="flex items-center gap-2">
-            <span className="text-lg font-black font-serif text-amber-950 tracking-tight">CAFÉ MAGNOLIA</span>
+            <span className="text-lg font-black font-serif text-amber-950 tracking-tight">HILOS DE AMOR</span>
             <span className="text-[10px] font-extrabold bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
               Ticket Digital
             </span>
@@ -193,10 +206,10 @@ export const PublicTicketPage: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-white/10 mx-auto flex items-center justify-center border border-white/20 mb-1">
               <Coffee className="w-6 h-6 text-amber-300" />
             </div>
-            <h2 className="text-xl font-black font-serif tracking-wider text-amber-100">CAFÉ MAGNOLIA</h2>
-            <p className="text-[11px] text-amber-200/80 font-medium">Hilos de Amor Resto & Café Gourmet</p>
+            <h2 className="text-xl font-black font-serif tracking-wider text-amber-100">HILOS DE AMOR</h2>
+            <p className="text-[11px] text-amber-200/80 font-medium">Pastelería Artesanal & Café Gourmet</p>
             <p className="text-[10px] text-gray-300">
-              Av. Principal 1234, CABA • Tel: (011) 5432-1980
+              {branchAddress} • Tel: {branchPhone}
             </p>
 
             <div className="pt-2 flex items-center justify-center gap-2">
@@ -348,8 +361,8 @@ export const PublicTicketPage: React.FC = () => {
 
             {/* Footer Notice */}
             <div className="text-center pt-2 text-gray-500 text-[10px] space-y-1">
-              <p className="font-bold text-gray-700">¡Muchas gracias por elegir Café Magnolia!</p>
-              <p className="text-[9px]">Seguinos en Instagram: @cafemagnolia</p>
+              <p className="font-bold text-gray-700">¡Muchas gracias por elegir Hilos de Amor!</p>
+              <p className="text-[9px]">Seguinos en Instagram: {branchInstagram}</p>
               <p className="text-[8px] text-gray-400">
                 Ticket digital generado electrónicamente • Sin validez fiscal
               </p>
