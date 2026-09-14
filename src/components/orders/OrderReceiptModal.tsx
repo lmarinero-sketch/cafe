@@ -40,8 +40,8 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
   if (!isOpen || !order) return null;
 
   const activeBranch = branches?.find((b) => b.isActive) || branches?.[0];
-  const branchAddress = activeBranch?.address || 'Tucumán 145 Sur • San Juan';
-  const branchPhone = activeBranch?.phone || '(264) 422-8900';
+  const branchAddress = activeBranch?.address || 'Meglioli Sur 55, Rivadavia, San Juan';
+  const branchPhone = activeBranch?.phone || '+54 9 2645 62-5097';
   const branchInstagram = activeBranch?.instagram
     ? activeBranch.instagram.startsWith('@')
       ? activeBranch.instagram

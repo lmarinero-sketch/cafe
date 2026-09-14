@@ -28,6 +28,6 @@ CREATE POLICY "Allow anon delete branches" ON branches FOR DELETE TO anon USING 
 
 -- Seed default branches
 INSERT INTO branches (name, address, zone, phone, whatsapp, instagram, hours, badge, features, map_query, is_active) VALUES
-  ('Sucursal Peatonal Tucumán', 'Tucumán 145 Sur (frente a Plaza 25 de Mayo)', 'Capital, San Juan', '(264) 422-8900', '5492644228900', 'hilosdeamor.sj', 'Lun-Sáb 07:00 a 22:00', 'Casa Central', '{"Terraza Climatizada","WiFi 300MB","Take Away Rápido"}', 'Hilos de Amor Tucumán 145 San Juan Argentina', true),
+  ('Sucursal Central Meglioli', 'Meglioli Sur 55, Rivadavia, San Juan', 'Rivadavia, San Juan', '+54 9 2645 62-5097', '5492645625097', 'hilosdeamor.sj', 'Lun-Sáb 07:00 a 22:00', 'Casa Central', '{"Terraza Climatizada","WiFi 300MB","Take Away Rápido"}', 'Hilos de Amor Meglioli Sur 55 Rivadavia San Juan Argentina', true),
   ('Sucursal Del Bono Shopping', 'Av. Ignacio de la Roza 1840 Oeste (Paseo Del Bono)', 'Rivadavia, San Juan', '(264) 433-1200', '5492644331200', 'hilosdeamor.sj', 'Todos los días 08:00 a 00:00', 'Coworking', '{"Estacionamiento Gratuito","Espacio Coworking","Pet Friendly"}', 'Paseo Del Bono Shopping San Juan Argentina', true),
   ('Sucursal Paseo San Juan', 'Av. Libertador San Martín 3200 Oeste', 'Desamparados, San Juan', '(264) 441-7500', '5492644417500', 'hilosdeamor.sj', 'Lun-Dom 08:00 a 23:00', 'Drive-Thru', '{"Auto-Café","Jardín al aire libre","Pastelería en vivo"}', 'Paseo San Juan Desamparados Argentina', true);

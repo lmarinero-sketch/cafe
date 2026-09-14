@@ -47,7 +47,7 @@ INSERT INTO site_content (section, key, value, type, label, sort_order) VALUES
   ('product_star', 'star_image', '/nano_banana_coffee.png', 'image_url', 'Imagen del producto', 4),
   ('product_star', 'star_badge', '🍌 Lanzamiento 2026', 'text', 'Badge', 5),
   -- Social
-  ('social', 'social_whatsapp', '5492644228900', 'text', 'WhatsApp principal', 1),
+  ('social', 'social_whatsapp', '5492645625097', 'text', 'WhatsApp principal', 1),
   ('social', 'social_instagram', 'hilosdeamor.sj', 'text', 'Instagram handle', 2),
   ('social', 'social_facebook', '', 'text', 'Facebook URL', 3),
   -- Footer

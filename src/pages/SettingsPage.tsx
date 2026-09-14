@@ -594,14 +594,14 @@ export const SettingsPage: React.FC = () => {
                     <div>
                       <label className="block font-bold text-brand-dark mb-1">Dirección *</label>
                       <input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                        placeholder="Ej: Tucumán 145 Sur"
+                        placeholder="Ej: Meglioli Sur 55"
                         className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-white text-brand-dark font-medium focus:ring-2 focus:ring-brand-brown/30 focus:outline-none"
                       />
                     </div>
                     <div>
                       <label className="block font-bold text-brand-dark mb-1">Zona</label>
                       <input value={form.zone} onChange={(e) => setForm((f) => ({ ...f, zone: e.target.value }))}
-                        placeholder="Ej: Capital, San Juan"
+                        placeholder="Ej: Rivadavia, San Juan"
                         className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-white text-brand-dark font-medium focus:ring-2 focus:ring-brand-brown/30 focus:outline-none"
                       />
                     </div>
@@ -615,14 +615,14 @@ export const SettingsPage: React.FC = () => {
                     <div>
                       <label className="block font-bold text-brand-dark mb-1 flex items-center gap-1"><Phone className="w-3 h-3" /> Teléfono</label>
                       <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                        placeholder="(264) 422-8900"
+                        placeholder="+54 9 2645 62-5097"
                         className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-white text-brand-dark font-medium focus:ring-2 focus:ring-brand-brown/30 focus:outline-none"
                       />
                     </div>
                     <div>
                       <label className="block font-bold text-brand-dark mb-1 flex items-center gap-1"><MessageCircle className="w-3 h-3 text-green-600" /> WhatsApp</label>
                       <input value={form.whatsapp} onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))}
-                        placeholder="5492644228900 (sin + ni espacios)"
+                        placeholder="5492645625097 (sin + ni espacios)"
                         className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-white text-brand-dark font-medium focus:ring-2 focus:ring-brand-brown/30 focus:outline-none"
                       />
                     </div>

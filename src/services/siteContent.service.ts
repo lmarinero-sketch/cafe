@@ -29,7 +29,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent[] = [
   { id: '18', section: 'club', key: 'club_subtitle', value: 'Acumulá puntos en cada consumo, accedé a beneficios exclusivos en tu cumpleaños y disfrutá de refill ilimitado en café de filtro.', type: 'text', label: 'Subtítulo Club', sortOrder: 2 },
 
   // Social & Contact
-  { id: '19', section: 'social', key: 'social_whatsapp', value: '5492644228900', type: 'text', label: 'WhatsApp de Contacto', sortOrder: 1 },
+  { id: '19', section: 'social', key: 'social_whatsapp', value: '5492645625097', type: 'text', label: 'WhatsApp de Contacto', sortOrder: 1 },
   { id: '20', section: 'social', key: 'social_instagram', value: 'hilosdeamor.sj', type: 'text', label: 'Instagram Handle', sortOrder: 2 },
   { id: '21', section: 'social', key: 'social_facebook', value: 'hilosdeamor.sj', type: 'text', label: 'Facebook / Web', sortOrder: 3 },
 
