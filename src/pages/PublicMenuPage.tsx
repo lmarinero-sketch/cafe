@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Search,
   ShoppingCart,
@@ -17,8 +17,10 @@ import {
   Maximize2,
   FileText,
   Download,
+  BookOpen,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Product, OrderItem, PaymentMethod, OrderType } from '../types';
 import { formatCurrency } from '../utils/currency';
@@ -26,6 +28,8 @@ import { PrintableMenuModal } from '../components/menu/PrintableMenuModal';
 
 export const PublicMenuPage: React.FC = () => {
   const { products, categories, tables, createOrder, customers, cashRegisters, redeemGiftCard, getGiftCardByCode } = useApp();
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const activeRegister = cashRegisters.find((r) => r.status === 'abierta');
   const [searchParams] = useSearchParams();
@@ -164,10 +168,14 @@ export const PublicMenuPage: React.FC = () => {
             <span className="text-xs font-extrabold text-brand-brown">{formatCurrency(p.price)}</span>
             {isOutOfStock ? (
               <span className="py-1 px-2.5 rounded-lg bg-brand-secondary/50 text-brand-brown/70 text-[11px] font-bold">Sin stock</span>
-            ) : (
+            ) : isAuthenticated ? (
               <button className="py-1 px-2.5 rounded-lg bg-brand-brown text-brand-card text-[11px] font-bold hover:bg-brand-dark transition-colors flex items-center gap-1">
                 <Plus className="w-3 h-3" /> Agregar
               </button>
+            ) : (
+              <span className="py-1 px-2.5 rounded-lg bg-brand-secondary/40 text-brand-brown text-[11px] font-bold hover:bg-brand-secondary/60 transition-colors">
+                Ver detalle
+              </span>
             )}
           </div>
         </div>
@@ -177,6 +185,10 @@ export const PublicMenuPage: React.FC = () => {
 
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      showToast('Acceso Restringido', 'Solo personal registrado puede realizar pedidos desde la carta QR.', 'error');
+      return;
+    }
     if (cart.length === 0) return;
 
     if (paymentMethod === 'giftcard') {
@@ -244,8 +256,37 @@ export const PublicMenuPage: React.FC = () => {
     <div className="min-h-screen bg-brand-bg text-brand-dark pb-24 max-w-6xl mx-auto relative border-x border-brand-secondary/60 shadow-soft-lg">
       {/* Top Header Banner */}
       <div className="bg-brand-card p-4 sm:p-6 border-b border-brand-secondary sticky top-0 z-30 shadow-xs">
+        {/* Banner Informativo para Comensales / Personal */}
+        {!isAuthenticated ? (
+          <div className="mb-4 bg-amber-50/90 border border-amber-300/90 p-3 sm:p-3.5 rounded-2xl text-amber-950 flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl shrink-0">📖</span>
+              <div>
+                <h4 className="font-extrabold text-xs sm:text-sm text-amber-950 flex items-center gap-1.5">
+                  Carta Digital {selectedTableObj ? `• ${selectedTableObj.number}` : ''}
+                </h4>
+                <p className="text-[11px] sm:text-xs text-amber-900/90 mt-0.5">
+                  Consultá todas nuestras opciones, combos y precios. Tu mozo se acercará a tomar tu pedido en la mesa.
+                </p>
+              </div>
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-200/80 text-amber-900 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+              Solo Consulta
+            </span>
+          </div>
+        ) : (
+          <div className="mb-4 bg-emerald-50 border border-emerald-300 p-2.5 rounded-xl text-emerald-950 flex items-center justify-between text-xs shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-base">👤</span>
+              <span>
+                Sesión iniciada como <strong>{user?.name || user?.role || 'Personal'}</strong>. Comanda móvil habilitada.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Banner de Estado de Caja Cerrada */}
-        {!activeRegister ? (
+        {!activeRegister && isAuthenticated ? (
           <div className="mb-4 bg-rose-50 border-2 border-rose-400 p-3.5 rounded-2xl text-rose-950 flex items-center gap-3 shadow-soft animate-pulse">
             <span className="text-xl shrink-0">🔴</span>
             <div>
@@ -295,18 +336,29 @@ export const PublicMenuPage: React.FC = () => {
               <span className="hidden sm:inline">Carta PDF</span>
             </button>
 
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="relative p-2.5 sm:px-4 sm:py-2 rounded-xl bg-brand-brown text-brand-card hover:bg-brand-dark transition-colors shadow-soft flex items-center gap-2 font-bold text-xs shrink-0"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              <span className="hidden sm:inline">Ver Pedido</span>
-              {cart.length > 0 && (
-                <span className="bg-brand-yellow text-brand-dark font-extrabold text-[10px] px-1.5 py-0.5 rounded-full border border-brand-card">
-                  {cart.reduce((s, i) => s + i.quantity, 0)}
-                </span>
-              )}
-            </button>
+            {isAuthenticated ? (
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="relative p-2.5 sm:px-4 sm:py-2 rounded-xl bg-brand-brown text-brand-card hover:bg-brand-dark transition-colors shadow-soft flex items-center gap-2 font-bold text-xs shrink-0"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                <span className="hidden sm:inline">Ver Pedido</span>
+                {cart.length > 0 && (
+                  <span className="bg-brand-yellow text-brand-dark font-extrabold text-[10px] px-1.5 py-0.5 rounded-full border border-brand-card">
+                    {cart.reduce((s, i) => s + i.quantity, 0)}
+                  </span>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/login')}
+                className="p-2.5 sm:px-3.5 sm:py-2 rounded-xl border border-brand-secondary bg-brand-bg text-brand-brown hover:bg-brand-secondary/40 transition-colors shadow-xs flex items-center gap-1.5 font-bold text-xs shrink-0"
+                title="Iniciar sesión para personal del local"
+              >
+                <User className="w-4 h-4 text-brand-brown" />
+                <span className="hidden sm:inline">Personal</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -489,69 +541,117 @@ export const PublicMenuPage: React.FC = () => {
               {formatCurrency(selectedProduct.price * productQty)}
             </div>
 
-            {/* Quantity Selector */}
-            <div className="flex items-center justify-between bg-brand-bg p-2 rounded-xl border border-brand-secondary">
-              <span className="text-xs font-bold text-brand-dark">Cantidad:</span>
-              <div className="flex items-center gap-3">
+            {isAuthenticated ? (
+              <>
+                {/* Quantity Selector */}
+                <div className="flex items-center justify-between bg-brand-bg p-2 rounded-xl border border-brand-secondary">
+                  <span className="text-xs font-bold text-brand-dark">Cantidad:</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setProductQty(Math.max(1, productQty - 1))}
+                      className="w-8 h-8 rounded-lg bg-brand-card border border-brand-secondary font-bold flex items-center justify-center text-brand-dark"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="text-sm font-bold text-brand-dark w-4 text-center">
+                      {productQty}
+                    </span>
+                    <button
+                      onClick={() => setProductQty(productQty + 1)}
+                      className="w-8 h-8 rounded-lg bg-brand-brown text-brand-card font-bold flex items-center justify-center"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Observations input */}
+                <div>
+                  <label className="block text-[11px] font-bold text-brand-dark mb-1">
+                    Observaciones para cocina:
+                  </label>
+                  <input
+                    type="text"
+                    value={productNotes}
+                    onChange={(e) => setProductNotes(e.target.value)}
+                    placeholder="Ej. sin azúcar, con leche tibia..."
+                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none"
+                  />
+                </div>
+
                 <button
-                  onClick={() => setProductQty(Math.max(1, productQty - 1))}
-                  className="w-8 h-8 rounded-lg bg-brand-card border border-brand-secondary font-bold flex items-center justify-center text-brand-dark"
+                  onClick={addToCart}
+                  className="w-full py-3 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft flex items-center justify-center gap-2"
                 >
-                  <Minus className="w-4 h-4" />
+                  Agregar al pedido • {formatCurrency(selectedProduct.price * productQty)}
                 </button>
-                <span className="text-sm font-bold text-brand-dark w-4 text-center">
-                  {productQty}
-                </span>
+              </>
+            ) : (
+              <div className="space-y-3 pt-1">
+                <div className="bg-amber-50/90 border border-amber-200 p-3 rounded-xl text-center space-y-1">
+                  <p className="text-xs font-extrabold text-amber-950">
+                    📖 Carta Digital Informativa
+                  </p>
+                  <p className="text-[11px] text-amber-900">
+                    Los pedidos son tomados en la mesa por nuestro personal. Por favor, solicitá este ítem a tu mozo.
+                  </p>
+                </div>
                 <button
-                  onClick={() => setProductQty(productQty + 1)}
-                  className="w-8 h-8 rounded-lg bg-brand-brown text-brand-card font-bold flex items-center justify-center"
+                  onClick={() => setSelectedProduct(null)}
+                  className="w-full py-2.5 px-4 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold text-xs hover:bg-brand-secondary/40 transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
+                  Volver a la carta
                 </button>
               </div>
-            </div>
-
-            {/* Observations input */}
-            <div>
-              <label className="block text-[11px] font-bold text-brand-dark mb-1">
-                Observaciones para cocina:
-              </label>
-              <input
-                type="text"
-                value={productNotes}
-                onChange={(e) => setProductNotes(e.target.value)}
-                placeholder="Ej. sin azúcar, con leche tibia..."
-                className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none"
-              />
-            </div>
-
-            <button
-              onClick={addToCart}
-              className="w-full py-3 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft flex items-center justify-center gap-2"
-            >
-              Agregar al pedido • {formatCurrency(selectedProduct.price * productQty)}
-            </button>
+            )}
           </div>
         </div>
       )}
 
       {/* Public Menu Footer */}
-      <footer className="p-4 mt-6 text-center text-xs text-brand-brown/80 border-t border-brand-secondary/60 space-y-1">
-        <p>Hilos de Amor • Carta Digital</p>
-        <p>
+      <footer className="p-5 mt-8 text-center text-xs text-brand-brown/80 border-t border-brand-secondary/60 space-y-2">
+        <p className="font-serif font-bold text-brand-dark text-sm">Hilos de Amor • Carta Digital</p>
+        {!isAuthenticated ? (
+          <p>
+            <button
+              onClick={() => navigate('/login')}
+              className="text-[11px] text-brand-brown hover:text-brand-dark hover:underline font-semibold"
+            >
+              ¿Sos personal de Hilos de Amor? Iniciar Sesión
+            </button>
+          </p>
+        ) : (
+          <p className="text-[11px] text-emerald-800 font-semibold">
+            ✓ Sesión activa como {user?.name || user?.role || 'Personal'}
+          </p>
+        )}
+
+        {/* Banner informativo Grow Labs */}
+        <div className="pt-3 border-t border-brand-secondary/40 flex flex-col items-center justify-center gap-1.5">
+          <p className="text-[11px] text-brand-brown/80 font-medium">
+            Este sistema está hecho por{' '}
+            <a
+              href="https://www.growlabs.lat"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-extrabold text-emerald-900 hover:text-emerald-950 underline decoration-emerald-600/50"
+            >
+              Grow Labs
+            </a>
+          </p>
           <a
             href="https://www.growlabs.lat"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-bold text-brand-brown hover:text-brand-dark hover:underline inline-flex items-center gap-1"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 text-emerald-900 text-[11px] font-bold transition-all shadow-xs"
           >
-            Diseñado por <span className="text-emerald-900 font-extrabold">Grow Labs</span> 🚀
+            <span>🚀 www.growlabs.lat</span>
           </a>
-        </p>
+        </div>
       </footer>
 
-      {/* Cart Drawer */}
-      {isCartOpen && (
+      {/* Cart Drawer (Solo para personal autenticado) */}
+      {isAuthenticated && isCartOpen && (
         <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
           <div className="bg-brand-card rounded-t-3xl sm:rounded-2xl border border-brand-secondary p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-soft-lg">
             <div className="flex items-center justify-between border-b border-brand-secondary pb-3">
@@ -934,17 +1034,31 @@ export const PublicMenuPage: React.FC = () => {
               )}
 
               <div className="pt-3 flex gap-2">
-                <button
-                  onClick={() => {
-                    setSelectedProduct(expandedImageProduct);
-                    setProductQty(1);
-                    setProductNotes('');
-                    setExpandedImageProduct(null);
-                  }}
-                  className="w-full py-3 rounded-2xl bg-brand-brown hover:bg-brand-dark text-brand-card font-extrabold text-xs shadow-soft transition-all uppercase tracking-wider flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-4 h-4 text-brand-yellow" /> Pedir este producto
-                </button>
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => {
+                      setSelectedProduct(expandedImageProduct);
+                      setProductQty(1);
+                      setProductNotes('');
+                      setExpandedImageProduct(null);
+                    }}
+                    className="w-full py-3 rounded-2xl bg-brand-brown hover:bg-brand-dark text-brand-card font-extrabold text-xs shadow-soft transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4 text-brand-yellow" /> Pedir este producto
+                  </button>
+                ) : (
+                  <div className="w-full flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-brand-brown font-semibold">
+                      📖 Carta Digital • Pedí este producto a tu mozo en la mesa.
+                    </span>
+                    <button
+                      onClick={() => setExpandedImageProduct(null)}
+                      className="px-4 py-2 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shrink-0"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

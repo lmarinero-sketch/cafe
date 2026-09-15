@@ -207,14 +207,25 @@ export const TraditionalMenuPage: React.FC = () => {
               Ir al Menú Interactivo de Pedidos
             </button>
           </div>
-          <div className="pt-2 border-t border-[#D2E0D0]/60">
+          <div className="pt-3 border-t border-[#D2E0D0]/60 flex flex-col items-center justify-center gap-1">
+            <p className="text-[11px] text-[#2F5233]/80 font-medium">
+              Este sistema está hecho por{' '}
+              <a
+                href="https://www.growlabs.lat"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-extrabold text-[#2F5233] hover:text-[#1A2E1E] underline decoration-[#2F5233]/40"
+              >
+                Grow Labs
+              </a>
+            </p>
             <a
               href="https://www.growlabs.lat"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-bold text-[#2F5233] hover:text-[#1A2E1E] hover:underline inline-flex items-center gap-1"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EBF1EA] hover:bg-[#D2E0D0]/60 border border-[#D2E0D0] text-[#2F5233] text-[11px] font-bold transition-all shadow-xs"
             >
-              Diseñado por <span className="text-emerald-900 font-extrabold">Grow Labs</span> 🚀
+              <span>🚀 www.growlabs.lat</span>
             </a>
           </div>
         </footer>

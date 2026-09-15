@@ -433,7 +433,10 @@ export const TablesPage: React.FC = () => {
                 <img src="${qrUrl}" onload="window.print();window.close();" />
               </div>
               <div class="table-title">${table.number.toUpperCase()}</div>
-              <p class="sub">¡Pedí directamente desde tu celular!</p>
+              <p class="sub">¡Escaneá para ver nuestra Carta Digital!</p>
+              <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #D4C5B9; font-size: 10px; color: #765747;">
+                Sistema hecho por <a href="https://www.growlabs.lat" target="_blank" style="color: #2F5233; font-weight: 800; text-decoration: none;">Grow Labs</a> • <a href="https://www.growlabs.lat" target="_blank" style="color: #2F5233; text-decoration: underline;">www.growlabs.lat</a>
+              </div>
             </div>
           </body>
         </html>
@@ -527,13 +530,16 @@ export const TablesPage: React.FC = () => {
               <div class="body-content">
                 <div class="steps">
                   1️⃣ Escaneá el código QR<br/>
-                  2️⃣ Elegí del menú digital<br/>
-                  3️⃣ ¡Recibí tu pedido en la mesa!
+                  2️⃣ Mirá la carta digital<br/>
+                  3️⃣ ¡Tu mozo tomará tu pedido en la mesa!
                 </div>
                 <div class="qr-wrap">
                   <img src="${qrUrl}" onload="window.print();window.close();" />
                 </div>
                 <div class="table-num">${table.number}</div>
+                <div style="margin-top: 10px; padding: 6px 10px; font-size: 10px; color: #765747; border-top: 1px solid #E8E0D5;">
+                  Sistema hecho por <a href="https://www.growlabs.lat" target="_blank" style="color: #2F5233; font-weight: 800; text-decoration: none;">Grow Labs</a> • <a href="https://www.growlabs.lat" target="_blank" style="color: #2F5233; text-decoration: underline;">www.growlabs.lat</a>
+                </div>
               </div>
             </div>
           </body>
@@ -1159,6 +1165,17 @@ export const TablesPage: React.FC = () => {
                 <p className="text-sm font-extrabold text-brand-dark font-serif">{selectedQrTable.number}</p>
                 <p className="text-[10px] text-brand-brown/80 capitalize font-medium">
                   Sector: {selectedQrTable.sector} • {selectedQrTable.capacity} personas
+                </p>
+                <p className="text-[10px] text-brand-brown/80 mt-1">
+                  Sistema hecho por{' '}
+                  <a
+                    href="https://www.growlabs.lat"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-emerald-800 hover:text-emerald-950 underline"
+                  >
+                    Grow Labs (www.growlabs.lat)
+                  </a>
                 </p>
               </div>
             </div>

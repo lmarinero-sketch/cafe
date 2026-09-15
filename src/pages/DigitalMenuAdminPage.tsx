@@ -125,7 +125,7 @@ export const DigitalMenuAdminPage: React.FC = () => {
             <QrCode className="w-5 h-5 text-brand-brown" /> Códigos QR por Mesa
           </h3>
           <p className="text-sm text-brand-brown/80 mt-1">
-            Imprime estos QR y colócalos en las mesas. Cuando los clientes escanean, el pedido quedará asociado automáticamente a esa mesa.
+            Imprimí estos códigos QR y colocalos en las mesas. Al escanearlos, los clientes accederán a la Carta Digital con fotos, descripciones y precios. Los pedidos son tomados por el personal.
           </p>
         </div>
 
