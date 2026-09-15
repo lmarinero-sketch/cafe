@@ -83,10 +83,10 @@ export const VirtualAdvisorFloating: React.FC = () => {
     }
     if (p.includes('order') || p.includes('delivery')) {
       return [
-        { label: '📊 Ventas del Día y Pedidos', prompt: '¿Cómo puedo ver y auditar la lista de pedidos de ventas del día?' },
+        { label: '🧾 Pedidos del Día de Hoy', prompt: '¿Cuáles son los pedidos del día de hoy y qué productos se vendieron?' },
+        { label: '📥 Excel de lo Vendido Hoy', prompt: 'Oliver, por favor generame un archivo exportable en Excel con todo lo vendido en el día de hoy.' },
         { label: '📄 Reporte PDF de Ventas', prompt: 'Generame un reporte en PDF de las ventas con la estética oficial del restaurante.' },
-        { label: '🧾 Órdenes recientes', prompt: '¿Cuáles fueron los últimos pedidos registrados y cuál es el monto total?' },
-        { label: '📥 Exportar Ventas a Excel', prompt: 'Generame un reporte Excel con todas las ventas y pedidos.' },
+        { label: '📊 Ventas del Día y Pedidos', prompt: '¿Cómo puedo ver y auditar la lista de pedidos de ventas del día?' },
         { label: '⏳ Pedidos pendientes', prompt: '¿Hay algún pedido pendiente en preparación o entrega?' }
       ];
     }
@@ -121,11 +121,11 @@ export const VirtualAdvisorFloating: React.FC = () => {
     }
     // Default dashboard actions
     return [
+      { label: '🧾 Pedidos del Día de Hoy', prompt: '¿Cuáles son los pedidos del día de hoy y qué productos se vendieron?' },
+      { label: '📥 Excel de lo Vendido Hoy', prompt: 'Oliver, por favor generame un archivo exportable en Excel con todo lo vendido en el día de hoy.' },
       { label: '🌟 Combos y Opciones (Y/O)', prompt: '¿Qué combos y promociones tenemos activos y qué opciones permiten elegir?' },
-      { label: '📊 Ventas del Día y Pedidos', prompt: '¿Cómo puedo ver y auditar la lista de ventas del día en el sistema?' },
       { label: '📄 Reporte PDF de Ventas', prompt: 'Generame un reporte en PDF de las ventas con toda la estética del proyecto.' },
-      { label: '📱 Menú QR y Mozos', prompt: '¿Cómo funciona el código QR de las mesas para clientes y para mozos?' },
-      { label: '📥 Exportar Ventas a Excel', prompt: 'Generame un reporte Excel con todas las ventas registradas.' }
+      { label: '📱 Menú QR y Mozos', prompt: '¿Cómo funciona el código QR de las mesas para clientes y para mozos?' }
     ];
   };
 
@@ -182,10 +182,10 @@ export const VirtualAdvisorFloating: React.FC = () => {
     }
   };
 
-  const handleExcelDownloadClick = async (type: string, filename: string, title: string) => {
+  const handleExcelDownloadClick = async (type: string, filename: string, title: string, period?: string) => {
     setDownloadingType(type);
     try {
-      await generateAndTriggerExcel(type, filename, title);
+      await generateAndTriggerExcel(type, filename, title, period);
     } catch (err) {
       console.error('Error re-downloading Excel:', err);
     } finally {
@@ -243,15 +243,16 @@ export const VirtualAdvisorFloating: React.FC = () => {
 
   // Render markdown text with download card parsing
   const renderMessageContent = (rawText: string) => {
-    const excelTagRegex = /\[DESCARGAR_EXCEL:([^:]+):([^:]+):([^\]]+)\]/g;
-    const excelMatches: { type: string; filename: string; title: string }[] = [];
+    const excelTagRegex = /\[DESCARGAR_EXCEL:([^:]+):([^:]+):([^:]+?)(?::([^\]]+))?\]/g;
+    const excelMatches: { type: string; filename: string; title: string; period?: string }[] = [];
     let match;
 
     while ((match = excelTagRegex.exec(rawText)) !== null) {
       excelMatches.push({
         type: match[1],
         filename: match[2],
-        title: match[3]
+        title: match[3],
+        period: match[4]
       });
     }
 
@@ -344,7 +345,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => handleExcelDownloadClick(em.type, em.filename, em.title)}
+              onClick={() => handleExcelDownloadClick(em.type, em.filename, em.title, em.period)}
               disabled={downloadingType === em.type}
               className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-lg text-xs font-bold transition-all shadow shadow-emerald-700/20 cursor-pointer disabled:opacity-50"
             >

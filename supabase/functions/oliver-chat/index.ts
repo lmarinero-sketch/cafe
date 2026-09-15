@@ -165,7 +165,15 @@ Hablás en español con un tono cálido, profesional, gourmet y ejecutivo (espa�
 
 6. **GENERACIÓN DE REPORTES (PDF Y EXCEL):**
    - **REPORTES EN PDF:** Si el usuario te pide un **PDF** (ej: "puedes darme un pdf de las ventas?", "generame un reporte en pdf", "exportar en pdf", "descargar pdf"), DEBES USAR OBLIGATORIAMENTE la herramienta 'generate_pdf_report'. ¡NUNCA ofrezcas ni generes un Excel cuando te solicitaron un PDF!
-   - **PLANILLAS EXCEL:** Si el usuario te pide explícitamente un **Excel** o planilla (.xlsx), usá la herramienta 'generate_excel'.`;
+   - **PLANILLAS EXCEL:** Si el usuario te pide explícitamente un **Excel** o planilla (.xlsx), usá la herramienta 'generate_excel'.
+
+7. **CONSULTAS SOBRE LOS PEDIDOS DEL DÍA Y EXCEL DE LO VENDIDO (¡MUY IMPORTANTE!):**
+   - Si te preguntan: "¿cuáles son los pedidos del día?", "¿qué se vendió hoy?", "¿qué pedidos tenemos hoy?", "¿cuánto vendimos hoy?", DEBES USAR la herramienta 'query_orders' pasando period: 'today'.
+   - En tu respuesta, presenta:
+     1. **Resumen de la jornada:** Total de pedidos concretados y facturación del día en ARS ($).
+     2. **Detalle comanda por comanda:** Código de comanda (ej: #ORD-5643), hora, cliente, mesa o canal, método de pago, monto total y **los productos específicos vendidos** en cada pedido (ej: 1x Cortado Mediano, 2x Medialunas, etc.).
+     3. **Lo más vendido:** Mencioná los productos que tuvieron mayor cantidad de unidades vendidas hoy.
+   - Si el usuario te pide **crear o descargar un archivo exportable en Excel de lo vendido** (ej: "exportame a excel las ventas de hoy", "creame un excel de lo vendido", "descargar excel de ventas del dia"), DEBES USAR la herramienta 'generate_excel' con report_type: 'sales' y period: 'today'. Confirmale al usuario que el archivo Excel ha sido generado con éxito; la interfaz del sistema renderizará la tarjeta verde para la descarga directa del .xlsx.`;
 
 const OLIVER_TOOLS = [
   {
@@ -380,12 +388,21 @@ const OLIVER_TOOLS = [
     type: 'function',
     function: {
       name: 'generate_excel',
-      description: 'Generar y exportar un archivo Excel (.xlsx) con datos reales del restaurante. Tipos soportados: sales (ventas y comandas), customers (fidelización y clientes), products (carta y precios), ingredients (costos e insumos), cash (caja y arqueo).',
+      description: 'Generar y preparar para descarga un archivo Excel (.xlsx) con datos reales del restaurante. Permite exportar ventas y desglose de lo vendido (sales) filtrando por período (today/hoy, yesterday/ayer, this_week, this_month, all), clientes (customers), productos y carta (products), insumos y recetas (ingredients), o movimientos de caja (cash).',
       parameters: {
         type: 'object',
         properties: {
-          report_type: { type: 'string', enum: ['sales', 'customers', 'products', 'ingredients', 'cash'], description: 'Tipo de reporte a exportar' },
-          title: { type: 'string', description: 'Título personalizado para el reporte' }
+          report_type: {
+            type: 'string',
+            enum: ['sales', 'customers', 'products', 'ingredients', 'cash'],
+            description: 'Tipo de reporte a exportar: sales (ventas, pedidos y detalle de productos vendidos), customers, products, ingredients, cash'
+          },
+          period: {
+            type: 'string',
+            enum: ['today', 'yesterday', 'this_week', 'this_month', 'all'],
+            description: 'Período temporal para ventas: today (pedidos del día de hoy), yesterday (ayer), this_week, this_month, all (histórico)'
+          },
+          title: { type: 'string', description: 'Título personalizado para el reporte (ej: Reporte de Ventas y Productos Vendidos del Día)' }
         },
         required: ['report_type']
       }
@@ -513,24 +530,57 @@ async function executeTool(name: string, args: Record<string, any>, sb: any): Pr
         if (to) q = q.lte('created_at', to);
         if (args.status) q = q.eq('status', args.status);
         if (args.type) q = q.eq('type', args.type);
-        const { data, error } = await q.order('created_at', { ascending: false }).limit(args.limit || 25);
+        const { data, error } = await q.order('created_at', { ascending: false }).limit(args.limit || 30);
         if (error) return { text: JSON.stringify({ error: error.message }) };
 
         const orders = data || [];
         const validSales = orders.filter((o: any) => o.status !== 'cancelado');
         const totalVentas = validSales.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
 
-        const mapped = orders.map((o: any) => ({
-          codigo: o.code || `#${o.id.slice(0, 5)}`,
-          cliente: o.customer_name || 'Consumidor Final',
-          mesa: o.table_name || 'N/A',
-          tipo: o.type === 'salon' ? 'Salón' : o.type === 'delivery' ? 'Delivery' : 'Para Llevar',
-          estado: o.status,
-          es_venta_valida: o.status !== 'cancelado' ? 'Sí' : 'No (Cancelado)',
-          metodo_pago: o.payment_method || 'No especificado',
-          total: formatARS(o.total || 0),
-          fecha: o.created_at ? new Date(o.created_at).toLocaleDateString('es-AR', { hour: '2-digit', minute: '2-digit' }) : ''
-        }));
+        // Agregación de lo más vendido durante el período consultado
+        const productSalesCount: Record<string, { cantidad: number; total: number }> = {};
+        validSales.forEach((o: any) => {
+          (o.items || []).forEach((it: any) => {
+            const pName = it.productName || it.name || 'Producto';
+            const qty = Number(it.quantity) || 1;
+            const sub = (Number(it.unitPrice) || 0) * qty;
+            if (!productSalesCount[pName]) productSalesCount[pName] = { cantidad: 0, total: 0 };
+            productSalesCount[pName].cantidad += qty;
+            productSalesCount[pName].total += sub;
+          });
+        });
+
+        const rankingLoMasVendido = Object.entries(productSalesCount)
+          .map(([producto, d]) => ({
+            producto,
+            unidades_vendidas: d.cantidad,
+            total_recaudado: formatARS(d.total)
+          }))
+          .sort((a, b) => b.unidades_vendidas - a.unidades_vendidas);
+
+        const mapped = orders.map((o: any) => {
+          const itemsList = (o.items || []).map((it: any) => {
+            let desc = `${it.quantity || 1}x ${it.productName || it.name || 'Ítem'}`;
+            if (it.selectedComboOptions && it.selectedComboOptions.length > 0) {
+              const opts = it.selectedComboOptions.map((co: any) => co.productName || co.name).join(', ');
+              desc += ` (Opciones: ${opts})`;
+            }
+            return desc;
+          });
+
+          return {
+            codigo: o.code || `#${o.id.slice(0, 5)}`,
+            cliente: o.customer_name || 'Consumidor Final',
+            mesa: o.table_name || 'N/A',
+            tipo: o.type === 'salon' ? 'Salón' : o.type === 'delivery' ? 'Delivery' : 'Para Llevar',
+            estado: o.status,
+            es_venta_valida: o.status !== 'cancelado' ? 'Sí' : 'No (Cancelado)',
+            metodo_pago: o.payment_method || 'No especificado',
+            total: formatARS(o.total || 0),
+            fecha: o.created_at ? new Date(o.created_at).toLocaleDateString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '',
+            productos_vendidos: itemsList.length > 0 ? itemsList : ['Sin detalle de productos']
+          };
+        });
 
         return {
           text: JSON.stringify({
@@ -538,6 +588,7 @@ async function executeTool(name: string, args: Record<string, any>, sb: any): Pr
             total_pedidos_encontrados: orders.length,
             ventas_validas_concretadas: validSales.length,
             total_recaudado: formatARS(totalVentas),
+            resumen_lo_mas_vendido: rankingLoMasVendido.slice(0, 5),
             pedidos: mapped
           })
         };
@@ -815,15 +866,17 @@ async function executeTool(name: string, args: Record<string, any>, sb: any): Pr
 
       case 'generate_excel': {
         const repType = args.report_type;
+        const period = args.period || 'today';
         const nowStr = new Date().toISOString().split('T')[0];
-        const filename = `Reporte_${repType}_${nowStr}.xlsx`;
-        const exportTitle = args.title || `Reporte de ${repType.toUpperCase()}`;
-        const tag = `[DESCARGAR_EXCEL:${repType}:${filename}:${exportTitle}]`;
+        const periodLabel = period === 'today' ? 'Hoy' : period === 'yesterday' ? 'Ayer' : period === 'this_month' ? 'EsteMes' : period === 'this_week' ? 'EstaSemana' : 'Historico';
+        const filename = `Reporte_${repType}_${periodLabel}_${nowStr}.xlsx`;
+        const exportTitle = args.title || `Reporte de ${repType === 'sales' ? 'Ventas y Productos Vendidos' : repType.toUpperCase()}${period ? ` (${periodLabel})` : ''}`;
+        const tag = `[DESCARGAR_EXCEL:${repType}:${filename}:${exportTitle}:${period}]`;
 
         return {
           text: JSON.stringify({
             success: true,
-            mensaje: `Reporte Excel de ${repType} preparado para descarga con datos de pedidos y ventas reales.`,
+            mensaje: `Reporte Excel de ${repType} (${periodLabel}) preparado para descarga con desglose de pedidos, detalle de ítems vendidos y ranking.`,
             tag_descarga: tag
           }),
           exportTag: tag
