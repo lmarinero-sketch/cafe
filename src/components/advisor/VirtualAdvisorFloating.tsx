@@ -419,7 +419,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-sm text-white tracking-wide">Oliver</h3>
                   <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded border border-amber-400/30">
-                    Maitre IA
+                    Grow Labs AI
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-300">
