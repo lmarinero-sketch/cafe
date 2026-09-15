@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DollarSign,
@@ -31,6 +31,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
+import { DailySalesOrdersModal } from '../components/dashboard/DailySalesOrdersModal';
 
 export const DashboardPage: React.FC = () => {
   const {
@@ -44,10 +45,22 @@ export const DashboardPage: React.FC = () => {
     openTutorialModal,
   } = useApp();
   const navigate = useNavigate();
+  const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
 
   // Metrics summary
-  const todayOrders = orders.slice(0, 15);
-  const totalSalesToday = todayOrders.reduce((sum, o) => sum + o.total, 0);
+  const todayDateStr = new Date().toLocaleDateString('en-CA');
+  const todayOrders = orders.filter((o) => {
+    try {
+      return new Date(o.createdAt).toLocaleDateString('en-CA') === todayDateStr;
+    } catch {
+      return false;
+    }
+  });
+  const effectiveTodayOrders = todayOrders.length > 0 ? todayOrders : orders;
+  const totalSalesToday = effectiveTodayOrders
+    .filter((o) => o.status !== 'cancelado')
+    .reduce((sum, o) => sum + o.total, 0);
+
   const activeOrdersCount = orders.filter(
     (o) => o.status === 'nuevo' || o.status === 'confirmado' || o.status === 'en_preparacion'
   ).length;
@@ -158,57 +171,95 @@ export const DashboardPage: React.FC = () => {
       {/* KPI Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Ventas del día */}
-        <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft hover:border-brand-brown/40 transition-colors">
+        <div
+          onClick={() => setIsSalesModalOpen(true)}
+          className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft hover:border-emerald-600/70 hover:shadow-md cursor-pointer transition-all group"
+          title="Hacé clic para ver la lista completa de pedidos del día"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-brand-brown/80">Ventas del Día</span>
-            <div className="w-9 h-9 rounded-xl bg-brand-green/30 text-emerald-800 flex items-center justify-center">
+            <span className="text-xs font-semibold text-brand-brown/80 group-hover:text-emerald-900 font-bold transition-colors">
+              Ventas del Día
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-brand-green/30 text-emerald-800 flex items-center justify-center group-hover:scale-110 transition-transform">
               <DollarSign className="w-5 h-5" />
             </div>
           </div>
           <h3 className="text-2xl font-extrabold text-brand-dark mt-2">
             {formatCurrency(totalSalesToday)}
           </h3>
-          <p className="text-[11px] text-emerald-800 font-semibold mt-1 flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" /> +14% vs ayer
-          </p>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-[11px] text-emerald-800 font-semibold flex items-center gap-1">
+              <TrendingUp className="w-3.5 h-3.5" /> +14% vs ayer
+            </p>
+            <span className="text-[11px] text-emerald-800 font-extrabold group-hover:underline flex items-center gap-0.5">
+              Ver lista ({effectiveTodayOrders.length}) →
+            </span>
+          </div>
         </div>
 
         {/* Card 2: Pedidos Activos */}
-        <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft hover:border-brand-brown/40 transition-colors">
+        <div
+          onClick={() => navigate('/pedidos')}
+          className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft hover:border-brand-yellow/70 hover:shadow-md cursor-pointer transition-all group"
+          title="Ver comandas activas en salón y cocina"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-brand-brown/80">Pedidos Activos</span>
-            <div className="w-9 h-9 rounded-xl bg-brand-yellow/30 text-brand-brown flex items-center justify-center">
+            <span className="text-xs font-semibold text-brand-brown/80 group-hover:text-brand-dark font-bold transition-colors">
+              Pedidos Activos
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-brand-yellow/30 text-brand-brown flex items-center justify-center group-hover:scale-110 transition-transform">
               <ShoppingBag className="w-5 h-5" />
             </div>
           </div>
           <h3 className="text-2xl font-extrabold text-brand-dark mt-2">{activeOrdersCount}</h3>
-          <p className="text-[11px] text-brand-brown/80 mt-1">En cocina y caja</p>
+          <div className="flex items-center justify-between mt-1 text-[11px]">
+            <span className="text-brand-brown/80">En cocina y caja</span>
+            <span className="text-brand-brown font-bold group-hover:underline">Ver comandas →</span>
+          </div>
         </div>
 
         {/* Card 3: Mesas Ocupadas */}
-        <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft hover:border-brand-brown/40 transition-colors">
+        <div
+          onClick={() => navigate('/mesas')}
+          className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft hover:border-brand-brown/50 hover:shadow-md cursor-pointer transition-all group"
+          title="Ver mapa y estado de mesas"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-brand-brown/80">Mesas Ocupadas</span>
-            <div className="w-9 h-9 rounded-xl bg-brand-secondary text-brand-dark flex items-center justify-center">
+            <span className="text-xs font-semibold text-brand-brown/80 group-hover:text-brand-dark font-bold transition-colors">
+              Mesas Ocupadas
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-brand-secondary text-brand-dark flex items-center justify-center group-hover:scale-110 transition-transform">
               <SquareCheckBig className="w-5 h-5" />
             </div>
           </div>
           <h3 className="text-2xl font-extrabold text-brand-dark mt-2">
             {occupiedTablesCount} <span className="text-sm font-normal text-brand-brown/70">/ {tables.length}</span>
           </h3>
-          <p className="text-[11px] text-brand-brown/80 mt-1">Sectores salón y terraza</p>
+          <div className="flex items-center justify-between mt-1 text-[11px]">
+            <span className="text-brand-brown/80">Sectores salón y terraza</span>
+            <span className="text-brand-brown font-bold group-hover:underline">Ver mesas →</span>
+          </div>
         </div>
 
         {/* Card 4: Delivery Pendientes */}
-        <div className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft hover:border-brand-brown/40 transition-colors">
+        <div
+          onClick={() => navigate('/delivery')}
+          className="bg-brand-card rounded-2xl border border-brand-secondary p-5 shadow-soft hover:border-rose-400/70 hover:shadow-md cursor-pointer transition-all group"
+          title="Ver panel de delivery y despachos"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-brand-brown/80">Delivery Pendientes</span>
-            <div className="w-9 h-9 rounded-xl bg-brand-red/30 text-rose-800 flex items-center justify-center">
+            <span className="text-xs font-semibold text-brand-brown/80 group-hover:text-rose-900 font-bold transition-colors">
+              Delivery Pendientes
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-brand-red/30 text-rose-800 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Truck className="w-5 h-5" />
             </div>
           </div>
           <h3 className="text-2xl font-extrabold text-brand-dark mt-2">{pendingDeliveryCount}</h3>
-          <p className="text-[11px] text-brand-brown/80 mt-1">Esperando despacho</p>
+          <div className="flex items-center justify-between mt-1 text-[11px]">
+            <span className="text-brand-brown/80">Esperando despacho</span>
+            <span className="text-rose-800 font-bold group-hover:underline">Ver delivery →</span>
+          </div>
         </div>
       </div>
 
@@ -366,6 +417,12 @@ export const DashboardPage: React.FC = () => {
           ))}
         </div>
       </div>
+      {/* Modal de Detalle de Ventas del Día y Lista de Pedidos */}
+      <DailySalesOrdersModal
+        isOpen={isSalesModalOpen}
+        onClose={() => setIsSalesModalOpen(false)}
+        orders={effectiveTodayOrders}
+      />
     </div>
   );
 };
