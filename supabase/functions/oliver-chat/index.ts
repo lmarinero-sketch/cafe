@@ -91,29 +91,96 @@ function formatARS(amount: number): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(amount);
 }
 
-const OLIVER_BASE_PROMPT = `Sos "Oliver", el Chef Ejecutivo, Maitre y Asistente Virtual Inteligente de "Hilos de Amor - Plataforma Gastronómica".
-Hablás en español con un tono cálido, profesional, gourmet y ejecutivo (español argentino rioplatense educado).
+function formatCompositeDetails(row: any): { itemsFijos: string[]; gruposEleccion: any[] } {
+  let items: any[] = [];
+  let groups: any[] = [];
+  if (Array.isArray(row.composite_items)) {
+    items = row.composite_items;
+  } else if (row.composite_items && typeof row.composite_items === 'object') {
+    items = Array.isArray(row.composite_items.items) ? row.composite_items.items : [];
+    groups = Array.isArray(row.composite_items.groups) ? row.composite_items.groups : [];
+  }
 
-## REGLA DE ORO DE NEGOCIO (¡MUY IMPORTANTE!):
+  const itemsFijos = items.map((it: any) => `${it.quantity || 1}x ${it.productName || it.name || 'Producto'}`);
+  const gruposEleccion = groups.map((g: any) => ({
+    nombre_grupo: g.name,
+    elegir: `${g.maxSelectable || 1} opción(es)`,
+    alternativas: (g.options || []).map((o: any) => o.productName || o.name || 'Opción')
+  }));
+
+  return { itemsFijos, gruposEleccion };
+}
+
+const OLIVER_BASE_PROMPT = `Sos "Oliver", el Chef Ejecutivo, Maitre y Asistente Virtual Inteligente de "Hilos de Amor - Plataforma Gastronómica" (creada y potenciada por Grow Labs • www.growlabs.lat).
+Hablás en español con un tono cálido, profesional, gourmet y ejecutivo (español argentino rioplatense educado: tratás de vos con respeto y calidez).
+
+## TU ROL Y CAPACIDADES:
+- Asesorar a dueños, administradores, mozos y cajeros sobre el funcionamiento integral del restaurante, cafetería, cocina y salón.
+- Consultar en tiempo real y con precisión quirúrgica las ventas, pedidos, combos, carta de productos, clientes, mesas, caja diaria e insumos.
+- Explicar y asesorar sobre los combos gastronómicos y promociones, detallando qué incluye de forma fija (Lógica Y) y qué opciones puede elegir el comensal (Lógica O).
+- Generar Reportes Ejecutivos en PDF listos para imprimir/guardar con la estética oficial del proyecto (generate_pdf_report).
+- Exportar planillas Excel (.xlsx) completas para auditoría o administración (generate_excel).
+- Registrar nuevos clientes, productos, movimientos de caja o insumos.
+
+## CONOCIMIENTO CLAVE DEL SISTEMA Y REGLAS DE NEGOCIO:
+
 1. **VENTAS = PEDIDOS (ORDERS):**
-   - En este restaurante y sistema, **LAS VENTAS SON LOS PEDIDOS**. No existe una tabla separada de ventas: toda la facturación, ventas de café, pastelería y delivery proviene de la tabla 'orders'.
+   - En este restaurante y sistema, **LAS VENTAS SON LOS PEDIDOS**. No existe una tabla separada de ventas: toda la facturación proviene de la tabla 'orders'.
    - Cada pedido registrado en 'orders' representa una **venta**.
-   - Los pedidos válidos/concretados son todos aquellos que **NO están cancelados** (es decir, con estado 'entregado', 'en_camino', 'preparando', 'pendiente', 'cobrado').
-   - Los pedidos con estado 'cancelado' se informan por separado, pero no suman al monto total de recaudación.
-   - El monto de cada venta es el campo 'total' (o 'subtotal' + propinas).
+   - Los pedidos válidos/concretados son todos aquellos que **NO están cancelados** (estados: 'entregado', 'en_camino', 'preparando', 'pendiente', 'cobrado', 'confirmado', 'nuevo').
+   - Los pedidos con estado 'cancelado' se informan por separado pero no suman a la recaudación.
+   - El monto de cada venta es el campo 'total'.
 
-2. **CONSULTAS POR FECHA O PERÍODO:**
+2. **CONSULTAS DE VENTAS Y PERÍODOS TEMPORALES:**
    - Si te preguntan: "¿cómo fueron las ventas de ayer?", "¿cuánto vendimos hoy?", "¿y en el mes?", "¿cuáles son las ventas de la semana?", DEBES USAR la herramienta 'query_kpis' o 'query_orders' pasando el período ('yesterday', 'today', 'this_month', 'this_week') o el mes correspondiente.
-   - NUNCA digas que no hubo ventas si hay pedidos registrados. Mostrá siempre los datos reales con importes concretos en ARS ($).
+   - Mostrá siempre los datos reales con importes concretos en ARS ($) y cantidad de pedidos.
 
-3. **GENERACIÓN DE REPORTES (PDF Y EXCEL):**
+3. **CENTRO DE CONTROL "VENTAS DEL DÍA" (EN DASHBOARD):**
+   - En el Dashboard principal del sistema, al hacer clic en la tarjeta / botón "Ventas del Día" se abre un modal interactivo con la lista completa de todos los pedidos de la jornada actual.
+   - Permite filtrar por método de pago (Efectivo, Tarjeta, Transferencia, Mercado Pago), auditar importes, ver el estado de cada comanda y abrir/imprimir el ticket digital detallado.
+   - La base de datos fue purgada de pedidos de prueba anteriores al 13/09/2026; todos los pedidos y ventas actuales son datos 100% reales.
+
+4. **SISTEMA DE COMBOS Y PROMOCIONES (LÓGICA "Y" y LÓGICA "O"):**
+   - El restaurante cuenta con un potente motor de combos en el catálogo de productos ('products' con is_composite = true).
+   - **Lógica "Y" (Ítems fijos / obligatorios):** Productos que vienen siempre incluidos por defecto en el combo (ej: 1 Chipanguchito, 4 Chipá, 2 Jugos de Naranja).
+   - **Lógica "O" (Grupos de opciones a elección):** Grupos de alternativas donde el cliente o mozo elige una opción (ej: "Bebida caliente a elección: Café con leche O Cortado O Lágrima O Americano"; "Dulce a elección: Tarta individual O Alfajor artesanal"; "Panadería a elección: 2 Medialunas O 2 Tortitas/Semitas").
+   - **Combos vigentes en Hilos de Amor:**
+     - *Combo Individual 1 ($8.500):* Bebida caliente a elección (1) + Panadería a elección (2 medialunas o 2 tortitas/semitas).
+     - *Combo Individual 2 ($15.000):* 1 Chipanguchito (fijo) + Licuado a elección (Banana, Frutilla o Durazno).
+     - *Combo Individual 3 ($11.000):* Bebida caliente a elección + Tarta individual a elección (Lemon pie, Pirinea, Crumble, Naranja y chocolate) O Alfajor artesanal.
+     - *Combo Individual 4 ($14.000):* 1 Vaso de jugo de naranja (fijo) + Ciabatta a elección (Jamón crudo o Veggie).
+     - *Combo para Compartir 1 ($18.000):* 2 Bebidas calientes a elección + 1 Porción de torta a elección (Chajá, Rogel, Cheesecake, Carrot cake, Selva negra, Matilda, Nube de nuez, Semifrío de limón).
+     - *Combo para Compartir 2 ($17.000):* 2 Vasos de jugo de naranja (fijos) + 1 Ciabatta a elección (Crudo o Veggie).
+     - *Combo para Compartir 3 ($22.000):* 4 Chipá (fijos) + 2 Bebidas calientes a elección + 1 Porción de torta a elección.
+     - *Combo para Compartir 4 ($21.000):* 2 Vasos de jugo de naranja + 1 Alfajor (fijos) + 1 Variedad de Tostón a elección (Jamón crudo o De campo).
+   - Cuando te consulten sobre combos, DEBES USAR 'query_combos' o 'query_products' para brindar detalles exactos y actualizados.
+   - Podés explicar cómo crearlos o modificarlos en el módulo de Productos (marcando "Producto Compuesto / Combo", agregando ítems fijos con el botón "Agregar Producto Fijo (Y)" y creando grupos de opciones con el botón "Crear Grupo de Opciones (O)").
+
+5. **CARTA Y MENÚ DIGITAL QR DE MESAS:**
+   - Si un comensal escanea el código QR de una mesa en el salón, el menú se abre en **modo de solo consulta/lectura**.
+   - Los comensales pueden explorar libremente los platos, bebidas, combos y precios, pero **NO pueden emitir pedidos directos a cocina sin estar registrados**.
+   - Esto evita comandas no deseadas y asegura que la toma de pedidos esté a cargo del personal de sala.
+   - La toma de comandas móviles mediante el QR está habilitada exclusivamente para mozos y personal autenticado en el sistema.
+   - Al pie del menú QR figura el sello y enlace institucional: "Desarrollado con ❤️ por Grow Labs" (con link a www.growlabs.lat).
+
+6. **GENERACIÓN DE REPORTES (PDF Y EXCEL):**
    - **REPORTES EN PDF:** Si el usuario te pide un **PDF** (ej: "puedes darme un pdf de las ventas?", "generame un reporte en pdf", "exportar en pdf", "descargar pdf"), DEBES USAR OBLIGATORIAMENTE la herramienta 'generate_pdf_report'. ¡NUNCA ofrezcas ni generes un Excel cuando te solicitaron un PDF!
-   - **PLANILLAS EXCEL:** Si el usuario te pide explícitamente un **Excel** o planilla (.xlsx), usá la herramienta 'generate_excel'.
-   - Podés consultar productos, clientes, mesas, caja diaria, insumos/recetas.
-   - Podés registrar nuevos clientes, productos, movimientos de caja o insumos.
-   - Podés responder sobre gastronomía, recetas, costos y consejos operativos.`;
+   - **PLANILLAS EXCEL:** Si el usuario te pide explícitamente un **Excel** o planilla (.xlsx), usá la herramienta 'generate_excel'.`;
 
 const OLIVER_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'query_combos',
+      description: 'Consultar combos y promociones activos de Hilos de Amor. Devuelve el detalle completo: nombre, precio, descripción, ítems fijos obligatorios (lógica Y) y grupos de opciones a elección del cliente (lógica O) con sus alternativas disponibles.',
+      parameters: {
+        type: 'object',
+        properties: {
+          search: { type: 'string', description: 'Nombre o término a buscar (ej: individual, compartir, licuado, ciabatta)' }
+        }
+      }
+    }
+  },
   {
     type: 'function',
     function: {
@@ -162,13 +229,15 @@ const OLIVER_TOOLS = [
     type: 'function',
     function: {
       name: 'query_products',
-      description: 'Consultar productos de la carta y menú. Permite buscar por nombre, categoría o filtrar por disponibilidad.',
+      description: 'Consultar productos de la carta, menú o combos. Permite buscar por nombre, categoría o filtrar por disponibilidad o combos compuestos.',
       parameters: {
         type: 'object',
         properties: {
           search: { type: 'string', description: 'Nombre o ingrediente a buscar' },
           category: { type: 'string', description: 'Nombre de la categoría' },
-          only_available: { type: 'boolean', description: 'Solo productos disponibles' }
+          only_available: { type: 'boolean', description: 'Solo productos disponibles' },
+          only_combos: { type: 'boolean', description: 'Filtrar solo combos y productos compuestos' },
+          limit: { type: 'number', description: 'Cantidad máxima de productos a devolver' }
         }
       }
     }
@@ -474,22 +543,63 @@ async function executeTool(name: string, args: Record<string, any>, sb: any): Pr
         };
       }
 
+      case 'query_combos': {
+        let q = sb.from('products').select('id, name, category_name, price, cost, suggested_price, is_available, description, is_composite, composite_items').eq('is_composite', true);
+        if (args.search) {
+          q = q.or(`name.ilike.%${args.search}%,description.ilike.%${args.search}%`);
+        }
+        const { data, error } = await q.order('name');
+        if (error) return { text: JSON.stringify({ error: error.message }) };
+
+        const combos = (data || []).map((p: any) => {
+          const comp = formatCompositeDetails(p);
+          return {
+            nombre: p.name,
+            precio: formatARS(p.price || 0),
+            descripcion: p.description || '',
+            disponible: p.is_available ? 'Sí' : 'No',
+            items_fijos_logica_Y: comp.itemsFijos.length > 0 ? comp.itemsFijos : ['Sin productos fijos individuales'],
+            grupos_a_eleccion_logica_O: comp.gruposEleccion.length > 0 ? comp.gruposEleccion : ['Consultar opciones en descripción']
+          };
+        });
+
+        return {
+          text: JSON.stringify({
+            total_combos_encontrados: combos.length,
+            nota_operativa: 'Cada combo se compone de ítems fijos (Lógica Y) y grupos con alternativas a elección (Lógica O).',
+            combos
+          })
+        };
+      }
+
       case 'query_products': {
-        let q = sb.from('products').select('id, name, category_name, price, cost, suggested_price, is_available, description');
+        let q = sb.from('products').select('id, name, category_name, price, cost, suggested_price, is_available, description, is_composite, composite_items');
         if (args.search) q = q.ilike('name', `%${args.search}%`);
         if (args.category) q = q.ilike('category_name', `%${args.category}%`);
         if (args.only_available) q = q.eq('is_available', true);
-        const { data, error } = await q.order('category_name').order('name').limit(25);
+        if (args.only_combos) q = q.eq('is_composite', true);
+        const { data, error } = await q.order('category_name').order('name').limit(args.limit || 30);
         if (error) return { text: JSON.stringify({ error: error.message }) };
 
-        const mapped = (data || []).map((p: any) => ({
-          nombre: p.name,
-          categoria: p.category_name || 'Sin categoría',
-          precio: formatARS(p.price || 0),
-          costo: p.cost ? formatARS(p.cost) : 'No calculado',
-          disponible: p.is_available ? 'Sí' : 'No',
-          descripcion: p.description
-        }));
+        const mapped = (data || []).map((p: any) => {
+          const itemRes: any = {
+            nombre: p.name,
+            categoria: p.category_name || 'Sin categoría',
+            precio: formatARS(p.price || 0),
+            costo: p.cost ? formatARS(p.cost) : 'No calculado',
+            disponible: p.is_available ? 'Sí' : 'No',
+            descripcion: p.description,
+            es_combo: p.is_composite ? 'Sí (Producto Compuesto / Combo)' : 'No'
+          };
+          if (p.is_composite) {
+            const comp = formatCompositeDetails(p);
+            itemRes.detalle_combo = {
+              items_fijos_Y: comp.itemsFijos,
+              grupos_opciones_O: comp.gruposEleccion
+            };
+          }
+          return itemRes;
+        });
         return { text: JSON.stringify({ total_encontrados: mapped.length, productos: mapped }) };
       }
 

@@ -41,7 +41,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
     {
       id: 'welcome',
       role: 'assistant',
-      content: '¡Hola! 👋 Soy **Oliver**, tu Maitre Ejecutivo y Asistente IA en **Hilos de Amor**.\n\nPuedo consultar cualquier dato en tiempo real de tu base de datos (ventas, pedidos, clientes, mesas, caja), registrar nuevos datos, generar **Reportes Oficiales en PDF** listos para imprimir o guardar con la estética del proyecto, exportar planillas **Excel (.xlsx)**, o responder cualquier duda gastronómica y operativa.\n\n¿En qué te puedo asesorar hoy?',
+      content: '¡Hola! 👋 Soy **Oliver**, tu Maitre Ejecutivo y Asistente IA en **Hilos de Amor** (potenciado por Grow Labs).\n\nPuedo consultar cualquier dato en tiempo real (ventas, pedidos, combos con lógica Y/O, clientes, mesas, caja), auditar las **Ventas del Día**, generar **Reportes Oficiales en PDF** listos para imprimir con membrete institucional, exportar planillas **Excel (.xlsx)**, o responder cualquier duda gastronómica y operativa.\n\n¿En qué te puedo asesorar hoy?',
       time: 'Ahora'
     }
   ]);
@@ -83,6 +83,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
     }
     if (p.includes('order') || p.includes('delivery')) {
       return [
+        { label: '📊 Ventas del Día y Pedidos', prompt: '¿Cómo puedo ver y auditar la lista de pedidos de ventas del día?' },
         { label: '📄 Reporte PDF de Ventas', prompt: 'Generame un reporte en PDF de las ventas con la estética oficial del restaurante.' },
         { label: '🧾 Órdenes recientes', prompt: '¿Cuáles fueron los últimos pedidos registrados y cuál es el monto total?' },
         { label: '📥 Exportar Ventas a Excel', prompt: 'Generame un reporte Excel con todas las ventas y pedidos.' },
@@ -92,11 +93,13 @@ export const VirtualAdvisorFloating: React.FC = () => {
     if (p.includes('table')) {
       return [
         { label: '🪑 Mesas disponibles', prompt: '¿Cuántas mesas tenemos disponibles y cuántas están ocupadas?' },
+        { label: '📱 ¿Cómo funciona el Menú QR?', prompt: '¿Cómo funciona el código QR de las mesas para clientes y para mozos?' },
         { label: '🔄 Liberar mesa', prompt: 'Quiero cambiar el estado de una mesa a disponible.' }
       ];
     }
     if (p.includes('product') || p.includes('menu')) {
       return [
+        { label: '🌟 Combos y Opciones (Y/O)', prompt: '¿Qué combos y promociones tenemos activos y qué opciones permiten elegir?' },
         { label: '📋 Resumen de carta y precios', prompt: '¿Cuántos productos hay en la carta y cuáles son las categorías?' },
         { label: '📥 Exportar Menú a Excel', prompt: 'Generá un archivo Excel de todos los productos de la carta y sus precios.' },
         { label: '➕ Crear nuevo plato', prompt: 'Quiero crear un nuevo plato en la carta de Hilos de Amor.' }
@@ -118,10 +121,11 @@ export const VirtualAdvisorFloating: React.FC = () => {
     }
     // Default dashboard actions
     return [
+      { label: '🌟 Combos y Opciones (Y/O)', prompt: '¿Qué combos y promociones tenemos activos y qué opciones permiten elegir?' },
+      { label: '📊 Ventas del Día y Pedidos', prompt: '¿Cómo puedo ver y auditar la lista de ventas del día en el sistema?' },
       { label: '📄 Reporte PDF de Ventas', prompt: 'Generame un reporte en PDF de las ventas con toda la estética del proyecto.' },
-      { label: '📊 Resumen ejecutivo y KPIs', prompt: '¿Cómo está el restaurante hoy? Dame un resumen ejecutivo de ventas y operaciones.' },
-      { label: '📥 Exportar Ventas a Excel', prompt: 'Generame un reporte Excel con todas las ventas registradas.' },
-      { label: '🏆 Top clientes', prompt: '¿Quiénes son nuestros clientes más fieles por compras y puntos?' }
+      { label: '📱 Menú QR y Mozos', prompt: '¿Cómo funciona el código QR de las mesas para clientes y para mozos?' },
+      { label: '📥 Exportar Ventas a Excel', prompt: 'Generame un reporte Excel con todas las ventas registradas.' }
     ];
   };
 
