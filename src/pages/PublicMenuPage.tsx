@@ -22,7 +22,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Product, OrderItem, PaymentMethod, OrderType } from '../types';
+import { Product, OrderItem, PaymentMethod, OrderType, SelectedComboOption } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { PrintableMenuModal } from '../components/menu/PrintableMenuModal';
 
@@ -44,6 +44,7 @@ export const PublicMenuPage: React.FC = () => {
   const [expandedImageProduct, setExpandedImageProduct] = useState<Product | null>(null);
   const [productQty, setProductQty] = useState(1);
   const [productNotes, setProductNotes] = useState('');
+  const [selectedComboOptions, setSelectedComboOptions] = useState<Record<string, { productId: string; productName: string }>>({});
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // Cart Drawer & Checkout Form state
@@ -74,11 +75,48 @@ export const PublicMenuPage: React.FC = () => {
 
   const featuredProducts = products.filter((p) => p.isFeatured && p.isAvailable);
 
+  const handleSelectProduct = (p: Product) => {
+    setSelectedProduct(p);
+    setSelectedComboOptions({});
+    setProductQty(1);
+    setProductNotes('');
+  };
+
   const addToCart = () => {
     if (!selectedProduct) return;
 
+    // Validate if any combo group has required options missing
+    if (selectedProduct.isComposite && selectedProduct.compositeGroups && selectedProduct.compositeGroups.length > 0) {
+      for (const grp of selectedProduct.compositeGroups) {
+        if (grp.options && grp.options.length > 0 && !selectedComboOptions[grp.id]) {
+          showToast('Selección Requerida', `Por favor elegí una opción para "${grp.name}".`, 'warning');
+          return;
+        }
+      }
+    }
+
+    const chosenOptionsList: SelectedComboOption[] = (selectedProduct.compositeGroups || [])
+      .map((grp) => {
+        const chosen = selectedComboOptions[grp.id];
+        if (!chosen) return null;
+        return {
+          groupId: grp.id,
+          groupName: grp.name,
+          productId: chosen.productId,
+          productName: chosen.productName,
+        };
+      })
+      .filter(Boolean) as SelectedComboOption[];
+
+    const optionsKey = chosenOptionsList.map((o) => `${o.groupId}:${o.productId}`).sort().join('|');
+
     setCart((prev) => {
-      const existingIdx = prev.findIndex((item) => item.productId === selectedProduct.id);
+      const existingIdx = prev.findIndex((item) => {
+        if (item.productId !== selectedProduct.id) return false;
+        const itemKey = (item.selectedComboOptions || []).map((o) => `${o.groupId}:${o.productId}`).sort().join('|');
+        return itemKey === optionsKey;
+      });
+
       if (existingIdx >= 0) {
         const updated = [...prev];
         updated[existingIdx].quantity += productQty;
@@ -95,11 +133,14 @@ export const PublicMenuPage: React.FC = () => {
           notes: productNotes,
           isComposite: selectedProduct.isComposite,
           compositeItems: selectedProduct.compositeItems,
+          compositeGroups: selectedProduct.compositeGroups,
+          selectedComboOptions: chosenOptionsList,
         },
       ];
     });
 
     setSelectedProduct(null);
+    setSelectedComboOptions({});
     setProductQty(1);
     setProductNotes('');
   };
@@ -159,10 +200,19 @@ export const PublicMenuPage: React.FC = () => {
             )}
           </div>
           <p className="text-[11px] text-brand-brown/80 line-clamp-2 mt-0.5 leading-relaxed">{p.description}</p>
-          {p.isComposite && p.compositeItems && p.compositeItems.length > 0 && (
-            <p className="text-[10px] text-amber-900 font-semibold truncate mt-1 bg-amber-50/80 px-1.5 py-0.5 rounded border border-amber-200">
-              Incluye: {p.compositeItems.map((ci) => `${ci.quantity}x ${ci.productName}`).join(' + ')}
-            </p>
+          {p.isComposite && (
+            <div className="mt-1 space-y-1">
+              {p.compositeItems && p.compositeItems.length > 0 && (
+                <p className="text-[10px] text-blue-900 font-semibold truncate bg-blue-50/90 px-1.5 py-0.5 rounded border border-blue-200">
+                  <strong className="text-blue-950 font-black">Fijo (Y):</strong> {p.compositeItems.map((ci) => `${ci.quantity}x ${ci.productName}`).join(' + ')}
+                </p>
+              )}
+              {p.compositeGroups && p.compositeGroups.length > 0 && (
+                <p className="text-[10px] text-amber-950 font-semibold truncate bg-amber-50/90 px-1.5 py-0.5 rounded border border-amber-200">
+                  <strong className="text-amber-900 font-black">A elección (O):</strong> {p.compositeGroups.map((g) => `${g.name} (${g.options.map(o => o.productName).join(' ó ')})`).join(' • ')}
+                </p>
+              )}
+            </div>
           )}
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs font-extrabold text-brand-brown">{formatCurrency(p.price)}</span>
@@ -401,11 +451,7 @@ export const PublicMenuPage: React.FC = () => {
             {featuredProducts.map((p) => (
               <div
                 key={p.id}
-                onClick={() => {
-                  setSelectedProduct(p);
-                  setProductQty(1);
-                  setProductNotes('');
-                }}
+                onClick={() => handleSelectProduct(p)}
                 className="bg-brand-card rounded-2xl border border-brand-secondary p-3 shadow-xs hover:border-brand-brown/50 cursor-pointer transition-all flex flex-col justify-between"
               >
                 <div className="relative group">
@@ -468,7 +514,7 @@ export const PublicMenuPage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {catProducts.map((p) => <ProductCard key={p.id} p={p} onSelect={() => { setSelectedProduct(p); setProductQty(1); setProductNotes(''); }} onExpand={() => setExpandedImageProduct(p)} />)}
+                  {catProducts.map((p) => <ProductCard key={p.id} p={p} onSelect={() => handleSelectProduct(p)} onExpand={() => setExpandedImageProduct(p)} />)}
                 </div>
               </div>
             );
@@ -480,7 +526,7 @@ export const PublicMenuPage: React.FC = () => {
               {categories.find(c => c.id === selectedCategory)?.name ?? 'Categoría'} ({filteredProducts.length})
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProducts.map((p) => <ProductCard key={p.id} p={p} onSelect={() => { setSelectedProduct(p); setProductQty(1); setProductNotes(''); }} onExpand={() => setExpandedImageProduct(p)} />)}
+              {filteredProducts.map((p) => <ProductCard key={p.id} p={p} onSelect={() => handleSelectProduct(p)} onExpand={() => setExpandedImageProduct(p)} />)}
             </div>
           </>
         )}
@@ -510,30 +556,97 @@ export const PublicMenuPage: React.FC = () => {
               {selectedProduct.description}
             </p>
 
-            {selectedProduct.isComposite && selectedProduct.compositeItems && selectedProduct.compositeItems.length > 0 && (
-              <div className="bg-amber-50/90 p-3 rounded-xl border border-amber-200 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-extrabold text-amber-950 uppercase tracking-wider">
-                  <span>📦 Este Combo Incluye:</span>
-                  {(() => {
-                    const totalSeparado = selectedProduct.compositeItems.reduce((acc, it) => acc + (it.unitPrice || 0) * it.quantity, 0);
-                    const ahorro = totalSeparado > selectedProduct.price ? totalSeparado - selectedProduct.price : 0;
-                    return ahorro > 0 ? (
-                      <span className="text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full font-bold">
-                        Ahorras {formatCurrency(ahorro)} ({Math.round((ahorro / totalSeparado) * 100)}% OFF)
-                      </span>
-                    ) : null;
-                  })()}
-                </div>
-                <div className="space-y-1">
-                  {selectedProduct.compositeItems.map((ci, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-amber-950 bg-white/80 p-1.5 rounded-lg border border-amber-200/60">
-                      <span className="font-bold">{ci.quantity}x {ci.productName}</span>
-                      {ci.unitPrice ? (
-                        <span className="text-gray-500 font-mono text-[11px]">{formatCurrency(ci.unitPrice * ci.quantity)}</span>
-                      ) : null}
+            {selectedProduct.isComposite && (
+              <div className="space-y-2.5">
+                {/* Ítems Fijos (Lógica Y) */}
+                {selectedProduct.compositeItems && selectedProduct.compositeItems.length > 0 && (
+                  <div className="bg-blue-50/90 p-3 rounded-xl border border-blue-200 space-y-1.5">
+                    <div className="text-[11px] font-extrabold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-black">Y</span>
+                      <span>Incluye de forma obligatoria (Fijo):</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="space-y-1">
+                      {selectedProduct.compositeItems.map((ci, idx) => (
+                        <div key={idx} className="flex justify-between text-xs text-blue-950 bg-white/80 p-1.5 rounded-lg border border-blue-200/60">
+                          <span className="font-bold">{ci.quantity}x {ci.productName}</span>
+                          {ci.unitPrice ? (
+                            <span className="text-gray-500 font-mono text-[11px]">{formatCurrency(ci.unitPrice * ci.quantity)}</span>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Grupos a Elección (Lógica O) */}
+                {selectedProduct.compositeGroups && selectedProduct.compositeGroups.length > 0 && (
+                  <div className="bg-amber-50/90 p-3 rounded-xl border border-amber-300 space-y-2.5">
+                    <div className="flex items-center justify-between text-[11px] font-extrabold text-amber-950 uppercase tracking-wider">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full bg-amber-600 text-white flex items-center justify-center text-[9px] font-black">O</span>
+                        <span>Opciones a Elección:</span>
+                      </span>
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full">
+                        {isAuthenticated ? 'Elegí 1 por grupo' : '1 a elección'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {selectedProduct.compositeGroups.map((grp) => (
+                        <div key={grp.id} className="bg-white/90 p-2.5 rounded-xl border border-amber-200 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-amber-950">{grp.name}:</span>
+                            {isAuthenticated && selectedComboOptions[grp.id] && (
+                              <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.2 rounded-full flex items-center gap-1">
+                                ✓ {selectedComboOptions[grp.id].productName}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Selección Interactiva para Personal Autenticado */}
+                          {isAuthenticated ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+                              {grp.options.map((opt) => {
+                                const isSelected = selectedComboOptions[grp.id]?.productId === opt.productId;
+                                return (
+                                  <button
+                                    type="button"
+                                    key={opt.productId}
+                                    onClick={() =>
+                                      setSelectedComboOptions({
+                                        ...selectedComboOptions,
+                                        [grp.id]: { productId: opt.productId, productName: opt.productName },
+                                      })
+                                    }
+                                    className={`p-2 rounded-xl border text-left text-xs font-bold transition-all flex items-center justify-between ${
+                                      isSelected
+                                        ? 'bg-amber-600 text-white border-amber-700 ring-2 ring-amber-400 shadow-xs'
+                                        : 'bg-white hover:bg-amber-100/50 text-brand-dark border-amber-200'
+                                    }`}
+                                  >
+                                    <span className="truncate">{opt.productName}</span>
+                                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-amber-100 shrink-0 ml-1" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                              {grp.options.map((opt, oIdx) => (
+                                <React.Fragment key={opt.productId}>
+                                  {oIdx > 0 && <span className="text-[10px] font-bold text-amber-700">ó</span>}
+                                  <span className="bg-amber-100/80 text-amber-950 px-2 py-0.5 rounded text-[11px] font-semibold border border-amber-200">
+                                    {opt.productName}
+                                  </span>
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -681,6 +794,18 @@ export const PublicMenuPage: React.FC = () => {
                     >
                       <div className="flex-1 min-w-0 pr-2">
                         <h4 className="font-bold text-brand-dark truncate">{item.productName}</h4>
+                        {item.compositeItems && item.compositeItems.length > 0 && (
+                          <div className="text-[10px] text-blue-900 font-medium">
+                            Fijos: {item.compositeItems.map((ci) => `${ci.quantity * item.quantity}x ${ci.productName}`).join(' • ')}
+                          </div>
+                        )}
+                        {item.selectedComboOptions && item.selectedComboOptions.length > 0 && (
+                          <div className="text-[10px] text-amber-900 font-semibold space-y-0.5">
+                            {item.selectedComboOptions.map((sco, sIdx) => (
+                              <div key={sIdx}>↳ {sco.groupName}: {sco.productName}</div>
+                            ))}
+                          </div>
+                        )}
                         {item.notes && <p className="text-[10px] text-brand-brown/80">Nota: {item.notes}</p>}
                         <p className="font-extrabold text-brand-brown mt-0.5">
                           {formatCurrency(item.unitPrice * item.quantity)}

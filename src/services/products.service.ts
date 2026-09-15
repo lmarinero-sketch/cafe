@@ -2,6 +2,16 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Product } from '../types';
 
 function mapRowToProduct(row: any): Product {
+  let compositeItems: any[] = [];
+  let compositeGroups: any[] = [];
+
+  if (Array.isArray(row.composite_items)) {
+    compositeItems = row.composite_items;
+  } else if (row.composite_items && typeof row.composite_items === 'object') {
+    compositeItems = Array.isArray(row.composite_items.items) ? row.composite_items.items : [];
+    compositeGroups = Array.isArray(row.composite_items.groups) ? row.composite_items.groups : [];
+  }
+
   return {
     id: row.id,
     name: row.name,
@@ -17,7 +27,8 @@ function mapRowToProduct(row: any): Product {
     channels: row.channels || ['salon', 'retiro', 'delivery'],
     recipeItems: row.recipe_items || [],
     isComposite: Boolean(row.is_composite),
-    compositeItems: row.composite_items || [],
+    compositeItems,
+    compositeGroups,
   };
 }
 
@@ -36,7 +47,12 @@ function mapProductToRow(prod: Partial<Product>): Record<string, any> {
   if (prod.channels !== undefined) row.channels = prod.channels;
   if (prod.recipeItems !== undefined) row.recipe_items = prod.recipeItems;
   if (prod.isComposite !== undefined) row.is_composite = prod.isComposite;
-  if (prod.compositeItems !== undefined) row.composite_items = prod.compositeItems;
+  if (prod.compositeItems !== undefined || prod.compositeGroups !== undefined) {
+    row.composite_items = {
+      items: prod.compositeItems || [],
+      groups: prod.compositeGroups || [],
+    };
+  }
   return row;
 }
 

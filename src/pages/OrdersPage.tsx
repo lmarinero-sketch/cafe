@@ -409,6 +409,17 @@ export const OrdersPage: React.FC = () => {
                                       ))}
                                     </div>
                                   )}
+                                  {it.selectedComboOptions && it.selectedComboOptions.length > 0 && (
+                                    <div className="pl-2 border-l-2 border-emerald-400 bg-emerald-50/60 py-0.5 px-1 rounded text-[10px] text-emerald-950 font-medium space-y-0.5 my-0.5">
+                                      {it.selectedComboOptions.map((sco, sidx) => (
+                                        <div key={sidx} className="flex items-center gap-1">
+                                          <span className="text-emerald-700 font-black">↳</span>
+                                          <span className="font-bold">{sco.groupName}:</span>
+                                          <span>{sco.productName}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>

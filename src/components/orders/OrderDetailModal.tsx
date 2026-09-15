@@ -145,6 +145,18 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
                         ))}
                       </div>
                     )}
+                    {it.selectedComboOptions && it.selectedComboOptions.length > 0 && (
+                      <div className="bg-amber-50/80 border border-amber-200/80 rounded-lg p-1.5 mt-1 space-y-0.5 text-[10px] text-amber-950">
+                        <span className="font-extrabold uppercase text-[9px] text-amber-900 block">Opciones elegidas:</span>
+                        {it.selectedComboOptions.map((sco, sidx) => (
+                          <div key={sidx} className="flex items-center gap-1">
+                            <span className="text-amber-700 font-black">↳</span>
+                            <span className="font-bold">{sco.groupName}:</span>
+                            <span>{sco.productName}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {it.notes && (
                       <p className="text-[10px] text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 inline-block">
                         Nota: {it.notes}

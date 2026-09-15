@@ -148,10 +148,24 @@ export const TraditionalMenuPage: React.FC = () => {
                           <p className="text-xs text-[#2F5233]/90 leading-relaxed font-serif">
                             {item.description}
                           </p>
-                          {item.isComposite && item.compositeItems && item.compositeItems.length > 0 && (
-                            <p className="text-[11px] text-amber-900 font-bold bg-amber-50 p-1.5 rounded-lg border border-amber-200/70">
-                              Incluye: {item.compositeItems.map((ci) => `${ci.quantity}x ${ci.productName}`).join(' + ')}
-                            </p>
+                          {item.isComposite && (
+                            <div className="space-y-1">
+                              {item.compositeItems && item.compositeItems.length > 0 && (
+                                <p className="text-[11px] text-blue-900 font-bold bg-blue-50/80 p-1.5 rounded-lg border border-blue-200/70">
+                                  Fijo: {item.compositeItems.map((ci) => `${ci.quantity}x ${ci.productName}`).join(' + ')}
+                                </p>
+                              )}
+                              {item.compositeGroups && item.compositeGroups.length > 0 && (
+                                <div className="text-[11px] text-amber-950 font-medium bg-amber-50/90 p-1.5 rounded-lg border border-amber-200/70 space-y-0.5">
+                                  <span className="font-bold text-amber-900 block text-[10px] uppercase">A elección:</span>
+                                  {item.compositeGroups.map((g) => (
+                                    <div key={g.id}>
+                                      • <strong className="text-amber-950">{g.name}:</strong> {g.options.map((o) => o.productName).join(' ó ')}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
 

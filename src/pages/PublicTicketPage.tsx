@@ -295,6 +295,18 @@ export const PublicTicketPage: React.FC = () => {
                           ))}
                         </div>
                       )}
+                      {it.selectedComboOptions && it.selectedComboOptions.length > 0 && (
+                        <div className="text-[10px] text-amber-950 font-medium bg-amber-50/90 p-1.5 rounded-lg border border-amber-200/80 ml-5 my-1 space-y-0.5">
+                          <span className="font-extrabold uppercase text-[9px] text-amber-900 block">Opciones:</span>
+                          {it.selectedComboOptions.map((sco, sidx) => (
+                            <div key={sidx} className="flex items-center gap-1">
+                              <span className="text-amber-700 font-black">↳</span>
+                              <span className="font-bold">{sco.groupName}:</span>
+                              <span>{sco.productName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {it.notes && (
                         <p className="text-[10px] text-gray-500 italic pl-5">• {it.notes}</p>
                       )}

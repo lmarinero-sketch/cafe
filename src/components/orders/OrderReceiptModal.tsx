@@ -102,6 +102,11 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                 ${it.compositeItems.map((ci) => `+ ${ci.quantity * it.quantity}x ${ci.productName}`).join('<br/>')}
               </div>
             ` : ''}
+            ${it.selectedComboOptions && it.selectedComboOptions.length > 0 ? `
+              <div style="font-size: 9.5px; font-weight: 900; color: #000 !important; padding-left: 8px; margin-top: 1px;">
+                ${it.selectedComboOptions.map((sco) => `↳ ${sco.groupName}: ${sco.productName}`).join('<br/>')}
+              </div>
+            ` : ''}
             ${it.notes ? `<div style="font-size: 10px; font-weight: 900; color: #000 !important; padding-left: 6px; border-left: 2px solid #000; margin-top: 2px;">• NOTA: ${it.notes.toUpperCase()}</div>` : ''}
           </div>
           <div style="text-align: right; white-space: nowrap; font-weight: 900; font-size: 11.5px;">
@@ -276,6 +281,11 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
               ${it.compositeItems.map((ci) => `↳ ${ci.quantity * it.quantity}x ${ci.productName}`).join('<br/>')}
             </div>
           ` : ''}
+          ${it.selectedComboOptions && it.selectedComboOptions.length > 0 ? `
+            <div style="font-size: 10.5px; font-weight: 900; padding-left: 10px; margin-top: 3px;">
+              ${it.selectedComboOptions.map((sco) => `↳ ${sco.groupName}: ${sco.productName}`).join('<br/>')}
+            </div>
+          ` : ''}
           ${it.notes ? `
             <div style="font-size: 11px; font-weight: 900; border: 1.5px solid #000; padding: 2px 4px; margin-top: 3px; display: inline-block;">
               ⚠️ NOTA: ${it.notes.toUpperCase()}
@@ -392,6 +402,11 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             ${it.compositeItems && it.compositeItems.length > 0 ? `
               <div style="font-size: 11px; color: #78350f; background: #fffbeb; padding: 4px 8px; border-radius: 4px; margin-top: 4px; border: 1px solid #fef3c7;">
                 <strong>Incluye:</strong> ${it.compositeItems.map((ci) => `${ci.quantity * it.quantity}x ${ci.productName}`).join(' • ')}
+              </div>
+            ` : ''}
+            ${it.selectedComboOptions && it.selectedComboOptions.length > 0 ? `
+              <div style="font-size: 11px; color: #78350f; background: #fffbeb; padding: 4px 8px; border-radius: 4px; margin-top: 4px; border: 1px solid #fef3c7;">
+                <strong>Opciones elegidas:</strong> ${it.selectedComboOptions.map((sco) => `${sco.groupName}: ${sco.productName}`).join(' • ')}
               </div>
             ` : ''}
             ${it.notes ? `<div style="font-size: 11px; color: #6b7280; margin-top: 2px;">Nota: ${it.notes}</div>` : ''}
@@ -771,6 +786,13 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                         ))}
                       </div>
                     )}
+                    {it.selectedComboOptions && it.selectedComboOptions.length > 0 && (
+                      <div className="text-[10px] font-extrabold pl-3">
+                        {it.selectedComboOptions.map((sco, sidx) => (
+                          <div key={sidx}>↳ {sco.groupName}: {sco.productName}</div>
+                        ))}
+                      </div>
+                    )}
                     {it.notes && (
                       <div className="text-[10px] font-black border-l-2 border-black pl-2 mt-0.5">
                         • NOTA: {it.notes.toUpperCase()}
@@ -867,6 +889,13 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                         ))}
                       </div>
                     )}
+                    {it.selectedComboOptions && it.selectedComboOptions.length > 0 && (
+                      <div className="text-[10.5px] font-black pl-3">
+                        {it.selectedComboOptions.map((sco, sidx) => (
+                          <div key={sidx}>↳ {sco.groupName}: {sco.productName}</div>
+                        ))}
+                      </div>
+                    )}
                     {it.notes && (
                       <div className="text-[11px] font-black border border-black p-1">
                         ⚠️ NOTA: {it.notes.toUpperCase()}
@@ -958,6 +987,11 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                           {it.compositeItems && it.compositeItems.length > 0 && (
                             <div className="text-[10px] text-amber-900 font-bold bg-amber-50/80 p-1 rounded border border-amber-200/60 mt-0.5">
                               <strong>Incluye:</strong> {it.compositeItems.map((ci) => `${ci.quantity * it.quantity}x ${ci.productName}`).join(' • ')}
+                            </div>
+                          )}
+                          {it.selectedComboOptions && it.selectedComboOptions.length > 0 && (
+                            <div className="text-[10px] text-amber-900 font-bold bg-amber-50/80 p-1 rounded border border-amber-200/60 mt-0.5">
+                              <strong>Elegido:</strong> {it.selectedComboOptions.map((sco) => `${sco.groupName}: ${sco.productName}`).join(' • ')}
                             </div>
                           )}
                           {it.notes && <span className="text-[10px] text-amber-900 font-bold block">• NOTA: {it.notes}</span>}

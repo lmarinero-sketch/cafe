@@ -17,6 +17,22 @@ export interface CompositeItem {
   unitPrice?: number;
 }
 
+export interface CompositeGroup {
+  id: string;
+  name: string; // e.g. "Elección de Bebida / Infusión"
+  type: 'or'; // Lógica OR: el cliente elige 1 alternativa dentro de este grupo
+  required?: boolean;
+  options: CompositeItem[];
+}
+
+export interface SelectedComboOption {
+  groupId: string;
+  groupName: string;
+  productId: string;
+  productName: string;
+  quantity?: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -32,7 +48,8 @@ export interface Product {
   suggestedPrice?: number;
   recipeItems?: RecipeIngredient[];
   isComposite?: boolean; // Producto compuesto / combo
-  compositeItems?: CompositeItem[]; // Lista de productos que integran el combo
+  compositeItems?: CompositeItem[]; // Lista de productos fijos (Lógica AND)
+  compositeGroups?: CompositeGroup[]; // Grupos de opciones a elección (Lógica OR)
 }
 
 export interface Sector {
@@ -59,6 +76,8 @@ export interface OrderItem {
   notes?: string;
   isComposite?: boolean;
   compositeItems?: CompositeItem[];
+  compositeGroups?: CompositeGroup[];
+  selectedComboOptions?: SelectedComboOption[];
 }
 
 export type OrderType = 'salon' | 'retiro' | 'delivery';
