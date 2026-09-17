@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Eye, EyeOff, Edit, Tag, Image, Check, X, Package, Layers, Trash2, Percent, Sparkles, HelpCircle, ChevronDown, ChevronUp, FolderPlus, CheckCircle2, Split } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useToast } from '../context/ToastContext';
 import { Product, Channel, CompositeItem, CompositeGroup } from '../types';
 import { formatCurrency } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 
 export const ProductsPage: React.FC = () => {
   const { products, categories, addProduct, updateProduct, toggleProductStatus, deleteProduct } = useApp();
+  const { showToast } = useToast();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [filterType, setFilterType] = useState<'all' | 'simple' | 'composite'>('all');
@@ -20,6 +22,26 @@ export const ProductsPage: React.FC = () => {
   const [showComboHelp, setShowComboHelp] = useState<boolean>(true);
   const [newGroupName, setNewGroupName] = useState<string>('');
   const [groupOptionProdId, setGroupOptionProdId] = useState<Record<string, string>>({});
+
+  // Lock body scroll and handle Escape key when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setIsModalOpen(false);
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [isModalOpen]);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -243,12 +265,21 @@ export const ProductsPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.price) return;
+    if (!formData.name.trim()) {
+      showToast('Campo Requerido', 'Por favor ingresá el nombre del producto o combo.', 'warning');
+      return;
+    }
+    if (!formData.price || formData.price <= 0) {
+      showToast('Precio Inválido', 'El precio debe ser un valor mayor a 0.', 'warning');
+      return;
+    }
 
     if (editingProduct) {
       updateProduct(editingProduct.id, formData);
+      showToast('Producto Actualizado', `Se guardaron los cambios de "${formData.name}".`, 'success');
     } else {
       addProduct(formData);
+      showToast('Producto Creado', `Se creó "${formData.name}" exitosamente.`, 'success');
     }
     setIsModalOpen(false);
   };
@@ -536,12 +567,19 @@ export const ProductsPage: React.FC = () => {
 
       {/* Modal Form */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-brand-card rounded-2xl border border-brand-secondary p-6 max-w-xl w-full max-h-[92vh] overflow-y-auto shadow-soft-lg space-y-4">
-            <div className="flex items-center justify-between border-b border-brand-secondary pb-3">
-              <div className="flex items-center gap-2">
-                {formData.isComposite && <Package className="w-5 h-5 text-amber-600" />}
-                <h3 className="text-base font-bold text-brand-dark">
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
+            className="bg-brand-card rounded-2xl border border-brand-secondary max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-soft-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Sticky Header: Always pinned to top and visible */}
+            <div className="flex items-center justify-between border-b border-brand-secondary px-6 py-4 bg-brand-card shrink-0 z-10">
+              <div className="flex items-center gap-2 min-w-0 pr-2">
+                {formData.isComposite && <Package className="w-5 h-5 text-amber-600 shrink-0" />}
+                <h3 className="text-base font-bold text-brand-dark truncate">
                   {editingProduct
                     ? formData.isComposite
                       ? 'Editar Combo / Promoción'
@@ -552,14 +590,18 @@ export const ProductsPage: React.FC = () => {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark"
+                className="p-1.5 rounded-xl text-brand-dark/60 hover:text-brand-dark hover:bg-brand-secondary/40 transition-colors shrink-0"
+                title="Cerrar (Esc)"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Selector de Tipo de Producto */}
+            {/* Scrollable Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-4">
+              {/* Selector de Tipo de Producto */}
             <div className="grid grid-cols-2 gap-2 bg-brand-bg p-1.5 rounded-xl border border-brand-secondary">
               <button
                 type="button"
@@ -1208,6 +1250,7 @@ export const ProductsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}

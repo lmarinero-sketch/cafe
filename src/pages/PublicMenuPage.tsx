@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -62,6 +62,46 @@ export const PublicMenuPage: React.FC = () => {
   const [giftCardCode, setGiftCardCode] = useState<string>('');
 
   const [orderSuccessCode, setOrderSuccessCode] = useState<string | null>(null);
+
+  // Lock body scroll when any modal or drawer is open
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(
+      selectedProduct ||
+      (isAuthenticated && isCartOpen) ||
+      orderSuccessCode ||
+      expandedImageProduct ||
+      isPrintModalOpen
+    );
+
+    if (isAnyModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [selectedProduct, isAuthenticated, isCartOpen, orderSuccessCode, expandedImageProduct, isPrintModalOpen]);
+
+  // Handle ESC key to dismiss topmost modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (expandedImageProduct) {
+          setExpandedImageProduct(null);
+        } else if (selectedProduct) {
+          setSelectedProduct(null);
+        } else if (isCartOpen) {
+          setIsCartOpen(false);
+        } else if (orderSuccessCode) {
+          setOrderSuccessCode(null);
+        } else if (isPrintModalOpen) {
+          setIsPrintModalOpen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [expandedImageProduct, selectedProduct, isCartOpen, orderSuccessCode, isPrintModalOpen]);
 
   // Filter products: Only show products that are available (isAvailable === true)
   const filteredProducts = products.filter((p) => {
@@ -534,153 +574,145 @@ export const PublicMenuPage: React.FC = () => {
 
       {/* Item Detail Modal */}
       {selectedProduct && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-brand-card rounded-t-3xl sm:rounded-2xl border border-brand-secondary p-5 max-w-md w-full shadow-soft-lg space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-brand-dark">{selectedProduct.name}</h3>
+        <div
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in"
+          onClick={() => setSelectedProduct(null)}
+        >
+          <div
+            className="bg-brand-card rounded-t-3xl sm:rounded-2xl border border-brand-secondary max-w-md sm:max-w-lg w-full shadow-soft-lg flex flex-col max-h-[90vh] sm:max-h-[86vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Sticky Header: Always pinned to top and visible */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-brand-secondary/80 bg-brand-card shrink-0 z-10">
+              <div className="min-w-0 pr-2">
+                <h3 className="text-sm sm:text-base font-bold text-brand-dark truncate">{selectedProduct.name}</h3>
+                {selectedProduct.isComposite && (
+                  <span className="text-[10px] text-amber-800 font-extrabold bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1 mt-0.5">
+                    📦 Combo Especial
+                  </span>
+                )}
+              </div>
               <button
+                type="button"
                 onClick={() => setSelectedProduct(null)}
-                className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark"
+                className="p-1 rounded-xl text-brand-dark/60 hover:text-brand-dark hover:bg-brand-secondary/40 transition-colors shrink-0"
+                title="Cerrar (Esc)"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <img
-              src={selectedProduct.image}
-              alt={selectedProduct.name}
-              className="w-full h-44 rounded-xl object-cover bg-brand-bg border border-brand-secondary"
-            />
+            {/* Scrollable Body: Contained and smooth internal scrolling */}
+            <div className="p-4 overflow-y-auto space-y-3 flex-1">
+              <img
+                src={selectedProduct.image}
+                alt={selectedProduct.name}
+                className="w-full h-24 sm:h-28 rounded-xl object-cover bg-brand-bg border border-brand-secondary shrink-0 shadow-2xs"
+              />
 
-            <p className="text-xs text-brand-brown/90 leading-relaxed">
-              {selectedProduct.description}
-            </p>
+              {selectedProduct.description && (
+                <p className="text-xs text-brand-brown/90 leading-relaxed">
+                  {selectedProduct.description}
+                </p>
+              )}
 
-            {selectedProduct.isComposite && (
-              <div className="space-y-2.5">
-                {/* Ítems Fijos (Lógica Y) */}
-                {selectedProduct.compositeItems && selectedProduct.compositeItems.length > 0 && (
-                  <div className="bg-blue-50/90 p-3 rounded-xl border border-blue-200 space-y-1.5">
-                    <div className="text-[11px] font-extrabold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-black">Y</span>
-                      <span>Incluye de forma obligatoria (Fijo):</span>
+              {selectedProduct.isComposite && (
+                <div className="space-y-2">
+                  {/* Ítems Fijos (Lógica Y) */}
+                  {selectedProduct.compositeItems && selectedProduct.compositeItems.length > 0 && (
+                    <div className="bg-blue-50/90 p-2.5 rounded-xl border border-blue-200 space-y-1">
+                      <div className="text-[10px] font-extrabold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[8px] font-black">Y</span>
+                        <span>Incluye de forma obligatoria (Fijo):</span>
+                      </div>
+                      <div className="space-y-1">
+                        {selectedProduct.compositeItems.map((ci, idx) => (
+                          <div key={idx} className="flex justify-between text-xs text-blue-950 bg-white/90 px-2 py-1 rounded-lg border border-blue-200/60">
+                            <span className="font-bold">{ci.quantity}x {ci.productName}</span>
+                            {ci.unitPrice ? (
+                              <span className="text-gray-500 font-mono text-[10px]">{formatCurrency(ci.unitPrice * ci.quantity)}</span>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      {selectedProduct.compositeItems.map((ci, idx) => (
-                        <div key={idx} className="flex justify-between text-xs text-blue-950 bg-white/80 p-1.5 rounded-lg border border-blue-200/60">
-                          <span className="font-bold">{ci.quantity}x {ci.productName}</span>
-                          {ci.unitPrice ? (
-                            <span className="text-gray-500 font-mono text-[11px]">{formatCurrency(ci.unitPrice * ci.quantity)}</span>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Grupos a Elección (Lógica O) */}
-                {selectedProduct.compositeGroups && selectedProduct.compositeGroups.length > 0 && (
-                  <div className="bg-amber-50/90 p-3 rounded-xl border border-amber-300 space-y-2.5">
-                    <div className="flex items-center justify-between text-[11px] font-extrabold text-amber-950 uppercase tracking-wider">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full bg-amber-600 text-white flex items-center justify-center text-[9px] font-black">O</span>
-                        <span>Opciones a Elección:</span>
-                      </span>
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full">
-                        {isAuthenticated ? 'Elegí 1 por grupo' : '1 a elección'}
-                      </span>
-                    </div>
+                  {/* Grupos a Elección (Lógica O) */}
+                  {selectedProduct.compositeGroups && selectedProduct.compositeGroups.length > 0 && (
+                    <div className="bg-amber-50/90 p-2.5 rounded-xl border border-amber-300 space-y-2">
+                      <div className="flex items-center justify-between text-[10px] font-extrabold text-amber-950 uppercase tracking-wider">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-3.5 h-3.5 rounded-full bg-amber-600 text-white flex items-center justify-center text-[8px] font-black">O</span>
+                          <span>Opciones a Elección:</span>
+                        </span>
+                        <span className="text-[9px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full">
+                          {isAuthenticated ? 'Elegí 1 por grupo' : '1 a elección'}
+                        </span>
+                      </div>
 
-                    <div className="space-y-2">
-                      {selectedProduct.compositeGroups.map((grp) => (
-                        <div key={grp.id} className="bg-white/90 p-2.5 rounded-xl border border-amber-200 space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-amber-950">{grp.name}:</span>
-                            {isAuthenticated && selectedComboOptions[grp.id] && (
-                              <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.2 rounded-full flex items-center gap-1">
-                                ✓ {selectedComboOptions[grp.id].productName}
-                              </span>
+                      <div className="space-y-2">
+                        {selectedProduct.compositeGroups.map((grp) => (
+                          <div key={grp.id} className="bg-white/95 p-2 rounded-xl border border-amber-200 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black text-amber-950">{grp.name}:</span>
+                              {isAuthenticated && selectedComboOptions[grp.id] && (
+                                <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.2 rounded-full flex items-center gap-1">
+                                  ✓ {selectedComboOptions[grp.id].productName}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Selección Interactiva para Personal Autenticado */}
+                            {isAuthenticated ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+                                {grp.options.map((opt) => {
+                                  const isSelected = selectedComboOptions[grp.id]?.productId === opt.productId;
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={opt.productId}
+                                      onClick={() =>
+                                        setSelectedComboOptions({
+                                          ...selectedComboOptions,
+                                          [grp.id]: { productId: opt.productId, productName: opt.productName },
+                                        })
+                                      }
+                                      className={`py-1.5 px-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center justify-between ${
+                                        isSelected
+                                          ? 'bg-amber-600 text-white border-amber-700 ring-2 ring-amber-400 shadow-xs'
+                                          : 'bg-white hover:bg-amber-100/50 text-brand-dark border-amber-200'
+                                      }`}
+                                    >
+                                      <span className="truncate">{opt.productName}</span>
+                                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-amber-100 shrink-0 ml-1" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                                {grp.options.map((opt, oIdx) => (
+                                  <React.Fragment key={opt.productId}>
+                                    {oIdx > 0 && <span className="text-[10px] font-bold text-amber-700">ó</span>}
+                                    <span className="bg-amber-100/80 text-amber-950 px-2 py-0.5 rounded text-[10px] font-semibold border border-amber-200">
+                                      {opt.productName}
+                                    </span>
+                                  </React.Fragment>
+                                ))}
+                              </div>
                             )}
                           </div>
-
-                          {/* Selección Interactiva para Personal Autenticado */}
-                          {isAuthenticated ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
-                              {grp.options.map((opt) => {
-                                const isSelected = selectedComboOptions[grp.id]?.productId === opt.productId;
-                                return (
-                                  <button
-                                    type="button"
-                                    key={opt.productId}
-                                    onClick={() =>
-                                      setSelectedComboOptions({
-                                        ...selectedComboOptions,
-                                        [grp.id]: { productId: opt.productId, productName: opt.productName },
-                                      })
-                                    }
-                                    className={`p-2 rounded-xl border text-left text-xs font-bold transition-all flex items-center justify-between ${
-                                      isSelected
-                                        ? 'bg-amber-600 text-white border-amber-700 ring-2 ring-amber-400 shadow-xs'
-                                        : 'bg-white hover:bg-amber-100/50 text-brand-dark border-amber-200'
-                                    }`}
-                                  >
-                                    <span className="truncate">{opt.productName}</span>
-                                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-amber-100 shrink-0 ml-1" />}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                              {grp.options.map((opt, oIdx) => (
-                                <React.Fragment key={opt.productId}>
-                                  {oIdx > 0 && <span className="text-[10px] font-bold text-amber-700">ó</span>}
-                                  <span className="bg-amber-100/80 text-amber-950 px-2 py-0.5 rounded text-[11px] font-semibold border border-amber-200">
-                                    {opt.productName}
-                                  </span>
-                                </React.Fragment>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="text-base font-extrabold text-brand-brown">
-              {formatCurrency(selectedProduct.price * productQty)}
-            </div>
-
-            {isAuthenticated ? (
-              <>
-                {/* Quantity Selector */}
-                <div className="flex items-center justify-between bg-brand-bg p-2 rounded-xl border border-brand-secondary">
-                  <span className="text-xs font-bold text-brand-dark">Cantidad:</span>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setProductQty(Math.max(1, productQty - 1))}
-                      className="w-8 h-8 rounded-lg bg-brand-card border border-brand-secondary font-bold flex items-center justify-center text-brand-dark"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <span className="text-sm font-bold text-brand-dark w-4 text-center">
-                      {productQty}
-                    </span>
-                    <button
-                      onClick={() => setProductQty(productQty + 1)}
-                      className="w-8 h-8 rounded-lg bg-brand-brown text-brand-card font-bold flex items-center justify-center"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
+                  )}
                 </div>
+              )}
 
-                {/* Observations input */}
+              {isAuthenticated && (
                 <div>
-                  <label className="block text-[11px] font-bold text-brand-dark mb-1">
+                  <label className="block text-[10px] font-bold text-brand-dark mb-0.5">
                     Observaciones para cocina:
                   </label>
                   <input
@@ -688,35 +720,72 @@ export const PublicMenuPage: React.FC = () => {
                     value={productNotes}
                     onChange={(e) => setProductNotes(e.target.value)}
                     placeholder="Ej. sin azúcar, con leche tibia..."
-                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none"
+                    className="w-full px-2.5 py-1.5 rounded-xl border border-brand-secondary bg-brand-bg text-xs focus:outline-none focus:ring-1 focus:ring-brand-brown"
                   />
                 </div>
+              )}
 
-                <button
-                  onClick={addToCart}
-                  className="w-full py-3 px-4 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft flex items-center justify-center gap-2"
-                >
-                  Agregar al pedido • {formatCurrency(selectedProduct.price * productQty)}
-                </button>
-              </>
-            ) : (
-              <div className="space-y-3 pt-1">
-                <div className="bg-amber-50/90 border border-amber-200 p-3 rounded-xl text-center space-y-1">
+              {!isAuthenticated && (
+                <div className="bg-amber-50/90 border border-amber-200 p-2.5 rounded-xl text-center space-y-0.5">
                   <p className="text-xs font-extrabold text-amber-950">
                     📖 Carta Digital Informativa
                   </p>
-                  <p className="text-[11px] text-amber-900">
-                    Los pedidos son tomados en la mesa por nuestro personal. Por favor, solicitá este ítem a tu mozo.
+                  <p className="text-[10px] text-amber-900">
+                    Los pedidos son tomados en la mesa por nuestro personal. Solicitá este ítem a tu mozo.
                   </p>
                 </div>
+              )}
+            </div>
+
+            {/* Sticky Action Footer: Always visible at the bottom */}
+            <div className="p-3 sm:p-3.5 border-t border-brand-secondary/80 bg-brand-card shrink-0 z-10 flex items-center justify-between gap-2.5">
+              {isAuthenticated ? (
+                <>
+                  {/* Quantity Selector */}
+                  <div className="flex items-center gap-1.5 bg-brand-bg px-2 py-1 rounded-xl border border-brand-secondary shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setProductQty(Math.max(1, productQty - 1))}
+                      className="w-7 h-7 rounded-lg bg-brand-card border border-brand-secondary font-bold flex items-center justify-center text-brand-dark hover:bg-brand-secondary/30 transition-colors"
+                      title="Menos"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-xs font-black text-brand-dark w-5 text-center font-mono">
+                      {productQty}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setProductQty(productQty + 1)}
+                      className="w-7 h-7 rounded-lg bg-brand-brown text-brand-card font-bold flex items-center justify-center hover:bg-brand-dark transition-colors"
+                      title="Más"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Add to order button with total */}
+                  <button
+                    type="button"
+                    onClick={addToCart}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-brand-brown text-brand-card font-bold text-xs hover:bg-brand-dark transition-colors shadow-soft flex items-center justify-center gap-1.5"
+                  >
+                    <span>Agregar al pedido</span>
+                    <span className="font-mono text-brand-yellow font-extrabold">
+                      • {formatCurrency(selectedProduct.price * productQty)}
+                    </span>
+                  </button>
+                </>
+              ) : (
                 <button
+                  type="button"
                   onClick={() => setSelectedProduct(null)}
                   className="w-full py-2.5 px-4 rounded-xl border border-brand-secondary bg-brand-bg text-brand-dark font-bold text-xs hover:bg-brand-secondary/40 transition-colors"
                 >
                   Volver a la carta
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -765,8 +834,14 @@ export const PublicMenuPage: React.FC = () => {
 
       {/* Cart Drawer (Solo para personal autenticado) */}
       {isAuthenticated && isCartOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-brand-dark/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-brand-card rounded-t-3xl sm:rounded-2xl border border-brand-secondary p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-soft-lg">
+        <div
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in"
+          onClick={() => setIsCartOpen(false)}
+        >
+          <div
+            className="bg-brand-card rounded-t-3xl sm:rounded-2xl border border-brand-secondary p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-soft-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b border-brand-secondary pb-3">
               <h3 className="text-base font-bold text-brand-dark flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-brand-brown" /> Tu Pedido
@@ -1075,8 +1150,14 @@ export const PublicMenuPage: React.FC = () => {
 
       {/* Order Success Modal */}
       {orderSuccessCode && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in">
-          <div className="bg-brand-card rounded-2xl border-2 border-emerald-600 p-6 max-w-sm w-full text-center space-y-4 shadow-soft-lg">
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in"
+          onClick={() => setOrderSuccessCode(null)}
+        >
+          <div
+            className="bg-brand-card rounded-2xl border-2 border-emerald-600 p-6 max-w-sm w-full text-center space-y-4 shadow-soft-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <CheckCircle2 className="w-12 h-12 text-emerald-800 mx-auto" />
             <div>
               <h3 className="text-lg font-extrabold text-brand-dark font-serif">¡Pedido Recibido con Éxito!</h3>

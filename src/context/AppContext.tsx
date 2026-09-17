@@ -1305,7 +1305,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
 
     if (isSupabaseConfigured) {
-      await ordersService.updateOrderPaymentAndStatusDB(orderId, updates).catch(console.error);
+      const res = await ordersService.updateOrderPaymentAndStatusDB(orderId, updates).catch((err) => {
+        console.error('Error in updateOrderPaymentAndStatusDB:', err);
+        return null;
+      });
+      if (!res && updates.status) {
+        await ordersService.updateOrderStatusDB(orderId, updates.status).catch(console.error);
+      }
     }
 
     return true;
