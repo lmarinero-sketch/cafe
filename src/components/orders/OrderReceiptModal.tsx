@@ -80,6 +80,8 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
         return 'Tarjeta de Crédito';
       case 'giftcard':
         return 'Gift Card Virtual (Saldo)';
+      case 'varios':
+        return 'Varios Medios (Dividido)';
       default:
         return pm || 'Efectivo';
     }
@@ -235,6 +237,17 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
 
         <div style="font-size: 10.5px; font-weight: 900; margin-top: 4px;">
           <div><strong style="font-weight: 900;">FORMA DE PAGO:</strong> ${getPaymentMethodLabel(ord.paymentMethod).toUpperCase()}</div>
+          ${ord.payments && ord.payments.length > 1 ? `
+            <div style="font-size: 9.5px; padding-left: 6px; margin-top: 2px;">
+              ${ord.payments.map((p) => `• ${getPaymentMethodLabel(p.method)}: ${formatCurrency(p.amount)}`).join('<br/>')}
+            </div>
+          ` : ''}
+          ${ord.tipPayments && ord.tipPayments.length > 1 ? `
+            <div style="font-size: 9.5px; padding-left: 6px; margin-top: 2px;">
+              <strong>Propina dividida:</strong><br/>
+              ${ord.tipPayments.map((p) => `• ${getPaymentMethodLabel(p.method)}: ${formatCurrency(p.amount)}`).join('<br/>')}
+            </div>
+          ` : ''}
           ${ord.tipRegisteredBy ? `<div style="font-size: 9.5px; font-weight: 900;">Propina reg. por: ${ord.tipRegisteredBy}</div>` : ''}
           <div style="margin-top: 2px; font-weight: 900;">⭐ Puntos del Club: +${pointsEarned} pts</div>
         </div>
@@ -827,6 +840,21 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
 
               <div className="border-t-2 border-dashed border-black pt-2 text-[10.5px] space-y-0.5 font-black">
                 <div><strong>MEDIO DE PAGO:</strong> {getPaymentMethodLabel(order.paymentMethod).toUpperCase()}</div>
+                {order.payments && order.payments.length > 1 && (
+                  <div className="text-[9.5px] pl-2 text-gray-800 space-y-0.5">
+                    {order.payments.map((p, idx) => (
+                      <div key={idx}>• {getPaymentMethodLabel(p.method)}: {formatCurrency(p.amount)}</div>
+                    ))}
+                  </div>
+                )}
+                {order.tipPayments && order.tipPayments.length > 1 && (
+                  <div className="text-[9.5px] pl-2 text-gray-800 space-y-0.5 pt-1">
+                    <span className="font-bold">Propina dividida:</span>
+                    {order.tipPayments.map((p, idx) => (
+                      <div key={idx}>• {getPaymentMethodLabel(p.method)}: {formatCurrency(p.amount)}</div>
+                    ))}
+                  </div>
+                )}
                 {order.tipRegisteredBy && (
                   <div className="font-black">Propina reg. por: {order.tipRegisteredBy}</div>
                 )}

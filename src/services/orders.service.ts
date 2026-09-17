@@ -12,6 +12,7 @@ export function mapRowToOrder(row: any): Order {
     deliveryFee: Number(row.delivery_fee) || 0,
     total: Number(row.total) || 0,
     paymentMethod: row.payment_method || 'efectivo',
+    payments: Array.isArray(row.payments) ? row.payments : undefined,
     tableId: row.table_id || undefined,
     tableName: row.table_name || undefined,
     customerId: row.customer_id || undefined,
@@ -27,6 +28,7 @@ export function mapRowToOrder(row: any): Order {
     tipAmount: Number(row.tip_amount) || 0,
     tipPercentage: Number(row.tip_percentage) || 0,
     tipPaymentMethod: row.tip_payment_method || undefined,
+    tipPayments: Array.isArray(row.tip_payments) ? row.tip_payments : undefined,
     tipRegisteredBy: row.tip_registered_by || undefined,
     tipRegisteredAt: row.tip_registered_at || undefined,
   };
@@ -43,6 +45,7 @@ function mapOrderToRow(order: Partial<Order>): Record<string, any> {
   if (order.deliveryFee !== undefined) row.delivery_fee = order.deliveryFee;
   if (order.total !== undefined) row.total = order.total;
   if (order.paymentMethod !== undefined) row.payment_method = order.paymentMethod;
+  if (order.payments !== undefined) row.payments = order.payments;
   if (order.tableId !== undefined) row.table_id = order.tableId;
   if (order.tableName !== undefined) row.table_name = order.tableName;
   if (order.customerId !== undefined) row.customer_id = order.customerId;
@@ -57,6 +60,7 @@ function mapOrderToRow(order: Partial<Order>): Record<string, any> {
   if (order.tipAmount !== undefined) row.tip_amount = order.tipAmount;
   if (order.tipPercentage !== undefined) row.tip_percentage = order.tipPercentage;
   if (order.tipPaymentMethod !== undefined) row.tip_payment_method = order.tipPaymentMethod;
+  if (order.tipPayments !== undefined) row.tip_payments = order.tipPayments;
   if (order.tipRegisteredBy !== undefined) row.tip_registered_by = order.tipRegisteredBy;
   if (order.tipRegisteredAt !== undefined) row.tip_registered_at = order.tipRegisteredAt;
   return row;
@@ -148,6 +152,50 @@ export async function updateOrderTipDB(
 
   if (error) {
     console.error('Error updating order tip in Supabase:', error);
+    return null;
+  }
+  return mapRowToOrder(data);
+}
+
+export async function updateOrderPaymentAndStatusDB(
+  orderId: string,
+  updates: {
+    status?: Order['status'];
+    paymentMethod?: Order['paymentMethod'];
+    payments?: Order['payments'];
+    tipAmount?: number;
+    tipPercentage?: number;
+    tipPaymentMethod?: Order['tipPaymentMethod'];
+    tipPayments?: Order['tipPayments'];
+    tipRegisteredBy?: string;
+  }
+): Promise<Order | null> {
+  if (!isSupabaseConfigured) return null;
+  const now = new Date().toISOString();
+  const updatePayload: Record<string, any> = {
+    updated_at: now,
+  };
+  if (updates.status !== undefined) updatePayload.status = updates.status;
+  if (updates.paymentMethod !== undefined) updatePayload.payment_method = updates.paymentMethod;
+  if (updates.payments !== undefined) updatePayload.payments = updates.payments;
+  if (updates.tipAmount !== undefined) {
+    updatePayload.tip_amount = updates.tipAmount;
+    updatePayload.tip_percentage = updates.tipPercentage ?? 0;
+    updatePayload.tip_registered_at = now;
+  }
+  if (updates.tipPaymentMethod !== undefined) updatePayload.tip_payment_method = updates.tipPaymentMethod;
+  if (updates.tipPayments !== undefined) updatePayload.tip_payments = updates.tipPayments;
+  if (updates.tipRegisteredBy !== undefined) updatePayload.tip_registered_by = updates.tipRegisteredBy;
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update(updatePayload)
+    .eq('id', orderId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating order payment & status in Supabase:', error);
     return null;
   }
   return mapRowToOrder(data);

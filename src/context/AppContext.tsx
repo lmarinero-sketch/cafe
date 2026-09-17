@@ -22,6 +22,7 @@ import {
   GiftCardStatus,
   GiftCardUsage,
   PaymentMethod,
+  PaymentSplit,
   AuditLogEntry,
 } from '../types';
 import { initialCategories } from '../data/seeds/categories.seed';
@@ -121,7 +122,20 @@ interface AppContextType {
 
   createOrder: (order: Omit<Order, 'id' | 'code' | 'createdAt' | 'status'>) => Order | null;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  updateOrderTip: (orderId: string, tipAmount: number, tipPercentage: number, tipPaymentMethod: PaymentMethod | undefined, registeredBy: string) => Promise<boolean>;
+  updateOrderTip: (orderId: string, tipAmount: number, tipPercentage: number, tipPaymentMethod: PaymentMethod | 'varios' | undefined, registeredBy: string) => Promise<boolean>;
+  updateOrderPaymentAndStatus: (
+    orderId: string,
+    updates: {
+      status?: OrderStatus;
+      paymentMethod?: PaymentMethod | 'varios';
+      payments?: PaymentSplit[];
+      tipAmount?: number;
+      tipPercentage?: number;
+      tipPaymentMethod?: PaymentMethod | 'varios';
+      tipPayments?: PaymentSplit[];
+      tipRegisteredBy?: string;
+    }
+  ) => Promise<boolean>;
 
   addIngredient: (ingredient: Omit<Ingredient, 'id' | 'updatedAt' | 'normalizedCost'>) => void;
   updateIngredientPrice: (id: string, newPurchasePrice: number) => void;
@@ -1230,7 +1244,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     orderId: string,
     tipAmount: number,
     tipPercentage: number,
-    tipPaymentMethod: PaymentMethod | undefined,
+    tipPaymentMethod: PaymentMethod | 'varios' | undefined,
     registeredBy: string
   ): Promise<boolean> => {
     const now = new Date().toISOString();
@@ -1252,6 +1266,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     if (isSupabaseConfigured) {
       await ordersService.updateOrderTipDB(orderId, tipAmount, tipPercentage, tipPaymentMethod, registeredBy).catch(console.error);
+    }
+
+    return true;
+  };
+
+  const updateOrderPaymentAndStatus = async (
+    orderId: string,
+    updates: {
+      status?: OrderStatus;
+      paymentMethod?: PaymentMethod | 'varios';
+      payments?: PaymentSplit[];
+      tipAmount?: number;
+      tipPercentage?: number;
+      tipPaymentMethod?: PaymentMethod | 'varios';
+      tipPayments?: PaymentSplit[];
+      tipRegisteredBy?: string;
+    }
+  ): Promise<boolean> => {
+    const now = new Date().toISOString();
+    setOrders((prev) =>
+      prev.map((ord) => {
+        if (ord.id === orderId) {
+          return {
+            ...ord,
+            ...(updates.status ? { status: updates.status } : {}),
+            ...(updates.paymentMethod ? { paymentMethod: updates.paymentMethod } : {}),
+            ...(updates.payments ? { payments: updates.payments } : {}),
+            ...(updates.tipAmount !== undefined ? { tipAmount: updates.tipAmount } : {}),
+            ...(updates.tipPercentage !== undefined ? { tipPercentage: updates.tipPercentage } : {}),
+            ...(updates.tipPaymentMethod ? { tipPaymentMethod: updates.tipPaymentMethod } : {}),
+            ...(updates.tipPayments ? { tipPayments: updates.tipPayments } : {}),
+            ...(updates.tipRegisteredBy ? { tipRegisteredBy: updates.tipRegisteredBy, tipRegisteredAt: now } : {}),
+          };
+        }
+        return ord;
+      })
+    );
+
+    if (isSupabaseConfigured) {
+      await ordersService.updateOrderPaymentAndStatusDB(orderId, updates).catch(console.error);
     }
 
     return true;
@@ -2101,6 +2155,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         createOrder,
         updateOrderStatus,
         updateOrderTip,
+        updateOrderPaymentAndStatus,
         addIngredient,
         updateIngredientPrice,
         updateIngredient,

@@ -8,6 +8,7 @@ import { Table, TableStatus, OrderStatus, Order, PaymentMethod } from '../types'
 import { formatCurrency, formatDate } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 import { OrderReceiptModal } from '../components/orders/OrderReceiptModal';
+import { ChargeOrderModal } from '../components/orders/ChargeOrderModal';
 
 export const TablesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,11 +39,6 @@ export const TablesPage: React.FC = () => {
 
   const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
   const [cancelingOrderConfirm, setCancelingOrderConfirm] = useState<Order | null>(null);
-  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('efectivo');
-  const [tipMode, setTipMode] = useState<'none' | '10' | '15' | 'custom'>('10');
-  const [tipPaymentMethod, setTipPaymentMethod] = useState<PaymentMethod | 'mismo_medio'>('mismo_medio');
-  const [customTipAmount, setCustomTipAmount] = useState<number>(0);
-  const [giftCardCodeInput, setGiftCardCodeInput] = useState<string>('');
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
 
   // Sector management states
@@ -55,122 +51,16 @@ export const TablesPage: React.FC = () => {
 
   const activeRegister = cashRegisters.find((r) => r.status === 'abierta');
 
-  const handleChargeTableOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chargingOrder || !activeRegister) return;
-
-    if (selectedPayment === 'giftcard') {
-      if (!giftCardCodeInput.trim()) {
-        showToast('Código Requerido', 'Por favor ingresá el código de la Gift Card.', 'error');
-        return;
-      }
-      const card = getGiftCardByCode(giftCardCodeInput);
-      if (!card) {
-        showToast('Tarjeta No Encontrada', 'No se encontró ninguna Gift Card con el código ingresado.', 'error');
-        return;
-      }
-      if (card.currentBalance < chargingOrder.total) {
-        showToast(
-          'Saldo Insuficiente en Gift Card',
-          `La tarjeta tiene ${formatCurrency(card.currentBalance)} y el pedido es de ${formatCurrency(chargingOrder.total)}.`,
-          'error'
-        );
-        return;
-      }
-
-      const redeemRes = redeemGiftCard(
-        giftCardCodeInput,
-        chargingOrder.total,
-        chargingOrder.id,
-        chargingOrder.code,
-        chargingOrder.tableName || 'Salón',
-        `Cobro de Comanda ${chargingOrder.code}`
-      );
-
-      if (!redeemRes.success) {
-        showToast('Error al canjear', redeemRes.message, 'error');
-        return;
-      }
-    }
-
-    const suggested10 = Math.round(chargingOrder.total * 0.1);
-    const suggested15 = Math.round(chargingOrder.total * 0.15);
-    const tipAmount =
-      tipMode === '10'
-        ? suggested10
-        : tipMode === '15'
-        ? suggested15
-        : tipMode === 'custom'
-        ? customTipAmount
-        : 0;
-
-    const tipPercentage =
-      tipAmount > 0 && chargingOrder.total > 0
-        ? tipMode === '10'
-          ? 10
-          : tipMode === '15'
-          ? 15
-          : Math.round((tipAmount / chargingOrder.total) * 100)
-        : 0;
-
-    const tipRegisteredBy = user ? `${user.name} (${user.role || 'mozo'})` : 'Usuario de Turno';
-    const finalTipPaymentMethod = tipPaymentMethod === 'mismo_medio' ? selectedPayment : tipPaymentMethod;
-
-    addTransaction({
-      registerId: activeRegister.id,
-      orderId: chargingOrder.id,
-      type: 'ingreso',
-      amount: chargingOrder.total,
-      paymentMethod: selectedPayment,
-      description:
-        selectedPayment === 'giftcard'
-          ? `Cobro Pedido ${chargingOrder.code} con Gift Card ${giftCardCodeInput.toUpperCase()}`
-          : `Cobro Pedido ${chargingOrder.code}`,
-      registeredBy: user ? `${user.name} (${user.role || 'mozo'})` : 'Usuario de Turno',
-    });
-
-    if (tipAmount > 0) {
-      addTransaction({
-        registerId: activeRegister.id,
-        orderId: chargingOrder.id,
-        type: 'ingreso',
-        amount: tipAmount,
-        paymentMethod: finalTipPaymentMethod,
-        description: `Propina del Pedido ${chargingOrder.code}`,
-        registeredBy: tipRegisteredBy,
-      });
-    }
-
-    const orderPaid: Order = {
-      ...chargingOrder,
-      paymentMethod: selectedPayment,
-      status: 'entregado',
-      tipAmount,
-      tipPercentage,
-      tipPaymentMethod: tipAmount > 0 ? finalTipPaymentMethod : undefined,
-      tipRegisteredBy: tipAmount > 0 ? tipRegisteredBy : undefined,
-      tipRegisteredAt: tipAmount > 0 ? new Date().toISOString() : undefined,
-    };
-
-    updateOrderStatus(chargingOrder.id, 'entregado');
-    if (tipAmount > 0) {
-      updateOrderTip(chargingOrder.id, tipAmount, tipPercentage, finalTipPaymentMethod, tipRegisteredBy);
-    }
-
-    if (chargingOrder.tableId) {
+  const handleOrderChargedSuccess = (paidOrder: Order) => {
+    setReceiptOrder(paidOrder);
+    if (paidOrder.tableId) {
       const otherUnpaid = orders.filter(
-        (o) => o.tableId === chargingOrder.tableId && o.id !== chargingOrder.id && o.status !== 'entregado' && o.status !== 'cancelado'
+        (o) => o.tableId === paidOrder.tableId && o.id !== paidOrder.id && o.status !== 'entregado' && o.status !== 'cancelado'
       );
       if (otherUnpaid.length === 0) {
-        updateTableStatus(chargingOrder.tableId, 'disponible');
+        updateTableStatus(paidOrder.tableId, 'disponible');
       }
     }
-
-    setChargingOrder(null);
-    setGiftCardCodeInput('');
-    setTipMode('10');
-    setCustomTipAmount(0);
-    setReceiptOrder(orderPaid);
   };
 
   // Monitor canceled orders for centered popup alert
@@ -980,7 +870,6 @@ export const TablesPage: React.FC = () => {
                                 onClick={() => {
                                   if (nextSt === 'entregado') {
                                     setChargingOrder(po);
-                                    setSelectedPayment(po.paymentMethod);
                                   } else {
                                     updateOrderStatus(po.id, nextSt);
                                   }
@@ -994,7 +883,6 @@ export const TablesPage: React.FC = () => {
                             <button
                               onClick={() => {
                                 setChargingOrder(po);
-                                setSelectedPayment(po.paymentMethod);
                               }}
                               className="py-1 px-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[10px] shadow-xs flex items-center gap-1 transition-all shrink-0 ml-auto sm:ml-0"
                               title="Cobrar este pedido"
@@ -1017,7 +905,6 @@ export const TablesPage: React.FC = () => {
                     const firstPending = pendingOrders[0];
                     if (firstPending) {
                       setChargingOrder(firstPending);
-                      setSelectedPayment(firstPending.paymentMethod);
                     }
                   }}
                   className="w-full py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 transition-all"
@@ -1348,268 +1235,13 @@ export const TablesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Cobrar Pedido de Mesa */}
-      {chargingOrder && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-xs animate-fade-in">
-          <div className="bg-brand-card rounded-2xl border-2 border-emerald-600 p-6 w-full max-w-md shadow-soft-lg space-y-4">
-            <div className="flex items-center justify-between border-b border-brand-secondary pb-3">
-              <div className="flex items-center gap-2">
-                <Banknote className="w-5 h-5 text-emerald-700" />
-                <h3 className="text-base font-extrabold text-brand-dark font-serif">Cobrar Pedido {chargingOrder.code}</h3>
-              </div>
-              <button onClick={() => setChargingOrder(null)} className="p-1 rounded-lg text-brand-dark/60 hover:text-brand-dark">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="bg-brand-cream p-4 rounded-xl border border-brand-secondary/80 text-xs space-y-2">
-              <div className="flex justify-between text-brand-brown">
-                <span>Mesa / Cliente:</span>
-                <strong>{chargingOrder.tableName || 'Mesa'} • {chargingOrder.customerName}</strong>
-              </div>
-              <div className="space-y-1 py-2 border-t border-b border-brand-secondary/60">
-                {chargingOrder.items.map((it, idx) => (
-                  <div key={idx} className="flex justify-between text-brand-dark">
-                    <span>{it.quantity}x {it.productName}</span>
-                    <span className="font-bold">{formatCurrency(it.unitPrice * it.quantity)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-between text-sm font-extrabold text-brand-dark pt-1">
-                <span>Total a cobrar:</span>
-                <span className="text-emerald-800 text-base">{formatCurrency(chargingOrder.total)}</span>
-              </div>
-            </div>
-
-            {!activeRegister ? (
-              <div className="text-xs text-red-700 bg-red-50 border border-red-200 p-3 rounded-xl font-bold">
-                ⚠️ No hay una caja abierta en Tesorería. Abrí un turno antes de cobrar.
-              </div>
-            ) : (
-              <form onSubmit={handleChargeTableOrder} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-extrabold text-brand-dark mb-1">Método de Pago</label>
-                  <select
-                    value={selectedPayment}
-                    onChange={(e) => setSelectedPayment(e.target.value as PaymentMethod)}
-                    className="w-full px-3 py-2 rounded-xl border border-brand-secondary bg-brand-bg text-xs font-bold text-brand-dark focus:outline-none capitalize"
-                  >
-                    <option value="efectivo">💵 Efectivo</option>
-                    <option value="transferencia">🏦 Transferencia</option>
-                    <option value="mercadopago">📲 MercadoPago</option>
-                    <option value="debito">💳 Débito</option>
-                    <option value="credito">💳 Crédito</option>
-                    <option value="giftcard">🎁 Gift Card / Tarjeta de Regalo</option>
-                  </select>
-                </div>
-
-                {selectedPayment === 'giftcard' && (
-                  <div className="p-3 bg-brand-cream rounded-xl border border-brand-secondary space-y-2 animate-fade-in text-xs">
-                    <label className="block font-extrabold text-brand-dark text-[11px] uppercase tracking-wider">
-                      Código de Gift Card Virtual
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej: GIFT-8921-MAG"
-                      value={giftCardCodeInput}
-                      onChange={(e) => setGiftCardCodeInput(e.target.value.toUpperCase())}
-                      className="w-full px-3 py-2 bg-brand-card border border-brand-secondary rounded-xl font-mono font-extrabold text-xs text-brand-dark tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-amber-600/30"
-                    />
-
-                    {giftCardCodeInput.trim() && (() => {
-                      const matched = getGiftCardByCode(giftCardCodeInput);
-                      if (!matched) {
-                        return (
-                          <p className="text-[11px] font-bold text-rose-600">
-                            ✕ No existe ninguna Gift Card con este código.
-                          </p>
-                        );
-                      }
-                      const hasEnough = matched.currentBalance >= chargingOrder.total;
-                      return (
-                        <div className="p-2.5 bg-brand-card rounded-lg border border-brand-secondary space-y-1">
-                          <div className="flex justify-between font-bold text-[11px]">
-                            <span>Para: <strong>{matched.recipientName}</strong></span>
-                            <span className={hasEnough ? 'text-emerald-800' : 'text-rose-600'}>
-                              Saldo: {formatCurrency(matched.currentBalance)}
-                            </span>
-                          </div>
-                          {hasEnough ? (
-                            <p className="text-[10px] text-emerald-800 font-bold">
-                              ✓ Saldo suficiente para cubrir el pedido ({formatCurrency(chargingOrder.total)}).
-                            </p>
-                          ) : (
-                            <p className="text-[10px] text-rose-600 font-bold">
-                              ⚠️ Saldo insuficiente ({formatCurrency(matched.currentBalance)} disponible).
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {/* ── PROPINA DEL SERVICIO (10% Sugerido) ── */}
-                {(() => {
-                  const suggested10 = Math.round(chargingOrder.total * 0.1);
-                  const suggested15 = Math.round(chargingOrder.total * 0.15);
-                  const currentTipValue =
-                    tipMode === '10'
-                      ? suggested10
-                      : tipMode === '15'
-                      ? suggested15
-                      : tipMode === 'custom'
-                      ? customTipAmount
-                      : 0;
-
-                  return (
-                    <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-300 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-                          <span>🪙 Propina del Servicio</span>
-                          <span className="bg-amber-200 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-amber-400">
-                            10% Sugerido
-                          </span>
-                        </label>
-                        <span className="text-[10px] text-amber-900 font-bold">
-                          Responsable: {user?.name || 'Mozo'}
-                        </span>
-                      </div>
-
-
-                          <div className="grid grid-cols-4 gap-1.5 text-xs">
-                            <button
-                              type="button"
-                              onClick={() => setTipMode('none')}
-                              className={`py-2 px-1 rounded-xl font-bold border transition-all text-center ${
-                                tipMode === 'none'
-                                  ? 'bg-brand-dark text-white border-brand-dark shadow-xs'
-                                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                              }`}
-                            >
-                              <span className="block text-[11px]">Sin propina</span>
-                              <span className="text-[9px] opacity-70">$0</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setTipMode('10')}
-                              className={`py-2 px-1 rounded-xl font-black border transition-all text-center relative ${
-                                tipMode === '10'
-                                  ? 'bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-400'
-                                  : 'bg-white text-amber-950 border-amber-300 hover:bg-amber-50'
-                              }`}
-                            >
-                              <span className="block text-[11px]">⭐ 10%</span>
-                              <span className="text-[9px] font-mono">{formatCurrency(suggested10)}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setTipMode('15')}
-                              className={`py-2 px-1 rounded-xl font-bold border transition-all text-center ${
-                                tipMode === '15'
-                                  ? 'bg-brand-dark text-white border-brand-dark shadow-xs'
-                                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                              }`}
-                            >
-                              <span className="block text-[11px]">15%</span>
-                              <span className="text-[9px] font-mono">{formatCurrency(suggested15)}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setTipMode('custom')}
-                              className={`py-2 px-1 rounded-xl font-bold border transition-all text-center ${
-                                tipMode === 'custom'
-                                  ? 'bg-brand-dark text-white border-brand-dark shadow-xs'
-                                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                              }`}
-                            >
-                              <span className="block text-[11px]">Otro $</span>
-                              <span className="text-[9px] opacity-70">Libre</span>
-                            </button>
-                          </div>
-
-                          {tipMode === 'custom' && (
-                            <div className="pt-1">
-                              <input
-                                type="number"
-                                min={0}
-                                step={50}
-                                placeholder="Ingresá monto de propina $"
-                                value={customTipAmount || ''}
-                                onChange={(e) => setCustomTipAmount(Math.max(0, Number(e.target.value)))}
-                                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                              />
-                            </div>
-                          )}
-
-                          {currentTipValue > 0 && (
-                            <div className="pt-1 space-y-1">
-                              <label className="block text-[11px] font-bold text-amber-950">Medio de Pago de la Propina</label>
-                              <select
-                                value={tipPaymentMethod}
-                                onChange={(e) => setTipPaymentMethod(e.target.value as any)}
-                                className="w-full px-3 py-1.5 rounded-xl border border-amber-300 bg-white text-xs font-bold text-brand-dark focus:outline-none capitalize"
-                              >
-                                <option value="mismo_medio">Mismo que el Pedido</option>
-                                <option value="efectivo">💵 Efectivo</option>
-                                <option value="transferencia">🏦 Transferencia</option>
-                                <option value="mercadopago">📲 MercadoPago</option>
-                              </select>
-                            </div>
-                          )}
-
-                          {/* Resumen Total con Propina */}
-                          <div className="bg-white/90 p-2.5 rounded-xl border border-amber-200 text-xs space-y-1">
-                            <div className="flex justify-between text-gray-600 text-[11px]">
-                              <span>Consumo Mesa:</span>
-                              <span className="font-bold text-gray-800">{formatCurrency(chargingOrder.total)}</span>
-                            </div>
-                            {currentTipValue > 0 && (
-                              <div className="flex justify-between text-emerald-800 font-bold text-[11px]">
-                                <span>Propina ({tipMode === '10' ? '10%' : tipMode === '15' ? '15%' : `${Math.round((currentTipValue / chargingOrder.total) * 100)}%`}):</span>
-                                <span>+{formatCurrency(currentTipValue)}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between font-black text-sm text-brand-dark pt-1 border-t border-gray-200">
-                              <span>Total a Cobrar:</span>
-                              <span className="text-emerald-900 font-mono text-base">
-                                {formatCurrency(chargingOrder.total + currentTipValue)}
-                              </span>
-                            </div>
-                          </div>
-                    </div>
-                  );
-                })()}
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setChargingOrder(null);
-                      setGiftCardCodeInput('');
-                      setTipMode('10');
-                      setCustomTipAmount(0);
-                    }}
-                    className="flex-1 py-2.5 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 rounded-xl bg-emerald-700 text-white font-extrabold text-xs hover:bg-emerald-800 transition shadow-soft flex items-center justify-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Confirmar Pago
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Modal Cobrar Pedido de Mesa con Soporte para Múltiples Medios Divididos */}
+      <ChargeOrderModal
+        order={chargingOrder}
+        isOpen={!!chargingOrder}
+        onClose={() => setChargingOrder(null)}
+        onSuccess={handleOrderChargedSuccess}
+      />
 
       {/* Modal Add Table Form */}
       {isModalOpen && (

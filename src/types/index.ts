@@ -120,6 +120,12 @@ export interface CashRegister {
   status: 'abierta' | 'cerrada';
 }
 
+export interface PaymentSplit {
+  method: PaymentMethod;
+  amount: number;
+  reference?: string;
+}
+
 export interface Order {
   id: string;
   code: string;
@@ -139,13 +145,15 @@ export interface Order {
   address?: string;
   addressRef?: string;
   notes?: string;
-  paymentMethod: PaymentMethod;
+  paymentMethod: PaymentMethod | 'varios';
+  payments?: PaymentSplit[];
   customerId?: string;
   pointsEarned?: number;
   registerId?: string;
   tipAmount?: number;
   tipPercentage?: number;
-  tipPaymentMethod?: PaymentMethod;
+  tipPaymentMethod?: PaymentMethod | 'varios';
+  tipPayments?: PaymentSplit[];
   tipRegisteredBy?: string;
   tipRegisteredAt?: string;
 }

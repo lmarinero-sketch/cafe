@@ -93,6 +93,8 @@ export const PublicTicketPage: React.FC = () => {
         return 'Tarjeta de Crédito';
       case 'giftcard':
         return 'Gift Card Virtual (Saldo)';
+      case 'varios':
+        return 'Varios Medios (Dividido)';
       default:
         return pm || 'Efectivo';
     }
@@ -113,7 +115,14 @@ export const PublicTicketPage: React.FC = () => {
       ? (order.tableName.toLowerCase().startsWith('mesa') ? order.tableName : `Mesa ${order.tableName}`)
       : order.type.toUpperCase();
 
-    const msg = `🧾 *COMPROBANTE DE CONSUMO #${order.code}*\n*Hilos de Amor - Pastelería & Café*\n_(Documento no válido como factura)_\n\n👤 Cliente: ${order.customerName}\n📍 Modalidad: ${tableOrType}\n\n*Detalle del Pedido:*\n${itemsList}\n\n💰 *TOTAL:* ${formatCurrency(order.total)}\n💳 *Medio de Pago:* ${getPaymentMethodLabel(order.paymentMethod)}\n\n👉 *Ver Comprobante Digital:* ${url}\n\n¡Gracias por tu visita! ☕✨`;
+    const paymentText =
+      order.payments && order.payments.length > 1
+        ? order.payments
+            .map((p) => `  • ${getPaymentMethodLabel(p.method)}: ${formatCurrency(p.amount)}`)
+            .join('\n')
+        : getPaymentMethodLabel(order.paymentMethod);
+
+    const msg = `🧾 *COMPROBANTE DE CONSUMO #${order.code}*\n*Hilos de Amor - Pastelería & Café*\n_(Documento no válido como factura)_\n\n👤 Cliente: ${order.customerName}\n📍 Modalidad: ${tableOrType}\n\n*Detalle del Pedido:*\n${itemsList}\n\n💰 *TOTAL:* ${formatCurrency(order.total)}\n💳 *Medio de Pago:*\n${paymentText}\n\n👉 *Ver Comprobante Digital:* ${url}\n\n¡Gracias por tu visita! ☕✨`;
 
     const cleanPhone = (order.customerPhone || '').replace(/\D/g, '');
     const waUrl = cleanPhone
@@ -342,12 +351,27 @@ export const PublicTicketPage: React.FC = () => {
               ) : null}
 
               <div className="flex justify-between items-baseline pt-2 border-t-2 border-gray-900">
-                <div>
+                <div className="space-y-0.5">
                   <span className="text-sm font-black text-amber-950 block">TOTAL ABONADO</span>
-                  <span className="text-[10px] text-gray-500 font-bold uppercase">
+                  <span className="text-[10px] text-gray-500 font-bold uppercase block">
                     Medio: {getPaymentMethodLabel(order.paymentMethod)}
                     {order.tipRegisteredBy && ` • Propina reg. por: ${order.tipRegisteredBy}`}
                   </span>
+                  {order.payments && order.payments.length > 1 && (
+                    <div className="text-[10px] text-gray-600 font-bold pl-1 pt-0.5 space-y-0.5">
+                      {order.payments.map((p, idx) => (
+                        <div key={idx}>• {getPaymentMethodLabel(p.method)}: {formatCurrency(p.amount)}</div>
+                      ))}
+                    </div>
+                  )}
+                  {order.tipPayments && order.tipPayments.length > 1 && (
+                    <div className="text-[10px] text-gray-600 font-bold pl-1 pt-0.5 space-y-0.5">
+                      <span className="text-emerald-800">Propina:</span>
+                      {order.tipPayments.map((p, idx) => (
+                        <div key={idx}>• {getPaymentMethodLabel(p.method)}: {formatCurrency(p.amount)}</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <span className="text-xl font-black text-emerald-800 font-mono">
                   {formatCurrency(order.total + (order.tipAmount || 0))}
