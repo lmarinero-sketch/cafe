@@ -22,20 +22,35 @@ import { formatCurrency, formatDate } from '../../utils/currency';
 import { useApp } from '../../context/AppContext';
 
 interface OrderReceiptModalProps {
-  order: Order | null;
+  order?: Order | null;
+  orders?: Order[];
   isOpen: boolean;
   onClose: () => void;
   staffName?: string;
 }
 
 export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
-  order,
+  order: propOrder,
+  orders,
   isOpen,
   onClose,
   staffName,
 }) => {
   const { branches } = useApp();
   const [format, setFormat] = useState<'58mm' | 'comanda' | 'a4'>('58mm');
+  const [selectedOrderIndex, setSelectedOrderIndex] = useState<number>(0);
+
+  const orderList = React.useMemo(() => {
+    if (orders && orders.length > 0) return orders;
+    if (propOrder) return [propOrder];
+    return [];
+  }, [propOrder, orders]);
+
+  React.useEffect(() => {
+    setSelectedOrderIndex(0);
+  }, [propOrder, orders, isOpen]);
+
+  const order = orderList[selectedOrderIndex] || orderList[0];
 
   if (!isOpen || !order) return null;
 
@@ -655,6 +670,65 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
     printWindow.document.close();
   };
 
+  const handlePrintAllSeparated = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    let htmlContent = '';
+    if (format === '58mm') {
+      const ticketsHtml = orderList
+        .map((ord) => generateThermal58mmHTML(ord).replace(/<script>[\s\S]*?<\/script>/gi, ''))
+        .join('<div style="page-break-after: always; height: 35px; border-bottom: 2px dashed #000; margin: 25px 0;"></div>');
+      htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head><title>Tickets Separados - ${orderList.length} Comandas</title></head>
+        <body>
+          ${ticketsHtml}
+          <script>
+            window.onload = function() { window.print(); };
+          </script>
+        </body>
+        </html>
+      `;
+    } else if (format === 'comanda') {
+      const ticketsHtml = orderList
+        .map((ord) => generateKitchenComanda58mmHTML(ord).replace(/<script>[\s\S]*?<\/script>/gi, ''))
+        .join('<div style="page-break-after: always; height: 35px; border-bottom: 2px dashed #000; margin: 25px 0;"></div>');
+      htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head><title>Comandas de Cocina Separadas</title></head>
+        <body>
+          ${ticketsHtml}
+          <script>
+            window.onload = function() { window.print(); };
+          </script>
+        </body>
+        </html>
+      `;
+    } else {
+      const ticketsHtml = orderList
+        .map((ord) => generateA4HTML(ord).replace(/<script>[\s\S]*?<\/script>/gi, ''))
+        .join('<div style="page-break-after: always; height: 30px;"></div>');
+      htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head><title>Tickets A4 Separados</title></head>
+        <body>
+          ${ticketsHtml}
+          <script>
+            window.onload = function() { window.print(); };
+          </script>
+        </body>
+        </html>
+      `;
+    }
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   const handleShareWhatsApp = () => {
     const publicTicketUrl = `${window.location.origin}/ticket/${order.code}`;
     const itemsList = order.items.map((i) => `• ${i.quantity}x ${i.productName} (${formatCurrency(i.unitPrice * i.quantity)})`).join('\n');
@@ -685,6 +759,11 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                 <span className="font-mono text-xs font-black bg-brand-secondary/60 text-brand-dark px-2 py-0.5 rounded-md border border-brand-secondary">
                   #{order.code}
                 </span>
+                {orderList.length > 1 && (
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Ticket {selectedOrderIndex + 1} de {orderList.length}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-brand-brown/80">
                 Seleccioná el formato para imprimir con fuente en negrita de alta visibilidad
@@ -699,6 +778,41 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Barra de Selección de Ticket cuando se cobraron múltiples comandas juntas */}
+        {orderList.length > 1 && (
+          <div className="px-4 py-2.5 bg-emerald-50/80 border-b border-emerald-200 flex items-center justify-between flex-wrap gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+              <span className="text-[11px] font-extrabold text-emerald-950 mr-1">
+                Tickets ({orderList.length}):
+              </span>
+              {orderList.map((ord, idx) => (
+                <button
+                  key={ord.id}
+                  type="button"
+                  onClick={() => setSelectedOrderIndex(idx)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-black transition-all ${
+                    selectedOrderIndex === idx
+                      ? 'bg-emerald-700 text-white shadow-xs'
+                      : 'bg-white text-emerald-900 border border-emerald-300 hover:bg-emerald-100'
+                  }`}
+                >
+                  #{ord.code}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePrintAllSeparated}
+              className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition shrink-0"
+              title="Imprime cada ticket por separado de forma continua"
+            >
+              <Printer className="w-3.5 h-3.5 text-brand-yellow" />
+              <span>Imprimir todos separados</span>
+            </button>
+          </div>
+        )}
 
         {/* Form Selector Bar */}
         <div className="p-4 bg-brand-cream border-b border-brand-secondary flex flex-wrap items-center justify-between gap-3 shrink-0">

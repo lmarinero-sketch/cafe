@@ -7,6 +7,8 @@ import { InteractiveTutorialModal } from '../components/common/InteractiveTutori
 import { VirtualAdvisorFloating } from '../components/advisor/VirtualAdvisorFloating';
 import { useApp } from '../context/AppContext';
 
+import { BottomNavBar } from '../components/layout/BottomNavBar';
+
 export const AppLayout: React.FC = () => {
   const { isTutorialOpen, closeTutorialModal } = useApp();
 
@@ -21,7 +23,7 @@ export const AppLayout: React.FC = () => {
         <Sidebar />
 
         {/* Page Content Body */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full flex flex-col justify-between">
+        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 lg:p-8 pb-24 lg:pb-8 max-w-7xl mx-auto w-full flex flex-col justify-between">
           <div className="flex-1">
             <Outlet />
           </div>
@@ -41,6 +43,9 @@ export const AppLayout: React.FC = () => {
           </footer>
         </main>
       </div>
+
+      {/* Global Bottom Navigation Bar for Mobile */}
+      <BottomNavBar />
 
       {/* Global Feature Lock Modal */}
       <FeatureLockModal />

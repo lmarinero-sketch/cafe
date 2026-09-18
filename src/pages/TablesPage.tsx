@@ -9,6 +9,7 @@ import { formatCurrency, formatDate } from '../utils/currency';
 import { ModuleOnboardingBanner } from '../components/common/ModuleOnboardingBanner';
 import { OrderReceiptModal } from '../components/orders/OrderReceiptModal';
 import { ChargeOrderModal } from '../components/orders/ChargeOrderModal';
+import { TableBatchChargeModal } from '../components/tables/TableBatchChargeModal';
 
 export const TablesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,8 +39,12 @@ export const TablesPage: React.FC = () => {
   const [lastCancelledCount, setLastCancelledCount] = useState<number>(0);
 
   const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
+  const [chargingOrders, setChargingOrders] = useState<Order[] | null>(null);
   const [cancelingOrderConfirm, setCancelingOrderConfirm] = useState<Order | null>(null);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
+  const [receiptOrders, setReceiptOrders] = useState<Order[] | null>(null);
+  const [batchChargeTable, setBatchChargeTable] = useState<Table | null>(null);
+  const [batchChargePendingOrders, setBatchChargePendingOrders] = useState<Order[]>([]);
 
   // Sector management states
   const [isSectorsModalOpen, setIsSectorsModalOpen] = useState(false);
@@ -53,12 +58,29 @@ export const TablesPage: React.FC = () => {
 
   const handleOrderChargedSuccess = (paidOrder: Order) => {
     setReceiptOrder(paidOrder);
+    setReceiptOrders([paidOrder]);
     if (paidOrder.tableId) {
       const otherUnpaid = orders.filter(
         (o) => o.tableId === paidOrder.tableId && o.id !== paidOrder.id && o.status !== 'entregado' && o.status !== 'cancelado'
       );
       if (otherUnpaid.length === 0) {
         updateTableStatus(paidOrder.tableId, 'disponible');
+      }
+    }
+  };
+
+  const handleBatchChargedSuccess = (paidOrders: Order[]) => {
+    if (paidOrders.length === 0) return;
+    setReceiptOrders(paidOrders);
+    setReceiptOrder(paidOrders[0]);
+    const tableId = paidOrders[0]?.tableId;
+    if (tableId) {
+      const paidIds = new Set(paidOrders.map((o) => o.id));
+      const otherUnpaid = orders.filter(
+        (o) => o.tableId === tableId && !paidIds.has(o.id) && o.status !== 'entregado' && o.status !== 'cancelado'
+      );
+      if (otherUnpaid.length === 0) {
+        updateTableStatus(tableId, 'disponible');
       }
     }
   };
@@ -717,7 +739,7 @@ export const TablesPage: React.FC = () => {
       </div>
 
       {/* Tables Visual Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
         {filteredTables.map((t) => {
           const tableOrders = orders.filter((o) => o.tableId === t.id);
           const pendingOrders = tableOrders.filter((o) => o.status !== 'entregado' && o.status !== 'cancelado');
@@ -902,15 +924,19 @@ export const TablesPage: React.FC = () => {
               {hasPendingPayment && (
                 <button
                   onClick={() => {
-                    const firstPending = pendingOrders[0];
-                    if (firstPending) {
-                      setChargingOrder(firstPending);
+                    if (pendingOrders.length === 1) {
+                      setChargingOrders([pendingOrders[0]]);
+                    } else {
+                      setBatchChargeTable(t);
+                      setBatchChargePendingOrders(pendingOrders);
                     }
                   }}
                   className="w-full py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 transition-all"
                 >
                   <Banknote className="w-4 h-4 text-brand-yellow" />
-                  Cobrar Mesa ({formatCurrency(pendingTotal)})
+                  {pendingOrders.length > 1
+                    ? `Cobrar Todo Junto / Seleccionar (${formatCurrency(pendingTotal)})`
+                    : `Cobrar Mesa (${formatCurrency(pendingTotal)})`}
                 </button>
               )}
 
@@ -947,30 +973,31 @@ export const TablesPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  onClick={() => setSelectedQrTable(t)}
-                  className="w-full py-2 px-3 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 text-brand-dark border border-brand-secondary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <QrCode className="w-4 h-4 text-brand-brown shrink-0" />
-                  <span className="whitespace-nowrap">Código QR</span>
-                </button>
+              <div className="flex items-center gap-2">
                 <button
                   disabled={!activeRegister}
                   onClick={() => {
                     if (activeRegister) {
-                      window.open(`/menu?table=${t.id}&admin=true`, '_blank');
+                      navigate(`/menu?table=${t.id}&admin=true`);
                     }
                   }}
-                  title={!activeRegister ? "Caja cerrada: Abrí turno en Tesorería para tomar pedidos" : "Tomar pedido"}
-                  className={`w-full py-2 px-3 rounded-xl font-bold text-xs shadow-soft flex items-center justify-center gap-1.5 transition-colors ${
+                  title={!activeRegister ? "Caja cerrada: Abrí turno en Tesorería para tomar pedidos" : "Tomar pedido de la mesa"}
+                  className={`flex-1 py-2.5 px-3 rounded-xl font-extrabold text-xs shadow-soft flex items-center justify-center gap-1.5 transition-all ${
                     !activeRegister
                       ? 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed'
-                      : 'bg-brand-brown hover:bg-brand-dark text-brand-card'
+                      : 'bg-brand-brown hover:bg-brand-dark text-brand-card hover:scale-[1.01] active:scale-95'
                   }`}
                 >
                   <UtensilsCrossed className="w-4 h-4 text-brand-yellow shrink-0" />
                   <span className="whitespace-nowrap">Tomar Pedido</span>
+                </button>
+                <button
+                  onClick={() => setSelectedQrTable(t)}
+                  title="Ver y descargar Ficha / QR de la Mesa"
+                  className="py-2.5 px-3 rounded-xl bg-brand-bg hover:bg-brand-secondary/40 text-brand-brown border border-brand-secondary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shrink-0 shadow-xs"
+                >
+                  <QrCode className="w-4 h-4 text-brand-brown shrink-0" />
+                  <span className="hidden sm:inline whitespace-nowrap">QR</span>
                 </button>
               </div>
             </div>
@@ -1235,12 +1262,33 @@ export const TablesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Cobrar Pedido de Mesa con Soporte para Múltiples Medios Divididos */}
+      {/* Modal Selección de Comandas para Cobro Agrupado (Checklist) */}
+      <TableBatchChargeModal
+        isOpen={!!batchChargeTable}
+        table={batchChargeTable}
+        pendingOrders={batchChargePendingOrders}
+        onClose={() => {
+          setBatchChargeTable(null);
+          setBatchChargePendingOrders([]);
+        }}
+        onProceed={(selectedOrders) => {
+          setBatchChargeTable(null);
+          setBatchChargePendingOrders([]);
+          setChargingOrders(selectedOrders);
+        }}
+      />
+
+      {/* Modal Cobrar Pedido de Mesa con Soporte para Múltiples Medios Divididos y Cobro Agrupado */}
       <ChargeOrderModal
         order={chargingOrder}
-        isOpen={!!chargingOrder}
-        onClose={() => setChargingOrder(null)}
+        orders={chargingOrders || undefined}
+        isOpen={!!chargingOrder || !!chargingOrders}
+        onClose={() => {
+          setChargingOrder(null);
+          setChargingOrders(null);
+        }}
         onSuccess={handleOrderChargedSuccess}
+        onBatchSuccess={handleBatchChargedSuccess}
       />
 
       {/* Modal Add Table Form */}
@@ -1765,8 +1813,12 @@ export const TablesPage: React.FC = () => {
       {/* Modal de Comprobante de Pago (A4 y 58mm) */}
       <OrderReceiptModal
         order={receiptOrder}
-        isOpen={!!receiptOrder}
-        onClose={() => setReceiptOrder(null)}
+        orders={receiptOrders || undefined}
+        isOpen={!!receiptOrder || !!receiptOrders}
+        onClose={() => {
+          setReceiptOrder(null);
+          setReceiptOrders(null);
+        }}
         staffName={user ? `${user.name} (${user.role})` : undefined}
       />
     </div>

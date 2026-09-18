@@ -41,6 +41,7 @@ export const OrdersPage: React.FC = () => {
   const [chargingOrder, setChargingOrder] = useState<Order | null>(null);
   const [cancelingOrderConfirm, setCancelingOrderConfirm] = useState<Order | null>(null);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
+  const [mobileStatusFilter, setMobileStatusFilter] = useState<'all' | OrderStatus>('all');
 
   const activeRegister = cashRegisters.find((r) => r.status === 'abierta');
 
@@ -239,15 +240,58 @@ export const OrdersPage: React.FC = () => {
             </div>
           )}
 
+          {/* Mobile Status Filter Chips (Mozo / Celular) */}
+          <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <button
+              type="button"
+              onClick={() => setMobileStatusFilter('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 ${
+                mobileStatusFilter === 'all'
+                  ? 'bg-brand-brown text-white shadow-soft'
+                  : 'bg-brand-card text-brand-brown border border-brand-secondary/80'
+              }`}
+            >
+              <span>Todos</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${mobileStatusFilter === 'all' ? 'bg-white/20 text-white' : 'bg-brand-secondary text-brand-dark'}`}>
+                {currentShiftOrders.length}
+              </span>
+            </button>
+            {columns.map((col) => {
+              const count = currentShiftOrders.filter((o) => o.status === col.status).length;
+              const isSelected = mobileStatusFilter === col.status;
+              return (
+                <button
+                  key={col.status}
+                  type="button"
+                  onClick={() => setMobileStatusFilter(col.status)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-brand-brown text-white shadow-soft ring-2 ring-brand-brown/40'
+                      : 'bg-brand-card text-brand-brown border border-brand-secondary/80 hover:bg-brand-secondary/30'
+                  }`}
+                >
+                  <span>{col.title}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${isSelected ? 'bg-white/20 text-white' : 'bg-brand-secondary text-brand-dark'}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Kanban Board Columns */}
           <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-            {columns.map((col) => {
-              const colOrders = currentShiftOrders.filter((o) => o.status === col.status);
-              return (
-                <div
-                  key={col.status}
-                  className="w-72 shrink-0 bg-brand-card rounded-2xl border border-brand-secondary p-4 shadow-soft space-y-3 flex flex-col justify-between"
-                >
+            {columns
+              .filter((col) => mobileStatusFilter === 'all' || col.status === mobileStatusFilter)
+              .map((col) => {
+                const colOrders = currentShiftOrders.filter((o) => o.status === col.status);
+                return (
+                  <div
+                    key={col.status}
+                    className={`shrink-0 bg-brand-card rounded-2xl border border-brand-secondary p-4 shadow-soft space-y-3 flex flex-col justify-between ${
+                      mobileStatusFilter !== 'all' ? 'w-full max-w-xl mx-auto lg:w-72' : 'w-72'
+                    }`}
+                  >
                   {/* Column Header */}
                   <div className="flex items-center justify-between border-b border-brand-secondary pb-2">
                     <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${col.color}`}>

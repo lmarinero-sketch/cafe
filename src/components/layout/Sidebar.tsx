@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -49,6 +49,18 @@ export const Sidebar: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Escuchar eventos globales de toggle de barra móvil
+  useEffect(() => {
+    const handleToggle = () => setMobileOpen((prev) => !prev);
+    const handleClose = () => setMobileOpen(false);
+    window.addEventListener('toggle-mobile-sidebar', handleToggle);
+    window.addEventListener('close-mobile-sidebar', handleClose);
+    return () => {
+      window.removeEventListener('toggle-mobile-sidebar', handleToggle);
+      window.removeEventListener('close-mobile-sidebar', handleClose);
+    };
+  }, []);
 
   const userRole = user?.role || 'admin';
 
@@ -136,27 +148,10 @@ export const Sidebar: React.FC = () => {
 
   return (
     <>
-      {/* Mobile Topbar Toggle */}
-      <div className="lg:hidden bg-brand-card border-b border-brand-secondary/80 p-3 flex items-center justify-between">
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 rounded-lg bg-brand-bg text-brand-dark hover:bg-brand-secondary/50 flex items-center gap-2 text-sm font-semibold"
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          <span>Menú de Navegación</span>
-        </button>
-        <button
-          onClick={() => navigate('/planes')}
-          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-brand-brown text-brand-card flex items-center gap-1"
-        >
-          <Store className="w-3.5 h-3.5" /> Planes
-        </button>
-      </div>
-
-      {/* Backdrop for Mobile */}
+      {/* Backdrop for Mobile Drawer */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-brand-dark/40 backdrop-blur-xs z-40 animate-fade-in"
+          className="lg:hidden fixed inset-0 bg-brand-dark/50 backdrop-blur-xs z-50 animate-fade-in"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -164,14 +159,17 @@ export const Sidebar: React.FC = () => {
       {/* Sidebar Navigation */}
       <aside
         className={`fixed lg:static top-0 left-0 z-50 h-full bg-brand-card border-r border-brand-secondary flex flex-col justify-between transition-all duration-300 shadow-soft-lg lg:shadow-none ${
-          mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0'
+          mobileOpen ? 'translate-x-0 w-72' : '-translate-x-full lg:translate-x-0'
         } ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}`}
       >
         <div className="p-4 space-y-6 overflow-y-auto flex-1 no-scrollbar">
           {/* Brand Logo & Header */}
           <div className="flex items-center justify-between relative border-b border-brand-secondary/60 pb-4">
             <div
-              onClick={() => navigate('/dashboard')}
+              onClick={() => {
+                navigate('/dashboard');
+                setMobileOpen(false);
+              }}
               className="flex items-center gap-3 cursor-pointer group"
             >
               <img
@@ -179,7 +177,7 @@ export const Sidebar: React.FC = () => {
                 alt="Logo Hilos de Amor"
                 className="w-10 h-10 rounded-full border border-brand-secondary object-cover shadow-soft group-hover:scale-105 transition-transform"
               />
-              {!isCollapsed && (
+              {(!isCollapsed || mobileOpen) && (
                 <div>
                   <h1 className="font-extrabold text-brand-dark text-base leading-tight font-serif">
                     Hilos de Amor
@@ -188,6 +186,16 @@ export const Sidebar: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Mobile close button */}
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="lg:hidden p-1.5 rounded-xl hover:bg-brand-secondary/40 text-brand-brown transition-colors shrink-0"
+              title="Cerrar menú"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
             {!isCollapsed && (
               <button
                 onClick={() => setIsCollapsed(true)}

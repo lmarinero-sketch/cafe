@@ -20,10 +20,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
 interface ChargeOrderModalProps {
-  order: Order | null;
+  order?: Order | null;
+  orders?: Order[];
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (updatedOrder: Order) => void;
+  onBatchSuccess?: (updatedOrders: Order[]) => void;
 }
 
 interface SplitItem {
@@ -35,9 +37,11 @@ interface SplitItem {
 
 export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
   order,
+  orders,
   isOpen,
   onClose,
   onSuccess,
+  onBatchSuccess,
 }) => {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -48,6 +52,16 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
     redeemGiftCard,
     updateOrderPaymentAndStatus,
   } = useApp();
+
+  // Resolver lista de órdenes a cobrar
+  const targetOrders: Order[] = useMemo(() => {
+    if (orders && orders.length > 0) return orders;
+    if (order) return [order];
+    return [];
+  }, [order, orders]);
+
+  const primaryOrder = targetOrders[0] || null;
+  const isBatch = targetOrders.length > 1;
 
   const activeRegister = useMemo(
     () => cashRegisters.find((r) => r.status === 'abierta'),
@@ -69,13 +83,19 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
   const [singleTipMethod, setSingleTipMethod] = useState<PaymentMethod | 'mismo_medio'>('mismo_medio');
   const [tipSplits, setTipSplits] = useState<SplitItem[]>([]);
 
-  // Inicializar estado cuando se abre una orden
+  // Total acumulado de las órdenes a cobrar
+  const orderTotal = useMemo(
+    () => targetOrders.reduce((sum, o) => sum + o.total, 0),
+    [targetOrders]
+  );
+
+  // Inicializar estado cuando se abren las órdenes
   useEffect(() => {
-    if (!order) return;
+    if (targetOrders.length === 0) return;
     setPaymentMode('simple');
     setSingleMethod(
-      order.paymentMethod && order.paymentMethod !== 'varios'
-        ? (order.paymentMethod as PaymentMethod)
+      primaryOrder?.paymentMethod && primaryOrder.paymentMethod !== 'varios'
+        ? (primaryOrder.paymentMethod as PaymentMethod)
         : 'efectivo'
     );
     setSingleGiftCardCode('');
@@ -83,10 +103,10 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
       {
         id: 'split-1',
         method:
-          order.paymentMethod && order.paymentMethod !== 'varios'
-            ? (order.paymentMethod as PaymentMethod)
+          primaryOrder?.paymentMethod && primaryOrder.paymentMethod !== 'varios'
+            ? (primaryOrder.paymentMethod as PaymentMethod)
             : 'efectivo',
-        amount: order.total,
+        amount: orderTotal,
       },
     ]);
 
@@ -94,7 +114,7 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
     setCustomTipAmount(0);
     setTipPaymentMode('single');
     setSingleTipMethod('mismo_medio');
-    const initialTip = Math.round(order.total * 0.1);
+    const initialTip = Math.round(orderTotal * 0.1);
     setTipSplits([
       {
         id: 'tipsplit-1',
@@ -102,12 +122,11 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
         amount: initialTip,
       },
     ]);
-  }, [order]);
+  }, [targetOrders, primaryOrder, orderTotal]);
 
-  if (!isOpen || !order) return null;
+  if (!isOpen || targetOrders.length === 0 || !primaryOrder) return null;
 
-  // Cálculos del pedido principal
-  const orderTotal = order.total;
+  // Cálculos del cobro
   const totalAssignedOrder = splits.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
   const remainingOrder = Math.max(0, orderTotal - totalAssignedOrder);
   const isOrderFullyCovered = paymentMode === 'simple' || totalAssignedOrder === orderTotal;
@@ -137,7 +156,7 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
   const totalAssignedTip = tipSplits.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
   const remainingTip = Math.max(0, tipAmount - totalAssignedTip);
   const isTipFullyCovered =
-    tipAmount === 0 || tipPaymentMode === 'single' || totalAssignedTip === tipAmount;
+    tipAmount === 0 || tipPaymentMode === 'single' || totalAssignedTip >= tipAmount;
 
   // Función para obtener el monto máximo permitido para una fila específica del pedido
   const getMaxAllowedForOrderSplit = (index: number): number => {
@@ -301,10 +320,10 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
         const redeemRes = redeemGiftCard(
           singleGiftCardCode,
           orderTotal,
-          order.id,
-          order.code,
-          order.tableName || order.type,
-          `Cobro de Pedido ${order.code}`
+          primaryOrder.id,
+          isBatch ? targetOrders.map((o) => o.code).join(', ') : primaryOrder.code,
+          primaryOrder.tableName || primaryOrder.type,
+          `Cobro ${isBatch ? 'comandas mesa' : 'Pedido ' + primaryOrder.code} con Gift Card`
         );
         if (!redeemRes.success) {
           showToast('Error al canjear', redeemRes.message, 'error');
@@ -353,10 +372,10 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
           const redeemRes = redeemGiftCard(
             split.giftCardCode,
             split.amount,
-            order.id,
-            order.code,
-            order.tableName || order.type,
-            `Cobro parcial Pedido ${order.code} con Gift Card`
+            primaryOrder.id,
+            isBatch ? targetOrders.map((o) => o.code).join(', ') : primaryOrder.code,
+            primaryOrder.tableName || primaryOrder.type,
+            `Cobro parcial ${isBatch ? 'comandas mesa' : 'Pedido ' + primaryOrder.code} con Gift Card`
           );
           if (!redeemRes.success) {
             showToast('Error al canjear', redeemRes.message, 'error');
@@ -400,19 +419,50 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
               reference: s.giftCardCode?.toUpperCase() || undefined,
             }));
 
-    for (const split of finalOrderSplits) {
-      addTransaction({
-        registerId: activeRegister.id,
-        orderId: order.id,
-        type: 'ingreso',
-        amount: split.amount,
-        paymentMethod: split.method,
-        description:
-          split.method === 'giftcard' && split.reference
-            ? `Cobro Pedido ${order.code} con Gift Card ${split.reference}`
-            : `Cobro Pedido ${order.code} (${methodNames[split.method] || split.method})`,
-        registeredBy: staffName,
-      });
+    if (!isBatch) {
+      for (const split of finalOrderSplits) {
+        addTransaction({
+          registerId: activeRegister.id,
+          orderId: primaryOrder.id,
+          type: 'ingreso',
+          amount: split.amount,
+          paymentMethod: split.method,
+          description:
+            split.method === 'giftcard' && split.reference
+              ? `Cobro Pedido ${primaryOrder.code} con Gift Card ${split.reference}`
+              : `Cobro Pedido ${primaryOrder.code} (${methodNames[split.method] || split.method})`,
+          registeredBy: staffName,
+        });
+      }
+    } else {
+      if (paymentMode === 'simple') {
+        for (const ord of targetOrders) {
+          addTransaction({
+            registerId: activeRegister.id,
+            orderId: ord.id,
+            type: 'ingreso',
+            amount: ord.total,
+            paymentMethod: singleMethod,
+            description: `Cobro Pedido ${ord.code} (${methodNames[singleMethod] || singleMethod}) - Mesa ${ord.tableName || ''}`,
+            registeredBy: staffName,
+          });
+        }
+      } else {
+        for (const split of finalOrderSplits) {
+          addTransaction({
+            registerId: activeRegister.id,
+            orderId: primaryOrder.id,
+            type: 'ingreso',
+            amount: split.amount,
+            paymentMethod: split.method,
+            description:
+              split.method === 'giftcard' && split.reference
+                ? `Cobro Comandas (${targetOrders.map((o) => o.code).join(', ')}) con Gift Card ${split.reference}`
+                : `Cobro Comandas (${targetOrders.map((o) => o.code).join(', ')}) (${methodNames[split.method] || split.method})`,
+            registeredBy: staffName,
+          });
+        }
+      }
     }
 
     // Registrar transacciones de propina en Caja
@@ -431,11 +481,13 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
         finalTipMethod = resolvedMethod;
         addTransaction({
           registerId: activeRegister.id,
-          orderId: order.id,
+          orderId: primaryOrder.id,
           type: 'ingreso',
           amount: tipAmount,
           paymentMethod: resolvedMethod,
-          description: `Propina Pedido ${order.code} (${methodNames[resolvedMethod] || resolvedMethod})`,
+          description: isBatch
+            ? `Propina Comandas (${targetOrders.map((o) => o.code).join(', ')}) (${methodNames[resolvedMethod] || resolvedMethod})`
+            : `Propina Pedido ${primaryOrder.code} (${methodNames[resolvedMethod] || resolvedMethod})`,
           registeredBy: staffName,
         });
       } else {
@@ -447,44 +499,68 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
         for (const split of finalTipSplits) {
           addTransaction({
             registerId: activeRegister.id,
-            orderId: order.id,
+            orderId: primaryOrder.id,
             type: 'ingreso',
             amount: split.amount,
             paymentMethod: split.method,
-            description: `Propina Pedido ${order.code} (${methodNames[split.method] || split.method})`,
+            description: isBatch
+              ? `Propina Comandas (${targetOrders.map((o) => o.code).join(', ')}) (${methodNames[split.method] || split.method})`
+              : `Propina Pedido ${primaryOrder.code} (${methodNames[split.method] || split.method})`,
             registeredBy: staffName,
           });
         }
       }
     }
 
-    // 4. Actualizar estado y pagos de la orden
-    const updatedOrder: Order = {
-      ...order,
-      status: 'entregado',
-      paymentMethod: paymentMode === 'simple' ? singleMethod : 'varios',
-      payments: finalOrderSplits,
-      tipAmount,
-      tipPercentage,
-      tipPaymentMethod: tipAmount > 0 ? finalTipMethod : undefined,
-      tipPayments: finalTipSplits,
-      tipRegisteredBy: tipAmount > 0 ? staffName : undefined,
-      tipRegisteredAt: tipAmount > 0 ? new Date().toISOString() : undefined,
-    };
+    // 4. Actualizar estado y pagos de cada orden involucrada
+    const updatedOrders: Order[] = [];
+    for (let i = 0; i < targetOrders.length; i++) {
+      const ord = targetOrders[i];
+      const ordTip = i === 0 ? tipAmount : 0;
+      const ordTipPct = i === 0 ? tipPercentage : 0;
+      const orderSplits =
+        paymentMode === 'simple'
+          ? [{ method: singleMethod, amount: ord.total, reference: singleGiftCardCode.toUpperCase() || undefined }]
+          : finalOrderSplits;
 
-    await updateOrderPaymentAndStatus(order.id, {
-      status: 'entregado',
-      paymentMethod: updatedOrder.paymentMethod,
-      payments: updatedOrder.payments,
-      tipAmount: updatedOrder.tipAmount,
-      tipPercentage: updatedOrder.tipPercentage,
-      tipPaymentMethod: updatedOrder.tipPaymentMethod,
-      tipPayments: updatedOrder.tipPayments,
-      tipRegisteredBy: staffName,
-    });
+      const updated: Order = {
+        ...ord,
+        status: 'entregado',
+        paymentMethod: paymentMode === 'simple' ? singleMethod : 'varios',
+        payments: orderSplits,
+        tipAmount: ordTip,
+        tipPercentage: ordTipPct,
+        tipPaymentMethod: ordTip > 0 ? finalTipMethod : undefined,
+        tipPayments: ordTip > 0 ? finalTipSplits : undefined,
+        tipRegisteredBy: ordTip > 0 ? staffName : undefined,
+        tipRegisteredAt: ordTip > 0 ? new Date().toISOString() : undefined,
+      };
 
-    showToast('Pedido Cobrado', `Pedido ${order.code} cobrado y entregado correctamente.`, 'success');
-    onSuccess?.(updatedOrder);
+      await updateOrderPaymentAndStatus(ord.id, {
+        status: 'entregado',
+        paymentMethod: updated.paymentMethod,
+        payments: updated.payments,
+        tipAmount: updated.tipAmount,
+        tipPercentage: updated.tipPercentage,
+        tipPaymentMethod: updated.tipPaymentMethod,
+        tipPayments: updated.tipPayments,
+        tipRegisteredBy: staffName,
+      });
+      updatedOrders.push(updated);
+    }
+
+    if (isBatch) {
+      showToast(
+        'Comandas Cobradas',
+        `${targetOrders.length} comandas cobradas y entregadas correctamente.`,
+        'success'
+      );
+      onBatchSuccess?.(updatedOrders);
+      if (updatedOrders[0]) onSuccess?.(updatedOrders[0]);
+    } else {
+      showToast('Pedido Cobrado', `Pedido ${primaryOrder.code} cobrado y entregado correctamente.`, 'success');
+      onSuccess?.(updatedOrders[0]);
+    }
     onClose();
   };
 
@@ -499,13 +575,24 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-gray-900">Cobrar Pedido</h3>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-mono font-bold text-xs">
-                  #{order.code}
-                </span>
+                <h3 className="text-base sm:text-lg font-black text-gray-900">
+                  {isBatch ? 'Cobrar Comandas Juntas' : 'Cobrar Pedido'}
+                </h3>
+                {isBatch ? (
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-xs">
+                    {targetOrders.length} comandas
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-mono font-bold text-xs">
+                    #{primaryOrder.code}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-500 font-medium">
-                {order.tableName ? `Mesa: ${order.tableName}` : order.type.toUpperCase()} • Cliente: {order.customerName}
+                {primaryOrder.tableName ? `Mesa: ${primaryOrder.tableName}` : primaryOrder.type.toUpperCase()}
+                {isBatch
+                  ? ` • Comandas: ${targetOrders.map((o) => o.code).join(', ')}`
+                  : ` • Cliente: ${primaryOrder.customerName}`}
               </p>
             </div>
           </div>

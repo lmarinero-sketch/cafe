@@ -18,6 +18,7 @@ import {
   FileText,
   Download,
   BookOpen,
+  ArrowLeft,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -365,13 +366,21 @@ export const PublicMenuPage: React.FC = () => {
             </span>
           </div>
         ) : (
-          <div className="mb-4 bg-emerald-50 border border-emerald-300 p-2.5 rounded-xl text-emerald-950 flex items-center justify-between text-xs shadow-xs">
+          <div className="mb-4 bg-emerald-50 border border-emerald-300 p-2.5 rounded-xl text-emerald-950 flex items-center justify-between text-xs shadow-xs flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <span className="text-base">👤</span>
               <span>
                 Sesión iniciada como <strong>{user?.name || user?.role || 'Personal'}</strong>. Comanda móvil habilitada.
               </span>
             </div>
+            <button
+              type="button"
+              onClick={() => navigate('/mesas')}
+              className="py-1 px-3 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Volver a Mesas</span>
+            </button>
           </div>
         )}
 
@@ -1268,6 +1277,28 @@ export const PublicMenuPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Barra Flotante Fija de Comanda en Celular */}
+      {isAuthenticated && cart.length > 0 && !isCartOpen && (
+        <div className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 animate-fade-in">
+          <button
+            type="button"
+            onClick={() => setIsCartOpen(true)}
+            className="w-full py-3.5 px-5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white shadow-xl shadow-emerald-900/30 flex items-center justify-between font-black text-xs sm:text-sm transition-all transform active:scale-95 border-2 border-emerald-500/50"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="w-7 h-7 rounded-xl bg-white/20 flex items-center justify-center font-black text-xs">
+                {cart.reduce((s, i) => s + i.quantity, 0)}
+              </span>
+              <span>Ver Comanda {selectedTableObj ? `(${selectedTableObj.number})` : ''}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm sm:text-base font-extrabold">{formatCurrency(total)}</span>
+              <ChevronRight className="w-5 h-5 text-brand-yellow" />
+            </div>
+          </button>
         </div>
       )}
 

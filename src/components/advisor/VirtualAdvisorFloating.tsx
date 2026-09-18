@@ -364,7 +364,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
     <>
       {/* Floating Trigger Button with Oliver 3D Avatar */}
       {!isOpen && (
-        <div className="fixed bottom-5 right-5 z-[9990] flex items-center gap-3">
+        <div className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-[9990] flex items-center gap-3">
           {/* Subtle invitation chip */}
           <div 
             onClick={() => setIsOpen(true)}
@@ -376,7 +376,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
 
           <button
             onClick={() => setIsOpen(true)}
-            className="relative group w-14 h-14 rounded-full bg-white p-0.5 shadow-xl border-2 border-blue-600/30 hover:border-blue-600 hover:scale-110 active:scale-95 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+            className="relative group w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white p-0.5 shadow-xl border-2 border-blue-600/30 hover:border-blue-600 hover:scale-110 active:scale-95 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
             title="Abrir Asistente Virtual Oliver"
           >
             <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 relative">
@@ -402,7 +402,7 @@ export const VirtualAdvisorFloating: React.FC = () => {
           className={`fixed z-[9999] transition-all duration-300 flex flex-col bg-white shadow-2xl border border-slate-200/80 rounded-2xl overflow-hidden font-sans ${
             isExpanded
               ? 'inset-4 sm:inset-10 max-w-5xl mx-auto h-[calc(100vh-5rem)]'
-              : 'bottom-5 right-5 w-[94vw] sm:w-[460px] h-[640px] max-h-[88vh]'
+              : 'bottom-20 right-3 sm:bottom-6 sm:right-6 w-[calc(100vw-1.5rem)] sm:w-[460px] h-[560px] sm:h-[640px] max-h-[82vh]'
           }`}
         >
           {/* Header (Limpia y Clínica - Azul Institucional & Acentos Cálidos) */}
