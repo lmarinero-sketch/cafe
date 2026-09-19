@@ -521,6 +521,8 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
       const orderSplits =
         paymentMode === 'simple'
           ? [{ method: singleMethod, amount: ord.total, reference: singleGiftCardCode.toUpperCase() || undefined }]
+          : isBatch
+          ? [{ method: 'varios' as PaymentMethod, amount: ord.total }]
           : finalOrderSplits;
 
       const updated: Order = {
@@ -556,7 +558,6 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
         'success'
       );
       onBatchSuccess?.(updatedOrders);
-      if (updatedOrders[0]) onSuccess?.(updatedOrders[0]);
     } else {
       showToast('Pedido Cobrado', `Pedido ${primaryOrder.code} cobrado y entregado correctamente.`, 'success');
       onSuccess?.(updatedOrders[0]);

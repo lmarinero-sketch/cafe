@@ -1983,7 +1983,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const newTx: import('../types').CashTransaction = {
       ...tx,
       registeredBy: tx.registeredBy || (user ? `${user.name} (${user.role})` : 'Sistema'),
-      id: `tx-${Date.now()}`,
+      id: `tx-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
       timestamp: new Date().toISOString(),
     };
     setCashTransactions((prev) => [newTx, ...prev]);
