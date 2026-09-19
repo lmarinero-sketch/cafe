@@ -745,18 +745,18 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-brand-dark/70 backdrop-blur-xs animate-fade-in">
-      <div className="bg-brand-card rounded-3xl border border-brand-secondary w-full max-w-2xl shadow-soft-lg overflow-hidden max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2.5 sm:p-4 bg-brand-dark/70 backdrop-blur-xs animate-fade-in">
+      <div className="bg-brand-card rounded-2xl sm:rounded-3xl border border-brand-secondary w-full max-w-2xl shadow-soft-lg overflow-hidden max-h-[92dvh] sm:max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-brand-secondary flex items-center justify-between bg-gradient-to-r from-brand-card to-brand-cream shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center border border-amber-300 shrink-0">
-              <Receipt className="w-5 h-5" />
+        <div className="p-3.5 sm:p-5 border-b border-brand-secondary flex items-center justify-between bg-gradient-to-r from-brand-card to-brand-cream shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center border border-amber-300 shrink-0">
+              <Receipt className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-extrabold text-brand-dark font-serif">Impresión de Comprobante / Comanda</h3>
-                <span className="font-mono text-xs font-black bg-brand-secondary/60 text-brand-dark px-2 py-0.5 rounded-md border border-brand-secondary">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-base font-extrabold text-brand-dark font-serif truncate">Comprobante / Comanda</h3>
+                <span className="font-mono text-[11px] sm:text-xs font-black bg-brand-secondary/60 text-brand-dark px-1.5 sm:px-2 py-0.5 rounded-md border border-brand-secondary">
                   #{order.code}
                 </span>
                 {orderList.length > 1 && (
@@ -765,15 +765,15 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-brand-brown/80">
-                Seleccioná el formato para imprimir con fuente en negrita de alta visibilidad
+              <p className="text-[11px] sm:text-xs text-brand-brown/80 truncate">
+                Seleccioná el formato para imprimir con fuente de alta visibilidad
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-brand-secondary/40 text-brand-brown transition"
+            className="p-1.5 sm:p-2 rounded-xl hover:bg-brand-secondary/40 text-brand-brown transition shrink-0 ml-1.5"
           >
             <X className="w-5 h-5" />
           </button>
@@ -781,9 +781,9 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
 
         {/* Barra de Selección de Ticket cuando se cobraron múltiples comandas juntas */}
         {orderList.length > 1 && (
-          <div className="px-4 py-2.5 bg-emerald-50/80 border-b border-emerald-200 flex items-center justify-between flex-wrap gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
-              <span className="text-[11px] font-extrabold text-emerald-950 mr-1">
+          <div className="px-3.5 sm:px-4 py-2 bg-emerald-50/80 border-b border-emerald-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 no-scrollbar">
+              <span className="text-[11px] font-extrabold text-emerald-950 mr-1 shrink-0">
                 Tickets ({orderList.length}):
               </span>
               {orderList.map((ord, idx) => (
@@ -791,7 +791,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
                   key={ord.id}
                   type="button"
                   onClick={() => setSelectedOrderIndex(idx)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-black transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-black transition-all shrink-0 ${
                     selectedOrderIndex === idx
                       ? 'bg-emerald-700 text-white shadow-xs'
                       : 'bg-white text-emerald-900 border border-emerald-300 hover:bg-emerald-100'
@@ -805,7 +805,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             <button
               type="button"
               onClick={handlePrintAllSeparated}
-              className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition shrink-0"
+              className="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-xs transition shrink-0 active:scale-98"
               title="Imprime cada ticket por separado de forma continua"
             >
               <Printer className="w-3.5 h-3.5 text-brand-yellow" />
@@ -1207,11 +1207,11 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
         </div>
 
         {/* Modal Actions Footer */}
-        <div className="p-4 bg-brand-card border-t border-brand-secondary flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+        <div className="p-3 sm:p-4 bg-brand-card border-t border-brand-secondary flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition order-2 sm:order-1"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-brand-secondary font-bold text-xs text-brand-dark hover:bg-brand-secondary/30 transition order-2 sm:order-1"
           >
             Cerrar
           </button>
@@ -1220,19 +1220,22 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             <button
               type="button"
               onClick={handleShareWhatsApp}
-              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-soft transition flex items-center justify-center gap-1.5"
+              className="px-3.5 sm:px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-soft transition flex items-center justify-center gap-1.5 shrink-0"
+              title="Compartir por WhatsApp"
             >
-              <Share2 className="w-4 h-4 text-brand-yellow" />
-              WhatsApp
+              <Share2 className="w-4 h-4 text-brand-yellow shrink-0" />
+              <span>WhatsApp</span>
             </button>
 
             <button
               type="button"
               onClick={handlePrint}
-              className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-800 hover:from-amber-800 hover:to-amber-900 text-white font-extrabold text-xs shadow-soft transition flex items-center justify-center gap-2"
+              className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-800 hover:from-amber-800 hover:to-amber-900 text-white font-extrabold text-xs shadow-soft transition flex items-center justify-center gap-2 truncate active:scale-98"
             >
-              <Printer className="w-4 h-4 text-brand-yellow" />
-              Imprimir ({format === '58mm' ? 'Ticket Térmico' : format === 'comanda' ? 'Comanda Cocina' : 'Hoja A4'})
+              <Printer className="w-4 h-4 text-brand-yellow shrink-0" />
+              <span className="truncate">
+                Imprimir ({format === '58mm' ? '58mm' : format === 'comanda' ? 'Comanda' : 'A4'})
+              </span>
             </button>
           </div>
         </div>

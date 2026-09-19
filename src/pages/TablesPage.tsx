@@ -931,12 +931,14 @@ export const TablesPage: React.FC = () => {
                       setBatchChargePendingOrders(pendingOrders);
                     }
                   }}
-                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 transition-all active:scale-98"
                 >
-                  <Banknote className="w-4 h-4 text-brand-yellow" />
-                  {pendingOrders.length > 1
-                    ? `Cobrar Todo Junto / Seleccionar (${formatCurrency(pendingTotal)})`
-                    : `Cobrar Mesa (${formatCurrency(pendingTotal)})`}
+                  <Banknote className="w-4 h-4 text-brand-yellow shrink-0" />
+                  <span className="truncate">
+                    {pendingOrders.length > 1
+                      ? `Cobrar Todo Junto (${formatCurrency(pendingTotal)})`
+                      : `Cobrar Mesa (${formatCurrency(pendingTotal)})`}
+                  </span>
                 </button>
               )}
 

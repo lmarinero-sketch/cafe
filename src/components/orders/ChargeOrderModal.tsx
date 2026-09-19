@@ -566,50 +566,50 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-brand-dark/50 backdrop-blur-xs overflow-y-auto animate-fade-in">
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-lg my-auto overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-brand-dark/50 backdrop-blur-xs overflow-y-auto animate-fade-in">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-lg my-auto overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Cabecera Modal */}
-        <div className="p-4 sm:p-5 border-b border-gray-100 bg-gradient-to-r from-emerald-50 via-white to-amber-50/40 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-200">
-              <Banknote className="w-5 h-5" />
+        <div className="p-3.5 sm:p-5 border-b border-gray-100 bg-gradient-to-r from-emerald-50 via-white to-amber-50/40 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-200 shrink-0">
+              <Banknote className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-gray-900">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-lg font-black text-gray-900 truncate">
                   {isBatch ? 'Cobrar Comandas Juntas' : 'Cobrar Pedido'}
                 </h3>
                 {isBatch ? (
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-xs">
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[11px] sm:text-xs">
                     {targetOrders.length} comandas
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-mono font-bold text-xs">
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-mono font-bold text-[11px] sm:text-xs">
                     #{primaryOrder.code}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 font-medium">
+              <p className="text-[11px] sm:text-xs text-gray-500 font-medium truncate">
                 {primaryOrder.tableName ? `Mesa: ${primaryOrder.tableName}` : primaryOrder.type.toUpperCase()}
                 {isBatch
-                  ? ` • Comandas: ${targetOrders.map((o) => o.code).join(', ')}`
-                  : ` • Cliente: ${primaryOrder.customerName}`}
+                  ? ` • ${targetOrders.map((o) => o.code).join(', ')}`
+                  : ` • ${primaryOrder.customerName}`}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition shrink-0 ml-1.5"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Resumen de Total */}
-        <div className="px-5 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total de la Boleta</span>
-          <span className="text-xl font-black text-gray-900 font-mono">
+        <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between shrink-0">
+          <span className="text-[11px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total de la Boleta</span>
+          <span className="text-lg sm:text-xl font-black text-gray-900 font-mono">
             {formatCurrency(orderTotal)}
           </span>
         </div>
@@ -1094,11 +1094,11 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
         </div>
 
         {/* Acciones Inferiores */}
-        <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-2.5">
+        <div className="p-3 sm:p-4 bg-gray-50 border-t border-gray-100 flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 px-4 rounded-xl border border-gray-300 font-bold text-xs text-gray-700 hover:bg-gray-100 transition"
+            className="py-2.5 px-3.5 sm:px-4 rounded-xl border border-gray-300 font-bold text-xs text-gray-700 hover:bg-gray-100 transition shrink-0"
           >
             Cancelar
           </button>
@@ -1106,16 +1106,16 @@ export const ChargeOrderModal: React.FC<ChargeOrderModalProps> = ({
             type="submit"
             form="charge-form"
             disabled={!activeRegister || !isOrderFullyCovered || isOrderOverpaid || !isTipFullyCovered}
-            className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition ${
+            className={`flex-1 py-2.5 px-3 sm:px-4 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition truncate ${
               !activeRegister || !isOrderFullyCovered || isOrderOverpaid || !isTipFullyCovered
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-200'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-200 active:scale-98'
             }`}
           >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span className="truncate">
               {!isOrderFullyCovered
-                ? `Falta cubrir ${formatCurrency(remainingOrder)}`
+                ? `Falta ${formatCurrency(remainingOrder)}`
                 : !isTipFullyCovered
                 ? `Falta propina ${formatCurrency(remainingTip)}`
                 : 'Confirmar Cobro y Cerrar'}

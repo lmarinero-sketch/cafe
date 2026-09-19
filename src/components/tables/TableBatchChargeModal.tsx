@@ -63,24 +63,24 @@ export const TableBatchChargeModal: React.FC<TableBatchChargeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-brand-dark/60 backdrop-blur-xs animate-fade-in">
-      <div className="bg-brand-card rounded-2xl border-2 border-brand-brown max-w-lg w-full shadow-soft-lg flex flex-col max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2.5 sm:p-4 bg-brand-dark/60 backdrop-blur-xs animate-fade-in">
+      <div className="bg-brand-card rounded-2xl border-2 border-brand-brown max-w-lg w-full shadow-soft-lg flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-brand-secondary/80 bg-brand-cream/60 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-brown text-brand-card flex items-center justify-center shadow-xs">
-              <Receipt className="w-5 h-5 text-brand-yellow" />
+        <div className="p-3.5 sm:p-5 border-b border-brand-secondary/80 bg-brand-cream/60 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-brown text-brand-card flex items-center justify-center shadow-xs shrink-0">
+              <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-brand-yellow" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-brand-dark font-serif">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-lg font-black text-brand-dark font-serif truncate">
                   Cobrar Mesa: {table.number}
                 </h3>
-                <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-brand-secondary text-brand-dark uppercase">
+                <span className="text-[10px] sm:text-[11px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md bg-brand-secondary text-brand-dark uppercase">
                   {table.sector}
                 </span>
               </div>
-              <p className="text-xs text-brand-brown/80 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-brand-brown/80 mt-0.5 truncate">
                 Seleccioná las comandas que vas a cobrar juntas
               </p>
             </div>
@@ -88,32 +88,32 @@ export const TableBatchChargeModal: React.FC<TableBatchChargeModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-brand-brown hover:bg-brand-secondary/40 transition"
+            className="p-1.5 rounded-lg text-brand-brown hover:bg-brand-secondary/40 transition shrink-0 ml-1.5"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Acciones de selección rápida */}
-        <div className="px-4 py-2.5 bg-brand-bg border-b border-brand-secondary/60 flex items-center justify-between text-xs shrink-0">
-          <span className="font-bold text-brand-dark">
-            {selectedOrders.length} de {pendingOrders.length} comandas seleccionadas
+        <div className="px-3.5 sm:px-4 py-2 bg-brand-bg border-b border-brand-secondary/60 flex items-center justify-between text-xs shrink-0 gap-2">
+          <span className="font-bold text-brand-dark text-[11px] sm:text-xs">
+            {selectedOrders.length} de {pendingOrders.length} seleccionadas
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0 text-[11px]">
             <button
               type="button"
               onClick={handleSelectAll}
-              className="text-[11px] font-bold text-emerald-800 hover:underline flex items-center gap-1"
+              className="font-bold text-emerald-800 hover:underline flex items-center gap-1"
             >
-              <CheckSquare className="w-3.5 h-3.5" /> Seleccionar todas
+              <CheckSquare className="w-3.5 h-3.5" /> <span>Todas</span>
             </button>
             <span className="text-gray-300">|</span>
             <button
               type="button"
               onClick={handleDeselectAll}
-              className="text-[11px] font-bold text-rose-700 hover:underline flex items-center gap-1"
+              className="font-bold text-rose-700 hover:underline flex items-center gap-1"
             >
-              <Square className="w-3.5 h-3.5" /> Desmarcar todas
+              <Square className="w-3.5 h-3.5" /> <span>Ninguna</span>
             </button>
           </div>
         </div>
@@ -218,12 +218,12 @@ export const TableBatchChargeModal: React.FC<TableBatchChargeModalProps> = ({
         </div>
 
         {/* Footer con Total y Botones */}
-        <div className="p-4 border-t border-brand-secondary bg-brand-cream/70 shrink-0 space-y-3">
+        <div className="p-3 sm:p-4 border-t border-brand-secondary bg-brand-cream/70 shrink-0 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-brand-brown uppercase tracking-wider">
+            <span className="text-[11px] sm:text-xs font-bold text-brand-brown uppercase tracking-wider">
               Total Seleccionado:
             </span>
-            <span className="text-lg sm:text-xl font-black text-brand-dark font-mono">
+            <span className="text-base sm:text-xl font-black text-brand-dark font-mono">
               {formatCurrency(selectedTotal)}
             </span>
           </div>
@@ -232,7 +232,7 @@ export const TableBatchChargeModal: React.FC<TableBatchChargeModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 px-3 rounded-xl border border-brand-secondary text-brand-dark font-bold text-xs hover:bg-brand-secondary/30 transition text-center"
+              className="py-2.5 px-3 sm:px-4 rounded-xl border border-brand-secondary text-brand-dark font-bold text-xs hover:bg-brand-secondary/30 transition text-center shrink-0"
             >
               Cancelar
             </button>
@@ -240,14 +240,16 @@ export const TableBatchChargeModal: React.FC<TableBatchChargeModalProps> = ({
               type="button"
               disabled={selectedOrders.length === 0}
               onClick={handleContinue}
-              className={`flex-1 py-2.5 px-4 rounded-xl font-extrabold text-xs shadow-soft flex items-center justify-center gap-2 transition-all ${
+              className={`flex-1 py-2.5 px-3 sm:px-4 rounded-xl font-extrabold text-xs shadow-soft flex items-center justify-center gap-1.5 transition-all truncate ${
                 selectedOrders.length === 0
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-emerald-700/20'
+                  : 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-emerald-700/20 active:scale-98'
               }`}
             >
-              <Banknote className="w-4 h-4 text-brand-yellow" />
-              <span>Continuar al Cobro ({formatCurrency(selectedTotal)})</span>
+              <Banknote className="w-4 h-4 text-brand-yellow shrink-0" />
+              <span className="truncate">
+                Continuar al Cobro ({formatCurrency(selectedTotal)})
+              </span>
             </button>
           </div>
         </div>
