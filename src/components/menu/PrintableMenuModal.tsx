@@ -1248,11 +1248,11 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-fade-in print:static print:block print:inset-auto print:overflow-visible print:bg-white print:p-0">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-black/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-fade-in print:static print:block print:inset-auto print:overflow-visible print:bg-white print:p-0">
       {/* Container Dialog */}
-      <div className="bg-[#FAF8F5] rounded-2xl shadow-2xl border border-[#D8C7B0] w-full max-w-5xl max-h-[94vh] flex flex-col overflow-hidden text-[#1A1412] print:max-h-none print:w-full print:block print:overflow-visible print:border-none print:shadow-none print:bg-transparent">
+      <div className="bg-[#FAF8F5] rounded-2xl shadow-2xl border border-[#D8C7B0] w-full max-w-5xl h-[92vh] max-h-[92vh] flex flex-col overflow-hidden text-[#1A1412] print:h-auto print:max-h-none print:w-full print:block print:overflow-visible print:border-none print:shadow-none print:bg-transparent">
         {/* Modal Toolbar (Hidden during print) */}
-        <div className="bg-[#122315] text-[#FAF8F5] p-4 flex flex-wrap items-center justify-between gap-3 shadow-md print:hidden border-b border-[#C5A880]/30">
+        <div className="shrink-0 bg-[#122315] text-[#FAF8F5] p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2.5 shadow-md print:hidden border-b border-[#C5A880]/30">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-[#244128] rounded-xl border border-[#C5A880]/40">
               <BookOpen className="w-5 h-5 text-[#E6D4B8]" />
@@ -1275,7 +1275,13 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Inline WYSIWYG Editing Toggle Button */}
             <button
-              onClick={() => setIsEditMode(!isEditMode)}
+              onClick={() => {
+                const nextEdit = !isEditMode;
+                setIsEditMode(nextEdit);
+                if (nextEdit) {
+                  setShowConfig(false); // Close config drawer when editing so user has full view
+                }
+              }}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
                 isEditMode
                   ? 'bg-amber-400 hover:bg-amber-300 text-stone-950 font-black ring-2 ring-amber-200'
@@ -1290,8 +1296,12 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             {/* Template Selector Button */}
             <button
               onClick={() => {
-                setShowConfig(true);
-                setConfigTab('templates');
+                if (showConfig && configTab === 'templates') {
+                  setShowConfig(false);
+                } else {
+                  setShowConfig(true);
+                  setConfigTab('templates');
+                }
               }}
               className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
                 showConfig && configTab === 'templates'
@@ -1354,7 +1364,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
         {/* Collapsible Customizer Drawer (Fixed height & no clipping) */}
         {showConfig && (
-          <div className="bg-[#F4EFE6] border-b border-[#D8C7B0] p-4 text-[#1A1412] space-y-3.5 print:hidden animate-fade-in shadow-inner max-h-[55vh] overflow-y-auto">
+          <div className="shrink-0 bg-[#F4EFE6] border-b border-[#D8C7B0] p-4 text-[#1A1412] space-y-3.5 print:hidden animate-fade-in shadow-inner max-h-[42vh] overflow-y-auto">
             {/* Drawer Top Row: Tabs & Reset */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[#D8C7B0]/80 pb-2.5">
               {/* Tab Navigation */}
@@ -1693,7 +1703,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
         {/* Informational Notification Banner when Inline Edit Mode is Active */}
         {isEditMode && (
-          <div className="bg-amber-100 border-b border-amber-300 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950 print:hidden animate-fade-in">
+          <div className="shrink-0 bg-amber-100 border-b border-amber-300 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950 print:hidden animate-fade-in">
             <div className="flex items-center gap-2">
               <span className="p-1 bg-amber-500 text-white rounded-md">
                 <Edit3 className="w-3.5 h-3.5" />
@@ -1720,7 +1730,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         )}
 
         {/* Scrollable Modal Body (Haute Pâtisserie Visual Preview with Inline Editing) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-[#EFEAE2] print:overflow-visible print:p-0 print:block print:bg-transparent">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-8 bg-[#EFEAE2] print:overflow-visible print:p-0 print:block print:bg-transparent">
           {/* Subtle indicator of repeating header */}
           {!isEditMode && config.repeatHeaderOnAllPages && (
             <div className="max-w-[820px] mx-auto mb-3 flex items-center justify-center gap-2 bg-[#F5EFE6] border border-[#C5A880]/40 py-1.5 px-3 rounded-full text-xs text-[#8C6239] font-medium shadow-2xs print:hidden">
@@ -2216,7 +2226,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         </div>
 
         {/* Modal Footer Controls */}
-        <div className="bg-[#FAF8F5] border-t border-[#D8C7B0] p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#7A6F66] print:hidden">
+        <div className="shrink-0 bg-[#FAF8F5] border-t border-[#D8C7B0] p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#7A6F66] print:hidden">
           <div className="flex items-center gap-2">
             <span className="font-bold text-[#8C6239] bg-[#F4EFE6] px-2 py-0.5 rounded border border-[#C5A880]/50 font-serif">
               ✦ {activeTemplate.name}
