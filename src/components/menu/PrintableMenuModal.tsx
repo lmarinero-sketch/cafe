@@ -36,6 +36,7 @@ interface MenuPrintConfig {
   subtitle: string;
   experienceText: string;
   footerNote: string;
+  repeatHeaderOnAllPages: boolean;
 }
 
 const STORAGE_KEY = 'hilos_de_amor_printable_menu_config';
@@ -58,13 +59,13 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
       experienceText:
         'Todos nuestros productos son elaborados artesanalmente en el día con ingredientes de primera calidad.',
       footerNote: 'Precios expresados en Pesos Argentinos (ARS) • IVA Incluido',
+      repeatHeaderOnAllPages: true,
     };
 
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Ensure all current category ids are present
         const currentIds = categories.map((c) => c.id);
         const savedOrder = Array.isArray(parsed.categoryOrder) ? parsed.categoryOrder : [];
         const mergedOrder = [
@@ -75,6 +76,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         return {
           ...defaultConfig,
           ...parsed,
+          repeatHeaderOnAllPages: parsed.repeatHeaderOnAllPages !== undefined ? parsed.repeatHeaderOnAllPages : true,
           categoryOrder: mergedOrder.length > 0 ? mergedOrder : defaultConfig.categoryOrder,
         };
       }
@@ -170,12 +172,13 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
       experienceText:
         'Todos nuestros productos son elaborados artesanalmente en el día con ingredientes de primera calidad.',
       footerNote: 'Precios expresados en Pesos Argentinos (ARS) • IVA Incluido',
+      repeatHeaderOnAllPages: true,
     };
     setConfig(defaultConfig);
     localStorage.removeItem(STORAGE_KEY);
   };
 
-  // Helper to generate full-bleed HTML for window.print() (PDF)
+  // Helper to generate full-bleed HTML for window.print() (PDF) with repeated header across pages
   const generateMenuPrintHTML = () => {
     // Render Combos HTML Block
     const renderCombosHTML = () => {
@@ -330,14 +333,50 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               background: #FAF7F2;
             }
 
+            /* Main Print Page Table (Enables repeated thead across pages) */
+            .print-page-table {
+              width: 100%;
+              border-collapse: collapse;
+              border-spacing: 0;
+              margin: 0;
+              padding: 0;
+              background: transparent;
+            }
+
+            .print-page-table > thead {
+              display: ${config.repeatHeaderOnAllPages ? 'table-header-group' : 'table-row-group'};
+            }
+
+            .print-page-table > tfoot {
+              display: table-footer-group;
+            }
+
+            .print-page-table > thead > tr > td {
+              padding: 0 0 10px 0;
+              border: none;
+              vertical-align: top;
+            }
+
+            .print-page-table > tbody > tr > td {
+              padding: 0;
+              border: none;
+              vertical-align: top;
+            }
+
+            .print-page-table > tfoot > tr > td {
+              padding: 10px 0 0 0;
+              border: none;
+              vertical-align: bottom;
+            }
+
             /* Header */
             .header-banner {
               background: linear-gradient(135deg, #122315 0%, #244128 100%);
               color: #FFFDF8;
               border-radius: 12px;
-              padding: 16px 20px;
+              padding: 14px 20px;
               text-align: center;
-              margin-bottom: 12px;
+              margin-bottom: 8px;
               border: 2px solid #D8E4C3;
               break-inside: avoid;
               page-break-inside: avoid;
@@ -353,12 +392,12 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               background-color: #D8E4C3;
               padding: 3px 12px;
               border-radius: 20px;
-              margin-bottom: 4px;
+              margin-bottom: 3px;
             }
 
             .title {
               font-family: 'Playfair Display', Georgia, serif;
-              font-size: 28px;
+              font-size: 26px;
               font-weight: 800;
               color: #FFFDF8;
               letter-spacing: -0.5px;
@@ -378,9 +417,9 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               align-items: center;
               border-top: 1.5px solid #2F5233;
               border-bottom: 1.5px solid #2F5233;
-              padding: 6px 12px;
-              margin-bottom: 14px;
-              font-size: 10.5px;
+              padding: 5px 12px;
+              margin-bottom: 8px;
+              font-size: 10px;
               font-weight: 700;
               color: #2F5233;
               background-color: #EBF1EA;
@@ -395,9 +434,9 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               border: 1px solid #D8CBB6;
               border-left: 4px solid #765747;
               border-radius: 8px;
-              padding: 8px 12px;
-              margin-bottom: 14px;
-              font-size: 10.5px;
+              padding: 7px 12px;
+              margin-bottom: 10px;
+              font-size: 10px;
               color: #4A352C;
               break-inside: avoid;
               page-break-inside: avoid;
@@ -405,7 +444,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
             .showcase-box strong {
               color: #1A2E1E;
-              font-size: 11px;
+              font-size: 10.5px;
             }
 
             /* Special Combos Section */
@@ -574,7 +613,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
             /* Footer */
             .menu-footer {
-              margin-top: 14px;
+              margin-top: 10px;
               padding-top: 8px;
               border-top: 1.5px solid #2F5233;
               display: flex;
@@ -613,6 +652,15 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 margin: 0 !important;
                 padding: 0 !important;
               }
+              .print-page-table {
+                width: 100% !important;
+              }
+              .print-page-table > thead {
+                display: ${config.repeatHeaderOnAllPages ? 'table-header-group !important' : 'table-row-group !important'};
+              }
+              .print-page-table > tfoot {
+                display: table-footer-group !important;
+              }
               .category-section, .combos-section {
                 break-inside: auto !important;
                 page-break-inside: auto !important;
@@ -632,45 +680,63 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         </head>
         <body>
           <div class="sheet">
-            <!-- Header Banner -->
-            <div class="header-banner">
-              <div class="badge">Pastelería & Cafetería de Especialidad</div>
-              <h1 class="title">${config.title}</h1>
-              <p class="subtitle">${config.subtitle}</p>
-            </div>
+            <table class="print-page-table">
+              <thead>
+                <tr>
+                  <td>
+                    <!-- Header Banner -->
+                    <div class="header-banner">
+                      <div class="badge">Pastelería & Cafetería de Especialidad</div>
+                      <h1 class="title">${config.title}</h1>
+                      <p class="subtitle">${config.subtitle}</p>
+                    </div>
 
-            <!-- Sub Header -->
-            <div class="sub-info-bar">
-              <span>☕ Granos 100% Arábica Seleccionados</span>
-              <span>•</span>
-              <span>🥐 Elaboración 100% Artesanal y Libre de Gluten</span>
-              <span>•</span>
-              <span>✨ Sabores de Tradición</span>
-            </div>
+                    <!-- Sub Header -->
+                    <div class="sub-info-bar">
+                      <span>☕ Granos 100% Arábica Seleccionados</span>
+                      <span>•</span>
+                      <span>🥐 Elaboración 100% Artesanal y Libre de Gluten</span>
+                      <span>•</span>
+                      <span>✨ Sabores de Tradición</span>
+                    </div>
 
-            <!-- Showcase -->
-            ${
-              config.experienceText
-                ? `
-              <div class="showcase-box">
-                <strong>✨ Experiencia ${config.title}:</strong> ${config.experienceText}
-              </div>
-            `
-                : ''
-            }
-
-            <!-- Categories and Combos Content -->
-            ${bodyCategoriesHTML}
-
-            <!-- Footer Tradicional -->
-            <div class="menu-footer">
-              <div class="footer-left">
-                <p><strong>${config.title}</strong> • Pastelería Artesanal & Cafetería de Especialidad</p>
-              </div>
-              <div class="footer-right">
-                <p>${config.footerNote}</p>
-              </div>
-            </div>
+                    <!-- Showcase -->
+                    ${
+                      config.experienceText
+                        ? `
+                      <div class="showcase-box">
+                        <strong>✨ Experiencia ${config.title}:</strong> ${config.experienceText}
+                      </div>
+                    `
+                        : ''
+                    }
+                  </td>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <!-- Categories and Combos Content -->
+                    ${bodyCategoriesHTML}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>
+                    <!-- Footer Tradicional -->
+                    <div class="menu-footer">
+                      <div class="footer-left">
+                        <p><strong>${config.title}</strong> • Pastelería Artesanal & Cafetería de Especialidad</p>
+                      </div>
+                      <div class="footer-right">
+                        <p>${config.footerNote}</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
 
           <script>
@@ -684,7 +750,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
     `;
   };
 
-  // Helper to generate a fully editable Microsoft Word (.doc) HTML Document
+  // Helper to generate a fully editable Microsoft Word (.doc) HTML Document with repeated headers
   const handleExportWord = () => {
     // Helper to generate a 2-column Word table for products
     const generateWordProductsTable = (items: Product[], isComboGroup = false) => {
@@ -859,62 +925,80 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         </head>
         <body style="background-color: #FAF7F2; margin: 0; padding: 10pt;">
           <div class="WordSection1">
-            <!-- Header Banner -->
-            <table style="width: 100%; background-color: #1A2E1E; border-collapse: collapse; margin-bottom: 8pt; border: 2pt solid #D8E4C3; text-align: center;">
-              <tr>
-                <td style="padding: 12pt 16pt; text-align: center;">
-                  <div style="font-family: Arial, sans-serif; font-size: 8.5pt; font-weight: bold; text-transform: uppercase; color: #244128; background-color: #D8E4C3; padding: 2pt 8pt; display: inline-block; margin-bottom: 4pt;">
-                    Pastelería & Cafetería de Especialidad
-                  </div>
-                  <div style="font-family: Georgia, serif; font-size: 24pt; font-weight: bold; color: #FFFDF8; margin: 2pt 0;">
-                    ${config.title}
-                  </div>
-                  <div style="font-family: Arial, sans-serif; font-size: 10pt; color: #E2EAD2;">
-                    ${config.subtitle}
-                  </div>
-                </td>
-              </tr>
-            </table>
+            <table style="width: 100%; border-collapse: collapse; mso-table-lspace: 0; mso-table-rspace: 0;">
+              <thead>
+                <tr style="${config.repeatHeaderOnAllPages ? 'mso-table-header: yes;' : ''} page-break-inside: avoid;">
+                  <td style="padding-bottom: 8pt;">
+                    <!-- Header Banner -->
+                    <table style="width: 100%; background-color: #1A2E1E; border-collapse: collapse; margin-bottom: 6pt; border: 2pt solid #D8E4C3; text-align: center;">
+                      <tr>
+                        <td style="padding: 10pt 14pt; text-align: center;">
+                          <div style="font-family: Arial, sans-serif; font-size: 8.5pt; font-weight: bold; text-transform: uppercase; color: #244128; background-color: #D8E4C3; padding: 2pt 8pt; display: inline-block; margin-bottom: 3pt;">
+                            Pastelería & Cafetería de Especialidad
+                          </div>
+                          <div style="font-family: Georgia, serif; font-size: 22pt; font-weight: bold; color: #FFFDF8; margin: 1pt 0;">
+                            ${config.title}
+                          </div>
+                          <div style="font-family: Arial, sans-serif; font-size: 9.5pt; color: #E2EAD2;">
+                            ${config.subtitle}
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
 
-            <!-- Sub Header Bar -->
-            <table style="width: 100%; background-color: #EBF1EA; border-top: 1.5pt solid #2F5233; border-bottom: 1.5pt solid #2F5233; margin-bottom: 10pt; font-size: 9.5pt; font-weight: bold; color: #2F5233; text-align: center;">
-              <tr>
-                <td style="padding: 5pt 8pt;">☕ Granos 100% Arábica</td>
-                <td style="padding: 5pt 8pt;">•</td>
-                <td style="padding: 5pt 8pt;">🥐 Elaboración Artesanal Libre de Gluten</td>
-                <td style="padding: 5pt 8pt;">•</td>
-                <td style="padding: 5pt 8pt;">✨ Sabores de Tradición</td>
-              </tr>
-            </table>
+                    <!-- Sub Header Bar -->
+                    <table style="width: 100%; background-color: #EBF1EA; border-top: 1.5pt solid #2F5233; border-bottom: 1.5pt solid #2F5233; margin-bottom: 8pt; font-size: 9pt; font-weight: bold; color: #2F5233; text-align: center;">
+                      <tr>
+                        <td style="padding: 4pt 6pt;">☕ Granos 100% Arábica</td>
+                        <td style="padding: 4pt 6pt;">•</td>
+                        <td style="padding: 4pt 6pt;">🥐 Elaboración Artesanal Libre de Gluten</td>
+                        <td style="padding: 4pt 6pt;">•</td>
+                        <td style="padding: 4pt 6pt;">✨ Sabores de Tradición</td>
+                      </tr>
+                    </table>
 
-            <!-- Showcase Box -->
-            ${
-              config.experienceText
-                ? `
-              <table style="width: 100%; background-color: #F3EBDD; border-left: 4pt solid #765747; border: 1pt solid #D8CBB6; margin-bottom: 10pt; font-size: 9pt; color: #4A352C;">
-                <tr>
-                  <td style="padding: 6pt 10pt;">
-                    <strong>✨ Experiencia ${config.title}:</strong> ${config.experienceText}
+                    <!-- Showcase Box -->
+                    ${
+                      config.experienceText
+                        ? `
+                      <table style="width: 100%; background-color: #F3EBDD; border-left: 4pt solid #765747; border: 1pt solid #D8CBB6; margin-bottom: 8pt; font-size: 8.5pt; color: #4A352C;">
+                        <tr>
+                          <td style="padding: 5pt 8pt;">
+                            <strong>✨ Experiencia ${config.title}:</strong> ${config.experienceText}
+                          </td>
+                        </tr>
+                      </table>
+                    `
+                        : ''
+                    }
                   </td>
                 </tr>
-              </table>
-            `
-                : ''
-            }
-
-            <!-- Main Content Sections -->
-            ${wordSectionsHTML}
-
-            <!-- Footer -->
-            <table style="width: 100%; border-top: 1.5pt solid #2F5233; margin-top: 12pt; padding-top: 6pt; font-size: 9pt; color: #2F5233;">
-              <tr>
-                <td style="text-align: left;">
-                  <strong>${config.title}</strong> • Pastelería Artesanal & Cafetería de Especialidad
-                </td>
-                <td style="text-align: right; color: #765747; font-weight: bold;">
-                  ${config.footerNote}
-                </td>
-              </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <!-- Main Content Sections -->
+                    ${wordSectionsHTML}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr style="page-break-inside: avoid;">
+                  <td style="padding-top: 8pt;">
+                    <!-- Footer -->
+                    <table style="width: 100%; border-top: 1.5pt solid #2F5233; margin-top: 8pt; padding-top: 5pt; font-size: 8.5pt; color: #2F5233;">
+                      <tr>
+                        <td style="text-align: left;">
+                          <strong>${config.title}</strong> • Pastelería Artesanal & Cafetería de Especialidad
+                        </td>
+                        <td style="text-align: right; color: #765747; font-weight: bold;">
+                          ${config.footerNote}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </body>
@@ -1038,7 +1122,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* 1. Ubicación de Combos */}
               <div className="bg-white p-3 rounded-xl border border-[#D8CBB6] shadow-xs space-y-2">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-[#8C4B18]">
@@ -1089,14 +1173,39 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 </div>
               </div>
 
-              {/* 3. Orden de Categorías */}
+              {/* 3. Encabezado en todas las páginas (Nuevo) */}
+              <div className="bg-white p-3 rounded-xl border border-[#D8CBB6] shadow-xs space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#1A2E1E]">
+                  <Printer className="w-4 h-4 text-[#2F5233]" />
+                  <span>Encabezado en cada página</span>
+                </div>
+                <p className="text-[11px] text-[#6B5B52] leading-tight">
+                  Hace que el membrete institucional verde se repita automáticamente en cada hoja A4.
+                </p>
+                <label className="flex items-start gap-2 text-xs text-[#2C221E] cursor-pointer pt-1 bg-[#FAF7F2] p-2 rounded-lg border border-[#D8CBB6]">
+                  <input
+                    type="checkbox"
+                    checked={config.repeatHeaderOnAllPages}
+                    onChange={(e) => setConfig({ ...config, repeatHeaderOnAllPages: e.target.checked })}
+                    className="mt-0.5 rounded text-[#2F5233] focus:ring-[#2F5233]"
+                  />
+                  <div>
+                    <span className="font-bold block text-[11px] text-[#1A2E1E]">Repetir en todas las páginas</span>
+                    <span className="text-[10px] text-[#765747]">
+                      {config.repeatHeaderOnAllPages ? 'Activo (Recomendado para salón)' : 'Solo en la página 1'}
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {/* 4. Orden de Categorías */}
               <div className="bg-white p-3 rounded-xl border border-[#D8CBB6] shadow-xs space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-[#1A2E1E]">
                   <span className="flex items-center gap-1.5">
                     <Layers className="w-4 h-4 text-[#2F5233]" />
-                    <span>Orden de Categorías (Subir/Bajar)</span>
+                    <span>Orden Categorías</span>
                   </span>
-                  <span className="text-[10px] text-[#765747]">Usa las flechas</span>
+                  <span className="text-[10px] text-[#765747]">▲ / ▼</span>
                 </div>
 
                 <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
@@ -1114,7 +1223,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                             : 'bg-[#FAF7F2] border-[#D8CBB6] text-[#1A2E1E]'
                         }`}
                       >
-                        <span className="font-bold truncate max-w-[120px]">
+                        <span className="font-bold truncate max-w-[100px]">
                           {index + 1}. {cat.name}
                         </span>
 
@@ -1157,6 +1266,16 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
         {/* Scrollable Modal Body (On-screen visual preview) */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#F4EFDF]/40 print:overflow-visible print:p-0 print:block print:bg-transparent">
+          {/* Notice indicating repeating header */}
+          {config.repeatHeaderOnAllPages && (
+            <div className="max-w-[840px] mx-auto mb-3 flex items-center justify-center gap-2 bg-[#EBF1EA] border border-[#2F5233]/20 py-1.5 px-3 rounded-xl text-xs text-[#2F5233] font-bold shadow-2xs print:hidden">
+              <Check className="w-3.5 h-3.5 text-[#2F5233]" />
+              <span>
+                Encabezado institucional configurado para repetirse en todas las hojas A4 (impresión y Word).
+              </span>
+            </div>
+          )}
+
           {/* Printable Document Sheet */}
           <div
             id="printable-menu-area"
@@ -1170,9 +1289,9 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                   Pastelería Artesanal & Cafetería de Especialidad
                 </span>
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight font-serif text-[#FFFDF8] drop-shadow-sm">
-                  ${config.title}
+                  {config.title}
                 </h1>
-                <p className="text-xs text-[#E2EAD2] font-semibold mt-0.5">${config.subtitle}</p>
+                <p className="text-xs text-[#E2EAD2] font-semibold mt-0.5">{config.subtitle}</p>
               </div>
 
               {/* Sub-header info bar */}
@@ -1355,8 +1474,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               💡 Tip
             </span>
             <span>
-              Descarga en <strong>Word (.doc)</strong> si necesitas cambiar textos, mover tablas o ajustar el diseño
-              antes de imprimir.
+              La cabecera saldrá al inicio de cada hoja A4 impresa o en Word para mantener la identidad institucional.
             </span>
           </div>
 
