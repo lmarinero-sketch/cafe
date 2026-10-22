@@ -196,7 +196,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         <div class="combos-curated-box">
           <div class="combos-box-inner">
             <div class="combos-crest">✦ &nbsp; SELECCIÓN DE LA CASA &nbsp; ✦</div>
-            <h2 class="combos-title">Maridajes & Experiencias de Salón</h2>
+            <h2 class="combos-title">Combos y Promociones</h2>
             <div class="combos-desc-bar">Combinaciones sugeridas por nuestro barista y maestro pastelero</div>
 
             <div class="products-grid-curated">
@@ -206,7 +206,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 <div class="product-item-curated">
                   <div class="product-header-line">
                     <span class="product-name-curated">
-                      <span class="duo-tag">DÚO</span> ${item.name}
+                      <span class="duo-tag">COMBO</span> ${item.name}
                       ${item.isFeatured ? '<span class="star-accent">✦</span>' : ''}
                     </span>
                     <span class="dot-leader"></span>
@@ -711,7 +711,6 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                   <td>
                     <!-- Haute Pâtisserie Editorial Header -->
                     <div class="editorial-header">
-                      <div class="crest-tag">✦ &nbsp; MAISON DE CAFÉ & HAUTE PÂTISSERIE &nbsp; ✦</div>
                       <h1 class="brand-title">${config.title}</h1>
                       <div class="brand-subtitle">${config.subtitle}</div>
 
@@ -853,7 +852,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                   ✦ SELECCIÓN DE LA CASA ✦
                 </div>
                 <div style="font-family: 'Garamond', Georgia, serif; font-size: 13pt; font-weight: bold; color: #122315; text-transform: uppercase;">
-                  Maridajes & Experiencias de Salón
+                  Combos y Promociones
                 </div>
                 <div style="font-family: 'Century Gothic', Arial, sans-serif; font-size: 7.5pt; color: #7A6F66; margin-bottom: 6pt;">
                   Combinaciones sugeridas por nuestro barista y maestro pastelero
@@ -958,9 +957,6 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                     <table style="width: 100%; border-bottom: 1.5pt solid #C5A880; border-collapse: collapse; margin-bottom: 8pt; text-align: center;">
                       <tr>
                         <td style="padding: 6pt 10pt 8pt 10pt; text-align: center;">
-                          <div style="font-family: 'Century Gothic', Arial, sans-serif; font-size: 7.5pt; font-weight: bold; letter-spacing: 3pt; color: #A07844; text-transform: uppercase;">
-                            ✦ MAISON DE CAFÉ & HAUTE PÂTISSERIE ✦
-                          </div>
                           <div style="font-family: 'Garamond', Georgia, serif; font-size: 26pt; font-weight: bold; letter-spacing: 4pt; color: #122315; text-transform: uppercase; margin: 2pt 0;">
                             ${config.title}
                           </div>
@@ -1139,7 +1135,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               <div className="bg-white p-3 rounded-xl border border-[#D8C7B0] shadow-xs space-y-2">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-[#8C6239]">
                   <Sparkles className="w-4 h-4 text-[#A07844]" />
-                  <span>Maridajes & Selección</span>
+                  <span>Combos y Promociones</span>
                 </div>
                 <p className="text-[11px] text-[#6E645D] leading-tight">
                   Sección destacada con filete de autor para evitar mezclar con pastelería individual.
@@ -1299,10 +1295,6 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
           >
             {/* Editorial Header Section */}
             <div className="text-center space-y-2 border-b border-[#C5A880] pb-4">
-              <div className="text-[9px] font-sans font-bold tracking-[0.3em] uppercase text-[#A07844]">
-                ✦ &nbsp; MAISON DE CAFÉ & HAUTE PÂTISSERIE &nbsp; ✦
-              </div>
-
               <h1 className="text-3xl sm:text-4xl font-bold tracking-[0.18em] uppercase text-[#122315] font-serif">
                 {config.title}
               </h1>
@@ -1353,7 +1345,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                           ✦ SELECCIÓN DE LA CASA ✦
                         </span>
                         <h2 className="text-base sm:text-lg font-bold uppercase tracking-[0.12em] text-[#122315] font-serif">
-                          Maridajes & Experiencias de Salón
+                          Combos y Promociones
                         </h2>
                         <p className="text-[9px] font-sans text-[#7A6F66] tracking-wide">
                           Combinaciones sugeridas por nuestro barista y maestro pastelero
@@ -1366,7 +1358,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                             <div className="flex items-baseline justify-between gap-1 w-full">
                               <span className="font-bold text-xs text-[#1A1412] font-serif truncate flex items-center gap-1.5">
                                 <span className="text-[8px] font-sans font-bold bg-[#F3EBDD] border border-[#D8C3A5] text-[#8A5E2E] px-1 py-0.2 rounded-2xs">
-                                  DÚO
+                                  COMBO
                                 </span>
                                 {item.name}
                                 {item.isFeatured && <span className="text-[#A07844] text-[10px]">✦</span>}
