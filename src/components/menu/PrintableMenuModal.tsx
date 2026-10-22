@@ -16,10 +16,12 @@ import {
   Sparkles,
   Edit3,
   CheckCircle2,
+  Palette,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency } from '../../utils/currency';
 import { Category, Product } from '../../types';
+import { MENU_TEMPLATES, MenuTemplateId, getMenuTemplate } from './menuTemplates';
 
 interface PrintableMenuModalProps {
   isOpen: boolean;
@@ -29,6 +31,7 @@ interface PrintableMenuModalProps {
 type ComboPosition = 'top' | 'after-cafeteria' | 'bottom' | 'inline' | 'hidden';
 
 interface MenuPrintConfig {
+  templateId: MenuTemplateId;
   comboPosition: ComboPosition;
   categoryOrder: string[];
   hiddenCategoryIds: string[];
@@ -62,12 +65,14 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
   const printRef = useRef<HTMLDivElement>(null);
 
   const [showConfig, setShowConfig] = useState(false);
+  const [configTab, setConfigTab] = useState<'templates' | 'combos' | 'header' | 'pagination' | 'sections'>('templates');
   const [isEditMode, setIsEditMode] = useState(false);
   const [wordExportSuccess, setWordExportSuccess] = useState(false);
 
   // Configuration state
   const [config, setConfig] = useState<MenuPrintConfig>(() => {
     const defaultConfig: MenuPrintConfig = {
+      templateId: 'haute-patisserie',
       comboPosition: 'top',
       categoryOrder: categories.map((c) => c.id),
       hiddenCategoryIds: [],
@@ -93,6 +98,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         return {
           ...defaultConfig,
           ...parsed,
+          templateId: parsed.templateId || 'haute-patisserie',
           repeatHeaderOnAllPages: parsed.repeatHeaderOnAllPages !== undefined ? parsed.repeatHeaderOnAllPages : true,
           categoryOrder: mergedOrder.length > 0 ? mergedOrder : defaultConfig.categoryOrder,
         };
@@ -158,6 +164,8 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
   }, [edits]);
 
   if (!isOpen) return null;
+
+  const activeTemplate = getMenuTemplate(config.templateId);
 
   // Helper to detect if a product is a combo
   const isProductCombo = (p: Product) => {
@@ -361,6 +369,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
   const resetConfig = () => {
     const defaultConfig: MenuPrintConfig = {
+      templateId: 'haute-patisserie',
       comboPosition: 'top',
       categoryOrder: categories.map((c) => c.id),
       hiddenCategoryIds: [],
@@ -385,6 +394,14 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
   // LUXURY HAUTE-GASTRONOMIE PRINT HTML (PDF)
   // =========================================================================
   const generateMenuPrintHTML = () => {
+    const ts = activeTemplate.styles;
+
+    const formatCatNum = (index: number) => {
+      if (ts.categoryHeader.numeralFormat === 'roman') return `${toRoman(index + 1)}. &nbsp; `;
+      if (ts.categoryHeader.numeralFormat === 'decimal') return `${String(index + 1).padStart(2, '0')}. &nbsp; `;
+      return '';
+    };
+
     // Render Combos / Maridajes HTML Block
     const renderCombosHTML = () => {
       const printableCombos = allCombos.filter((c) => !c.isExcluded);
@@ -395,7 +412,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
       return `
         <div class="combos-curated-box">
           <div class="combos-box-inner">
-            <div class="combos-crest">✦ &nbsp; SELECCIÓN DE LA CASA &nbsp; ✦</div>
+            <div class="combos-crest">${ts.headerDividerSymbol} &nbsp; SELECCIÓN DE LA CASA &nbsp; ${ts.headerDividerSymbol}</div>
             <h2 class="combos-title">Combos y Promociones</h2>
             <div class="combos-desc-bar">Combinaciones sugeridas por nuestro barista y maestro pastelero</div>
 
@@ -407,7 +424,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                   <div class="product-header-line">
                     <span class="product-name-curated">
                       <span class="duo-tag">COMBO</span> ${item.name}
-                      ${item.isFeatured ? '<span class="star-accent">✦</span>' : ''}
+                      ${item.isFeatured ? `<span class="star-accent">${ts.headerDividerSymbol}</span>` : ''}
                     </span>
                     <span class="dot-leader"></span>
                     <span class="product-price-curated">$ ${item.price.toLocaleString('es-AR')}</span>
@@ -443,7 +460,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         <div class="category-block">
           <div class="category-header-curated">
             <div class="hairline"></div>
-            <h2 class="category-heading">${toRoman(index + 1)}. &nbsp; ${cat.name.toUpperCase()}</h2>
+            <h2 class="category-heading">${formatCatNum(index)}${cat.name.toUpperCase()}</h2>
             <div class="hairline"></div>
           </div>
 
@@ -455,7 +472,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 <div class="product-header-line">
                   <span class="product-name-curated">
                     ${item.name}
-                    ${item.isFeatured ? '<span class="star-accent">✦</span>' : ''}
+                    ${item.isFeatured ? `<span class="star-accent">${ts.headerDividerSymbol}</span>` : ''}
                   </span>
                   <span class="dot-leader"></span>
                   <span class="product-price-curated">$ ${item.price.toLocaleString('es-AR')}</span>
@@ -500,7 +517,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
           <meta charset="UTF-8" />
           <title>Carta Menú - ${config.title}</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Montserrat:wght@300;400;500;600;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400;1,600&display=swap');
             
             * {
               box-sizing: border-box;
@@ -514,9 +531,9 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             }
 
             html, body {
-              font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
-              background-color: #FAF8F5;
-              color: #1A1412;
+              font-family: ${ts.fontFamily};
+              background-color: ${ts.sheetBg};
+              color: ${ts.textColor};
               margin: 0 !important;
               padding: 0 !important;
               width: 100% !important;
@@ -530,7 +547,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               max-width: 100%;
               margin: 0;
               padding: 0;
-              background: #FAF8F5;
+              background: ${ts.sheetBg};
             }
 
             .print-page-table {
@@ -571,18 +588,18 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             .editorial-header {
               text-align: center;
               padding: 8px 0 6px 0;
-              border-bottom: 1.5px solid #C5A880;
+              border-bottom: 1.5px solid ${ts.accentColor};
               margin-bottom: 12px;
               break-inside: avoid;
               page-break-inside: avoid;
             }
 
             .brand-title {
-              font-family: 'Cormorant Garamond', Georgia, serif;
+              font-family: ${ts.headingFontFamily};
               font-size: 30px;
               font-weight: 700;
               letter-spacing: 0.20em;
-              color: #122315;
+              color: ${ts.headingColor};
               text-transform: uppercase;
               margin: 0 0 2px 0;
               line-height: 1.1;
@@ -594,7 +611,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               font-weight: 500;
               letter-spacing: 0.22em;
               text-transform: uppercase;
-              color: #7A6F66;
+              color: ${ts.subheadingColor};
               margin-bottom: 8px;
             }
 
@@ -610,12 +627,12 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             .rule-line {
               flex: 1;
               height: 0.75px;
-              background-color: #C5A880;
+              background-color: ${ts.accentColor};
             }
 
             .rule-diamond {
-              font-size: 8px;
-              color: #A07844;
+              font-size: 9px;
+              color: ${ts.accentColor};
             }
 
             .editorial-attributes {
@@ -624,7 +641,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               font-weight: 600;
               letter-spacing: 0.16em;
               text-transform: uppercase;
-              color: #5C524A;
+              color: ${ts.subheadingColor};
               display: flex;
               justify-content: center;
               align-items: center;
@@ -633,15 +650,15 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             }
 
             .editorial-attributes span.bullet {
-              color: #C5A880;
+              color: ${ts.accentColor};
               font-size: 9px;
             }
 
             .experience-quote {
-              font-family: 'Cormorant Garamond', Georgia, serif;
+              font-family: ${ts.headingFontFamily};
               font-style: italic;
               font-size: 11px;
-              color: #6E645D;
+              color: ${ts.descColor};
               text-align: center;
               margin: 6px auto 2px auto;
               max-width: 90%;
@@ -649,16 +666,16 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             }
 
             .combos-curated-box {
-              border: 1px solid #C5A880;
+              border: 1px solid ${ts.combos.border};
               padding: 2.5px;
               margin-bottom: 14px;
-              background-color: #FBF8F2;
+              background-color: ${ts.combos.bg};
               break-inside: avoid;
               page-break-inside: avoid;
             }
 
             .combos-box-inner {
-              border: 0.5px solid #D8C3A5;
+              border: 0.5px solid ${ts.combos.innerBorder};
               padding: 9px 12px;
               text-align: center;
             }
@@ -668,18 +685,18 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               font-size: 7.5px;
               font-weight: 700;
               letter-spacing: 0.28em;
-              color: #A07844;
+              color: ${ts.combos.crestColor};
               text-transform: uppercase;
               margin-bottom: 1px;
             }
 
             .combos-title {
-              font-family: 'Cormorant Garamond', Georgia, serif;
+              font-family: ${ts.headingFontFamily};
               font-size: 14px;
               font-weight: 700;
               letter-spacing: 0.12em;
               text-transform: uppercase;
-              color: #122315;
+              color: ${ts.combos.titleColor};
               margin-bottom: 1px;
             }
 
@@ -687,7 +704,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               font-family: 'Montserrat', sans-serif;
               font-size: 7.5px;
               letter-spacing: 0.08em;
-              color: #7A6F66;
+              color: ${ts.combos.descColor};
               margin-bottom: 8px;
             }
 
@@ -712,17 +729,17 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             .hairline {
               flex: 1;
               height: 0.75px;
-              background-color: #C5A880;
+              background-color: ${ts.accentColor};
               opacity: 0.7;
             }
 
             .category-heading {
-              font-family: 'Cormorant Garamond', Georgia, serif;
+              font-family: ${ts.headingFontFamily};
               font-size: 13px;
               font-weight: 700;
               letter-spacing: 0.24em;
               text-transform: uppercase;
-              color: #122315;
+              color: ${ts.headingColor};
               white-space: nowrap;
             }
 
@@ -747,15 +764,15 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             }
 
             .product-name-curated {
-              font-family: 'Cormorant Garamond', Georgia, serif;
+              font-family: ${ts.headingFontFamily};
               font-size: 12px;
               font-weight: 700;
-              color: #1A1412;
+              color: ${ts.textColor};
               white-space: nowrap;
             }
 
             .star-accent {
-              color: #A07844;
+              color: ${ts.accentColor};
               font-size: 9px;
               margin-left: 2px;
             }
@@ -765,9 +782,9 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               font-size: 7px;
               font-weight: 800;
               letter-spacing: 0.1em;
-              color: #8A5E2E;
-              background: #F3EBDD;
-              border: 0.5px solid #D8C3A5;
+              color: ${ts.combos.tagColor};
+              background: ${ts.combos.tagBg};
+              border: 0.5px solid ${ts.combos.tagBorder};
               padding: 0.5px 3px;
               border-radius: 2px;
               vertical-align: middle;
@@ -776,17 +793,17 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
             .dot-leader {
               flex: 1;
-              border-bottom: 1px dotted #CBBFB0;
+              border-bottom: 1px ${ts.dotLeaderStyle} ${ts.dotLeaderColor};
               height: 1px;
               min-width: 10px;
               margin-bottom: 2px;
             }
 
             .product-price-curated {
-              font-family: 'Cormorant Garamond', Georgia, serif;
+              font-family: ${ts.headingFontFamily};
               font-size: 12.5px;
               font-weight: 700;
-              color: #8C6239;
+              color: ${ts.priceColor};
               white-space: nowrap;
             }
 
@@ -794,7 +811,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               font-family: 'Montserrat', sans-serif;
               font-size: 8px;
               font-weight: 400;
-              color: #6E645D;
+              color: ${ts.descColor};
               line-height: 1.25;
               margin-top: 1px;
               padding-right: 6px;
@@ -803,9 +820,9 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             .combo-composition {
               font-family: 'Montserrat', sans-serif;
               font-size: 7.5px;
-              color: #4A423D;
-              background: #F4EFE6;
-              border-left: 2px solid #C5A880;
+              color: ${ts.combos.maridajeText};
+              background: ${ts.combos.maridajeBg};
+              border-left: 2px solid ${ts.combos.maridajeBorder};
               padding: 2px 5px;
               margin-top: 2px;
               line-height: 1.2;
@@ -813,14 +830,14 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
             .composition-label {
               font-weight: 700;
-              color: #8C6239;
+              color: ${ts.accentColor};
               text-transform: uppercase;
               font-size: 7px;
               letter-spacing: 0.05em;
             }
 
             .editorial-footer {
-              border-top: 1px solid #C5A880;
+              border-top: 1px solid ${ts.accentColor};
               padding-top: 6px;
               margin-top: 8px;
               display: flex;
@@ -829,18 +846,18 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               font-family: 'Montserrat', sans-serif;
               font-size: 8px;
               letter-spacing: 0.08em;
-              color: #7A6F66;
+              color: ${ts.subheadingColor};
               break-inside: avoid;
               page-break-inside: avoid;
             }
 
             .footer-brand {
-              font-family: 'Cormorant Garamond', serif;
+              font-family: ${ts.headingFontFamily};
               font-weight: 700;
               font-size: 10px;
               letter-spacing: 0.14em;
               text-transform: uppercase;
-              color: #122315;
+              color: ${ts.headingColor};
             }
 
             @media print {
@@ -849,12 +866,13 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 margin: 8mm 9mm 8mm 9mm;
               }
               html, body {
-                background: #FAF8F5 !important;
+                background: ${ts.sheetBg} !important;
                 padding: 0 !important;
                 margin: 0 !important;
                 width: 100% !important;
               }
               .sheet {
+                background: ${ts.sheetBg} !important;
                 width: 100% !important;
                 max-width: 100% !important;
                 margin: 0 !important;
@@ -892,14 +910,14 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               <thead>
                 <tr>
                   <td>
-                    <!-- Haute Pâtisserie Editorial Header -->
+                    <!-- Editorial Header -->
                     <div class="editorial-header">
                       <h1 class="brand-title">${config.title}</h1>
                       <div class="brand-subtitle">${config.subtitle}</div>
 
                       <div class="double-french-rule">
                         <div class="rule-line"></div>
-                        <div class="rule-diamond">✦</div>
+                        <div class="rule-diamond">${ts.headerDividerSymbol}</div>
                         <div class="rule-line"></div>
                       </div>
 
@@ -961,6 +979,15 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
   // LUXURY WORD (.DOC) EXPORT
   // =========================================================================
   const handleExportWord = () => {
+    const wt = activeTemplate.wordStyles;
+    const ts = activeTemplate.styles;
+
+    const formatCatNum = (index: number) => {
+      if (ts.categoryHeader.numeralFormat === 'roman') return `${toRoman(index + 1)}. &nbsp; `;
+      if (ts.categoryHeader.numeralFormat === 'decimal') return `${String(index + 1).padStart(2, '0')}. &nbsp; `;
+      return '';
+    };
+
     const generateWordProductsTable = (items: PrintableProduct[]) => {
       const printableItems = items.filter((p) => !p.isExcluded);
       let rows = '';
@@ -975,8 +1002,8 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
           const includesHTML =
             it.compositeItems && it.compositeItems.length > 0
-              ? `<div style="font-family: 'Century Gothic', Arial, sans-serif; font-size: 7.5pt; color: #4A423D; background-color: #F4EFE6; border-left: 2pt solid #C5A880; padding: 2pt 5pt; margin-top: 2pt;">
-                   <strong style="color: #8C6239;">MARIDAJE:</strong> ${it.compositeItems
+              ? `<div style="font-family: ${wt.fontBody}; font-size: 7.5pt; color: ${ts.combos.maridajeText}; background-color: ${ts.combos.maridajeBg}; border-left: 2pt solid ${ts.combos.maridajeBorder}; padding: 2pt 5pt; margin-top: 2pt;">
+                   <strong style="color: ${ts.accentColor};">MARIDAJE:</strong> ${it.compositeItems
                      .map((ci) => `${ci.quantity > 1 ? ci.quantity + 'x ' : ''}${ci.productName}`)
                      .join(' + ')}
                  </div>`
@@ -986,18 +1013,18 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             <td style="width: 50%; padding: 4pt 8pt; vertical-align: top; border: none;">
               <table style="width: 100%; border-collapse: collapse; margin-bottom: 1pt;">
                 <tr>
-                  <td style="font-family: 'Garamond', Georgia, serif; font-size: 11pt; font-weight: bold; color: #1A1412; text-align: left; padding: 0;">
-                    ${it.name} ${it.isFeatured ? '<span style="color: #A07844;">✦</span>' : ''}
+                  <td style="font-family: ${wt.fontHeading}; font-size: 11pt; font-weight: bold; color: ${wt.textColor}; text-align: left; padding: 0;">
+                    ${it.name} ${it.isFeatured ? `<span style="color: ${ts.accentColor};">${ts.headerDividerSymbol}</span>` : ''}
                   </td>
-                  <td style="border-bottom: 1pt dotted #CBBFB0; width: 30%; padding: 0 4pt;"></td>
-                  <td style="font-family: 'Garamond', Georgia, serif; font-size: 11pt; font-weight: bold; color: #8C6239; text-align: right; white-space: nowrap; padding: 0;">
+                  <td style="border-bottom: 1pt ${ts.dotLeaderStyle} ${ts.dotLeaderColor}; width: 30%; padding: 0 4pt;"></td>
+                  <td style="font-family: ${wt.fontHeading}; font-size: 11pt; font-weight: bold; color: ${wt.priceColor}; text-align: right; white-space: nowrap; padding: 0;">
                     $ ${it.price.toLocaleString('es-AR')}
                   </td>
                 </tr>
               </table>
               ${
                 it.description
-                  ? `<div style="font-family: 'Century Gothic', Arial, sans-serif; font-size: 8pt; color: #6E645D; line-height: 1.25; margin-top: 1pt;">${it.description}</div>`
+                  ? `<div style="font-family: ${wt.fontBody}; font-size: 8pt; color: ${wt.descColor}; line-height: 1.25; margin-top: 1pt;">${it.description}</div>`
                   : ''
               }
               ${includesHTML}
@@ -1027,17 +1054,17 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
       }
 
       return `
-        <div style="border: 1pt solid #C5A880; background-color: #FBF8F2; padding: 3pt; margin-bottom: 12pt;">
-          <table style="width: 100%; border: 0.5pt solid #D8C3A5; border-collapse: collapse; padding: 6pt;">
+        <div style="border: 1pt solid ${wt.comboBorder}; background-color: ${wt.comboBg}; padding: 3pt; margin-bottom: 12pt;">
+          <table style="width: 100%; border: 0.5pt solid ${ts.combos.innerBorder}; border-collapse: collapse; padding: 6pt;">
             <tr>
               <td style="text-align: center; padding: 6pt 4pt 4pt 4pt;">
-                <div style="font-family: 'Century Gothic', Arial, sans-serif; font-size: 7.5pt; font-weight: bold; letter-spacing: 2pt; color: #A07844;">
-                  ✦ SELECCIÓN DE LA CASA ✦
+                <div style="font-family: ${wt.fontBody}; font-size: 7.5pt; font-weight: bold; letter-spacing: 2pt; color: ${ts.combos.crestColor};">
+                  ${ts.headerDividerSymbol} &nbsp; SELECCIÓN DE LA CASA &nbsp; ${ts.headerDividerSymbol}
                 </div>
-                <div style="font-family: 'Garamond', Georgia, serif; font-size: 13pt; font-weight: bold; color: #122315; text-transform: uppercase;">
+                <div style="font-family: ${wt.fontHeading}; font-size: 13pt; font-weight: bold; color: ${ts.combos.titleColor}; text-transform: uppercase;">
                   Combos y Promociones
                 </div>
-                <div style="font-family: 'Century Gothic', Arial, sans-serif; font-size: 7.5pt; color: #7A6F66; margin-bottom: 6pt;">
+                <div style="font-family: ${wt.fontBody}; font-size: 7.5pt; color: ${ts.combos.descColor}; margin-bottom: 6pt;">
                   Combinaciones sugeridas por nuestro barista y maestro pastelero
                 </div>
               </td>
@@ -1060,11 +1087,11 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         <div style="margin-top: 8pt; margin-bottom: 4pt;">
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 6pt;">
             <tr>
-              <td style="border-bottom: 1pt solid #C5A880; width: 25%;"></td>
-              <td style="font-family: 'Garamond', Georgia, serif; font-size: 11.5pt; font-weight: bold; text-transform: uppercase; color: #122315; text-align: center; padding: 2pt 12pt; width: 50%;">
-                ${toRoman(index + 1)}. &nbsp; ${cat.name.toUpperCase()}
+              <td style="border-bottom: 1pt solid ${wt.accentColor}; width: 25%;"></td>
+              <td style="font-family: ${wt.fontHeading}; font-size: 11.5pt; font-weight: bold; text-transform: uppercase; color: ${wt.headingColor}; text-align: center; padding: 2pt 12pt; width: 50%;">
+                ${formatCatNum(index)}${cat.name.toUpperCase()}
               </td>
-              <td style="border-bottom: 1pt solid #C5A880; width: 25%;"></td>
+              <td style="border-bottom: 1pt solid ${wt.accentColor}; width: 25%;"></td>
             </tr>
           </table>
           ${generateWordProductsTable(catProds)}
@@ -1120,37 +1147,37 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               page: WordSection1;
             }
             body {
-              font-family: 'Garamond', Georgia, serif;
-              color: #1A1412;
-              background-color: #FAF8F5;
+              font-family: ${wt.fontBody};
+              color: ${wt.textColor};
+              background-color: ${wt.bgColor};
               margin: 0;
               padding: 0;
             }
           </style>
         </head>
-        <body style="background-color: #FAF8F5; margin: 0; padding: 10pt;">
+        <body style="background-color: ${wt.bgColor}; margin: 0; padding: 10pt;">
           <div class="WordSection1">
             <table style="width: 100%; border-collapse: collapse; mso-table-lspace: 0; mso-table-rspace: 0;">
               <thead>
                 <tr style="${config.repeatHeaderOnAllPages ? 'mso-table-header: yes;' : ''} page-break-inside: avoid;">
                   <td style="padding-bottom: 8pt;">
                     <!-- Editorial Header -->
-                    <table style="width: 100%; border-bottom: 1.5pt solid #C5A880; border-collapse: collapse; margin-bottom: 8pt; text-align: center;">
+                    <table style="width: 100%; border-bottom: 1.5pt solid ${wt.accentColor}; border-collapse: collapse; margin-bottom: 8pt; text-align: center;">
                       <tr>
                         <td style="padding: 6pt 10pt 8pt 10pt; text-align: center;">
-                          <div style="font-family: 'Garamond', Georgia, serif; font-size: 26pt; font-weight: bold; letter-spacing: 4pt; color: #122315; text-transform: uppercase; margin: 2pt 0;">
+                          <div style="font-family: ${wt.fontHeading}; font-size: 26pt; font-weight: bold; letter-spacing: 4pt; color: ${wt.titleColor}; text-transform: uppercase; margin: 2pt 0;">
                             ${config.title}
                           </div>
-                          <div style="font-family: 'Century Gothic', Arial, sans-serif; font-size: 8pt; letter-spacing: 2pt; text-transform: uppercase; color: #7A6F66; margin-bottom: 6pt;">
+                          <div style="font-family: ${wt.fontBody}; font-size: 8pt; letter-spacing: 2pt; text-transform: uppercase; color: ${wt.subtitleColor}; margin-bottom: 6pt;">
                             ${config.subtitle}
                           </div>
-                          <div style="font-family: 'Century Gothic', Arial, sans-serif; font-size: 7.5pt; letter-spacing: 1.5pt; text-transform: uppercase; color: #5C524A;">
+                          <div style="font-family: ${wt.fontBody}; font-size: 7.5pt; letter-spacing: 1.5pt; text-transform: uppercase; color: ${wt.subtitleColor};">
                             Granos 100% Arábica de Altura &nbsp;•&nbsp; Cocina Libre de Gluten &nbsp;•&nbsp; San Juan, Argentina
                           </div>
                           ${
                             config.experienceText
                               ? `
-                            <div style="font-family: 'Garamond', Georgia, serif; font-style: italic; font-size: 10pt; color: #6E645D; margin-top: 5pt;">
+                            <div style="font-family: ${wt.fontHeading}; font-style: italic; font-size: 10pt; color: ${wt.descColor}; margin-top: 5pt;">
                               « ${config.experienceText} »
                             </div>
                           `
@@ -1174,12 +1201,12 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 <tr style="page-break-inside: avoid;">
                   <td style="padding-top: 8pt;">
                     <!-- Footer -->
-                    <table style="width: 100%; border-top: 1pt solid #C5A880; margin-top: 6pt; padding-top: 4pt; font-family: 'Century Gothic', Arial, sans-serif; font-size: 7.5pt; color: #7A6F66;">
+                    <table style="width: 100%; border-top: 1pt solid ${wt.accentColor}; margin-top: 6pt; padding-top: 4pt; font-family: ${wt.fontBody}; font-size: 7.5pt; color: ${wt.subtitleColor};">
                       <tr>
-                        <td style="text-align: left; font-family: 'Garamond', Georgia, serif; font-weight: bold; font-size: 9pt; color: #122315;">
+                        <td style="text-align: left; font-family: ${wt.fontHeading}; font-weight: bold; font-size: 9pt; color: ${wt.headingColor};">
                           ${config.title} • Carta Oficial de Salón
                         </td>
-                        <td style="text-align: right; color: #765747;">
+                        <td style="text-align: right; color: ${wt.subtitleColor};">
                           ${config.footerNote}
                         </td>
                       </tr>
@@ -1260,11 +1287,29 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               <span>{isEditMode ? 'Guardar / Salir de Edición' : '✏️ Editar Textos y Precios'}</span>
             </button>
 
+            {/* Template Selector Button */}
+            <button
+              onClick={() => {
+                setShowConfig(true);
+                setConfigTab('templates');
+              }}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+                showConfig && configTab === 'templates'
+                  ? 'bg-amber-400 text-stone-950 font-black ring-2 ring-amber-200'
+                  : 'bg-white/10 hover:bg-white/20 text-[#FAF8F5] border border-[#C5A880]/30'
+              }`}
+              title="Elegir entre 10 estilos de cartas de salón"
+            >
+              <Palette className="w-4 h-4 text-[#E6D4B8]" />
+              <span className="hidden sm:inline">Diseño:</span>
+              <span className="font-serif underline underline-offset-2">{activeTemplate.name}</span>
+            </button>
+
             {/* General Settings Drawer Button */}
             <button
               onClick={() => setShowConfig(!showConfig)}
               className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-                showConfig
+                showConfig && configTab !== 'templates'
                   ? 'bg-[#C5A880] text-[#122315] shadow-md font-extrabold ring-2 ring-[#E6D4B8]'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
@@ -1309,83 +1354,256 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
         {/* Collapsible Customizer Drawer (Fixed height & no clipping) */}
         {showConfig && (
-          <div className="bg-[#F4EFE6] border-b border-[#D8C7B0] p-4 text-[#1A1412] space-y-4 print:hidden animate-fade-in shadow-inner max-h-[50vh] overflow-y-auto">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[#D8C7B0]/80 pb-2">
-              <div className="flex items-center gap-2">
-                <Settings2 className="w-4 h-4 text-[#8C6239]" />
-                <h3 className="font-extrabold text-sm text-[#122315] font-serif">
-                  Configuración de Paginación y Secciones
-                </h3>
+          <div className="bg-[#F4EFE6] border-b border-[#D8C7B0] p-4 text-[#1A1412] space-y-3.5 print:hidden animate-fade-in shadow-inner max-h-[55vh] overflow-y-auto">
+            {/* Drawer Top Row: Tabs & Reset */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[#D8C7B0]/80 pb-2.5">
+              {/* Tab Navigation */}
+              <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto scrollbar-none pb-1 sm:pb-0">
+                <button
+                  type="button"
+                  onClick={() => setConfigTab('templates')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
+                    configTab === 'templates'
+                      ? 'bg-[#8C6239] text-white shadow-xs'
+                      : 'text-[#6E645D] hover:text-[#122315] hover:bg-white/60'
+                  }`}
+                >
+                  <Palette className="w-3.5 h-3.5" />
+                  <span>10 Diseños de Carta</span>
+                  <span className="text-[10px] bg-amber-400 text-stone-950 font-black px-1.5 py-0.2 rounded-full ml-0.5">10</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setConfigTab('combos')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
+                    configTab === 'combos'
+                      ? 'bg-[#8C6239] text-white shadow-xs'
+                      : 'text-[#6E645D] hover:text-[#122315] hover:bg-white/60'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Combos y Promos</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setConfigTab('header')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
+                    configTab === 'header'
+                      ? 'bg-[#8C6239] text-white shadow-xs'
+                      : 'text-[#6E645D] hover:text-[#122315] hover:bg-white/60'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Membrete de Salón</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setConfigTab('pagination')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
+                    configTab === 'pagination'
+                      ? 'bg-[#8C6239] text-white shadow-xs'
+                      : 'text-[#6E645D] hover:text-[#122315] hover:bg-white/60'
+                  }`}
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Paginación Editorial</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setConfigTab('sections')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
+                    configTab === 'sections'
+                      ? 'bg-[#8C6239] text-white shadow-xs'
+                      : 'text-[#6E645D] hover:text-[#122315] hover:bg-white/60'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Orden de Secciones</span>
+                </button>
               </div>
+
+              {/* Reset to defaults */}
               <button
                 onClick={resetConfig}
-                className="text-xs text-[#7A6F66] hover:text-[#122315] flex items-center gap-1 font-semibold underline underline-offset-2"
+                className="text-xs text-[#7A6F66] hover:text-[#122315] flex items-center gap-1 font-semibold underline underline-offset-2 shrink-0 ml-auto"
               >
                 <RotateCcw className="w-3.5 h-3.5" /> Restablecer opciones
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* 1. Ubicación de Combos */}
-              <div className="bg-white p-3 rounded-xl border border-[#D8C7B0] shadow-xs space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#8C6239]">
+            {/* TAB 1: 10 Diseños de Carta */}
+            {configTab === 'templates' && (
+              <div className="space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-[#6E645D] gap-1">
+                  <span>
+                    Elige el estilo visual de tu carta. Cambia automáticamente colores, tipografías, filetes y estilo tanto en pantalla como al imprimir y descargar en Word.
+                  </span>
+                  <span className="font-bold text-[#8C6239] shrink-0">
+                    Estilo actual: <u>{activeTemplate.name}</u>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 pt-1">
+                  {MENU_TEMPLATES.map((tmpl) => {
+                    const isSelected = config.templateId === tmpl.id;
+                    return (
+                      <button
+                        key={tmpl.id}
+                        type="button"
+                        onClick={() => setConfig((prev) => ({ ...prev, templateId: tmpl.id }))}
+                        className={`text-left p-3 rounded-xl border transition-all flex flex-col justify-between group relative cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-50/90 border-[#8C6239] shadow-md ring-2 ring-[#8C6239]'
+                            : 'bg-white hover:bg-stone-50 border-[#D8C7B0] hover:border-[#8C6239]/50 shadow-xs'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1 mb-2">
+                            <span
+                              className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full tracking-wider ${
+                                isSelected
+                                  ? 'bg-[#8C6239] text-white'
+                                  : 'bg-stone-100 text-stone-600 group-hover:bg-amber-100/70'
+                              }`}
+                            >
+                              {tmpl.badge}
+                            </span>
+                            {isSelected && (
+                              <span className="flex items-center gap-1 text-[10px] font-black text-[#8C6239]">
+                                <Check className="w-3 h-3 text-[#8C6239]" /> Activo
+                              </span>
+                            )}
+                          </div>
+
+                          {/* 4-Color Swatch */}
+                          <div className="flex h-3 rounded-md overflow-hidden border border-black/10 mb-2 shadow-2xs">
+                            {tmpl.palettePreview.map((col, idx) => (
+                              <div key={idx} className="flex-1 h-full" style={{ backgroundColor: col }} />
+                            ))}
+                          </div>
+
+                          <h4 className="font-bold text-xs text-[#122315] font-serif leading-tight">
+                            {tmpl.name}
+                          </h4>
+                          <p className="text-[10px] text-[#7A6F66] mt-1 line-clamp-2 leading-tight">
+                            {tmpl.description}
+                          </p>
+                        </div>
+
+                        <div className="mt-2.5 pt-2 border-t border-stone-200/80 flex items-center justify-between text-[10px] font-bold text-[#8C6239]">
+                          <span>{isSelected ? '✓ En uso' : 'Usar este estilo'}</span>
+                          <span className="text-xs group-hover:translate-x-0.5 transition-transform">→</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: Combos y Promociones */}
+            {configTab === 'combos' && (
+              <div className="max-w-xl bg-white p-4 rounded-xl border border-[#D8C7B0] shadow-xs space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#8C6239]">
                   <Sparkles className="w-4 h-4 text-[#A07844]" />
-                  <span>Combos y Promociones</span>
+                  <span>Ubicación de Combos y Promociones</span>
                 </div>
-                <p className="text-[11px] text-[#6E645D] leading-tight">
-                  Sección destacada con filete de autor para evitar mezclar con pastelería individual.
+                <p className="text-xs text-[#6E645D] leading-relaxed">
+                  Para no mezclar combos con productos individuales (como medialunas o tartas sueltas), los combos se agrupan en una sección destacada con filete de autor.
                 </p>
-                <select
-                  value={config.comboPosition}
-                  onChange={(e) => setConfig({ ...config, comboPosition: e.target.value as ComboPosition })}
-                  className="w-full text-xs font-serif font-bold bg-[#FAF8F5] border border-[#D8C7B0] rounded-lg p-2 focus:ring-2 focus:ring-[#8C6239] outline-none text-[#1A1412]"
-                >
-                  <option value="top">✦ Al inicio (Portada destacada)</option>
-                  <option value="after-cafeteria">☕ Después de Cafetería</option>
-                  <option value="bottom">📌 Al final de la carta</option>
-                  <option value="inline">🔀 Dentro de su categoría original</option>
-                  <option value="hidden">🚫 No incluir en carta física</option>
-                </select>
-              </div>
-
-              {/* 2. Textos de Encabezado */}
-              <div className="bg-white p-3 rounded-xl border border-[#D8C7B0] shadow-xs space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#122315]">
-                  <FileText className="w-4 h-4 text-[#8C6239]" />
-                  <span>Membrete de Salón</span>
-                </div>
-                <div className="space-y-1.5">
-                  <div>
-                    <label className="text-[10px] font-bold text-[#7A6F66] uppercase">Título de la Casa</label>
-                    <input
-                      type="text"
-                      value={config.title}
-                      onChange={(e) => setConfig({ ...config, title: e.target.value })}
-                      className="w-full text-xs font-serif font-bold bg-[#FAF8F5] border border-[#D8C7B0] rounded-md px-2 py-1 outline-none text-[#122315]"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-[#7A6F66] uppercase">Bajada / Rubro</label>
-                    <input
-                      type="text"
-                      value={config.subtitle}
-                      onChange={(e) => setConfig({ ...config, subtitle: e.target.value })}
-                      className="w-full text-xs bg-[#FAF8F5] border border-[#D8C7B0] rounded-md px-2 py-1 outline-none text-[#1A1412]"
-                    />
-                  </div>
+                <div className="pt-1">
+                  <label className="text-[11px] font-bold text-[#7A6F66] uppercase block mb-1">
+                    Posición en la Carta Física y Word:
+                  </label>
+                  <select
+                    value={config.comboPosition}
+                    onChange={(e) => setConfig({ ...config, comboPosition: e.target.value as ComboPosition })}
+                    className="w-full text-xs font-serif font-bold bg-[#FAF8F5] border border-[#D8C7B0] rounded-lg p-2.5 focus:ring-2 focus:ring-[#8C6239] outline-none text-[#1A1412]"
+                  >
+                    <option value="top">✦ Al inicio de la carta (Portada destacada de autor)</option>
+                    <option value="after-cafeteria">☕ Justo después de Cafetería</option>
+                    <option value="bottom">📌 Al final de la carta</option>
+                    <option value="inline">🔀 Mezclados dentro de su categoría original</option>
+                    <option value="hidden">🚫 Ocultar combos en la carta física</option>
+                  </select>
                 </div>
               </div>
+            )}
 
-              {/* 3. Encabezado en todas las páginas */}
-              <div className="bg-white p-3 rounded-xl border border-[#D8C7B0] shadow-xs space-y-2">
+            {/* TAB 3: Membrete de Salón */}
+            {configTab === 'header' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-[#D8C7B0] shadow-xs space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#122315]">
+                    <FileText className="w-4 h-4 text-[#8C6239]" />
+                    <span>Datos Institucionales del Salón</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[10px] font-bold text-[#7A6F66] uppercase">Título de la Casa</label>
+                      <input
+                        type="text"
+                        value={config.title}
+                        onChange={(e) => setConfig({ ...config, title: e.target.value })}
+                        className="w-full text-xs font-serif font-bold bg-[#FAF8F5] border border-[#D8C7B0] rounded-md px-2.5 py-1.5 outline-none text-[#122315]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-[#7A6F66] uppercase">Bajada / Rubro</label>
+                      <input
+                        type="text"
+                        value={config.subtitle}
+                        onChange={(e) => setConfig({ ...config, subtitle: e.target.value })}
+                        className="w-full text-xs bg-[#FAF8F5] border border-[#D8C7B0] rounded-md px-2.5 py-1.5 outline-none text-[#1A1412]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-[#D8C7B0] shadow-xs space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#122315]">
+                    <FileText className="w-4 h-4 text-[#8C6239]" />
+                    <span>Manifiesto y Pie de Página</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[10px] font-bold text-[#7A6F66] uppercase">Cita / Manifiesto de Calidad</label>
+                      <input
+                        type="text"
+                        value={config.experienceText}
+                        onChange={(e) => setConfig({ ...config, experienceText: e.target.value })}
+                        className="w-full text-xs font-serif italic bg-[#FAF8F5] border border-[#D8C7B0] rounded-md px-2.5 py-1.5 outline-none text-[#122315]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-[#7A6F66] uppercase">Nota Legal / Pie de Hoja</label>
+                      <input
+                        type="text"
+                        value={config.footerNote}
+                        onChange={(e) => setConfig({ ...config, footerNote: e.target.value })}
+                        className="w-full text-xs bg-[#FAF8F5] border border-[#D8C7B0] rounded-md px-2.5 py-1.5 outline-none text-[#1A1412]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: Paginación Editorial */}
+            {configTab === 'pagination' && (
+              <div className="max-w-xl bg-white p-4 rounded-xl border border-[#D8C7B0] shadow-xs space-y-3">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-[#122315]">
                   <Printer className="w-4 h-4 text-[#8C6239]" />
-                  <span>Paginación Editorial</span>
+                  <span>Paginación Editorial y Repetición de Membrete</span>
                 </div>
-                <p className="text-[11px] text-[#6E645D] leading-tight">
-                  Repite el membrete institucional en cada hoja A4 al imprimir o exportar.
+                <p className="text-xs text-[#6E645D] leading-relaxed">
+                  Configura si el título del restaurante y el membrete institucional deben repetirse automáticamente en la parte superior de cada hoja A4 al imprimir o exportar a Word.
                 </p>
-                <label className="flex items-start gap-2 text-xs text-[#1A1412] cursor-pointer pt-1 bg-[#FAF8F5] p-2 rounded-lg border border-[#D8C7B0]">
+                <label className="flex items-start gap-3 text-xs text-[#1A1412] cursor-pointer pt-1 bg-[#FAF8F5] p-3 rounded-lg border border-[#D8C7B0]">
                   <input
                     type="checkbox"
                     checked={config.repeatHeaderOnAllPages}
@@ -1393,25 +1611,31 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                     className="mt-0.5 rounded text-[#8C6239] focus:ring-[#8C6239]"
                   />
                   <div>
-                    <span className="font-bold block text-[11px] text-[#122315]">Repetir membrete en cada hoja</span>
-                    <span className="text-[10px] text-[#7A6F66]">
-                      {config.repeatHeaderOnAllPages ? 'Activo en todas las páginas A4' : 'Solo en la primera página'}
+                    <span className="font-bold block text-xs text-[#122315]">
+                      Repetir membrete institucional en todas las hojas A4
+                    </span>
+                    <span className="text-[11px] text-[#7A6F66]">
+                      {config.repeatHeaderOnAllPages
+                        ? 'Activado: cada página que salga de la impresora o en Word tendrá el membrete de la casa.'
+                        : 'Desactivado: solo se mostrará en la primera página.'}
                     </span>
                   </div>
                 </label>
               </div>
+            )}
 
-              {/* 4. Orden de Categorías */}
-              <div className="bg-white p-3 rounded-xl border border-[#D8C7B0] shadow-xs space-y-2">
+            {/* TAB 5: Orden de Secciones */}
+            {configTab === 'sections' && (
+              <div className="max-w-xl bg-white p-4 rounded-xl border border-[#D8C7B0] shadow-xs space-y-3">
                 <div className="flex items-center justify-between text-xs font-bold text-[#122315]">
                   <span className="flex items-center gap-1.5">
                     <Layers className="w-4 h-4 text-[#8C6239]" />
-                    <span>Orden de Secciones</span>
+                    <span>Orden y Visibilidad de Secciones</span>
                   </span>
-                  <span className="text-[10px] text-[#7A6F66]">▲ / ▼</span>
+                  <span className="text-[11px] text-[#7A6F66]">Usa ▲ / ▼ para ordenar</span>
                 </div>
 
-                <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                   {config.categoryOrder.map((catId, index) => {
                     const cat = categories.find((c) => c.id === catId);
                     if (!cat) return null;
@@ -1420,17 +1644,17 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                     return (
                       <div
                         key={cat.id}
-                        className={`flex items-center justify-between gap-1 p-1.5 rounded-lg border text-xs transition-colors ${
+                        className={`flex items-center justify-between gap-2 p-2 rounded-lg border text-xs transition-colors ${
                           isHidden
                             ? 'bg-stone-100 border-stone-200 text-stone-400'
                             : 'bg-[#FAF8F5] border-[#D8CBB6] text-[#122315]'
                         }`}
                       >
-                        <span className="font-bold truncate max-w-[100px] font-serif">
+                        <span className="font-bold truncate font-serif">
                           {toRoman(index + 1)}. {cat.name}
                         </span>
 
-                        <div className="flex items-center gap-0.5">
+                        <div className="flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => toggleCategoryVisibility(cat.id)}
@@ -1463,7 +1687,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                   })}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -1511,20 +1735,31 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
           <div
             id="printable-menu-area"
             ref={printRef}
-            className="bg-[#FAF8F5] text-[#1A1412] font-serif p-6 sm:p-10 rounded-sm shadow-xl border border-[#D8C7B0] w-full max-w-[820px] mx-auto space-y-6"
+            className="p-6 sm:p-10 rounded-sm shadow-xl border w-full max-w-[820px] mx-auto space-y-6 transition-all duration-300"
             style={{
+              backgroundColor: activeTemplate.styles.sheetBg,
+              borderColor: activeTemplate.styles.sheetBorder,
+              color: activeTemplate.styles.textColor,
+              fontFamily: activeTemplate.styles.fontFamily,
               boxShadow: '0 4px 20px -2px rgba(40, 30, 20, 0.08), 0 2px 6px -1px rgba(40, 30, 20, 0.04)',
             }}
           >
             {/* Editorial Header Section */}
-            <div className="text-center space-y-2 border-b border-[#C5A880] pb-4">
+            <div
+              className="text-center space-y-2 pb-4"
+              style={{ borderBottom: `1.5px solid ${activeTemplate.styles.accentColor}` }}
+            >
               <h1
                 contentEditable={isEditMode}
                 suppressContentEditableWarning={true}
                 onBlur={(e) => setConfig((prev) => ({ ...prev, title: e.currentTarget.textContent || prev.title }))}
-                className={`text-3xl sm:text-4xl font-bold tracking-[0.18em] uppercase text-[#122315] font-serif ${
+                className={`text-3xl sm:text-4xl font-bold tracking-[0.18em] uppercase ${
                   isEditMode ? 'cursor-text hover:bg-amber-100/60 focus:bg-amber-100/90 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1.5' : ''
                 }`}
+                style={{
+                  color: activeTemplate.styles.headingColor,
+                  fontFamily: activeTemplate.styles.headingFontFamily,
+                }}
                 title={isEditMode ? 'Haz clic para editar el título' : undefined}
               >
                 {config.title}
@@ -1534,27 +1769,33 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 contentEditable={isEditMode}
                 suppressContentEditableWarning={true}
                 onBlur={(e) => setConfig((prev) => ({ ...prev, subtitle: e.currentTarget.textContent || prev.subtitle }))}
-                className={`text-[10px] font-sans font-medium tracking-[0.22em] uppercase text-[#7A6F66] ${
+                className={`text-[10px] font-medium tracking-[0.22em] uppercase ${
                   isEditMode ? 'cursor-text hover:bg-amber-100/60 focus:bg-amber-100/90 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1.5' : ''
                 }`}
+                style={{ color: activeTemplate.styles.subheadingColor }}
                 title={isEditMode ? 'Haz clic para editar la bajada' : undefined}
               >
                 {config.subtitle}
               </p>
 
-              {/* French Double Rule */}
+              {/* French Double Rule / Style Rule */}
               <div className="flex items-center justify-center gap-3 w-4/5 mx-auto py-1">
-                <div className="h-[1px] flex-1 bg-[#C5A880]" />
-                <span className="text-[10px] text-[#A07844]">✦</span>
-                <div className="h-[1px] flex-1 bg-[#C5A880]" />
+                <div className="h-[1px] flex-1" style={{ backgroundColor: activeTemplate.styles.accentColor }} />
+                <span className="text-[10px]" style={{ color: activeTemplate.styles.accentColor }}>
+                  {activeTemplate.styles.headerDividerSymbol}
+                </span>
+                <div className="h-[1px] flex-1" style={{ backgroundColor: activeTemplate.styles.accentColor }} />
               </div>
 
               {/* Attributes line */}
-              <div className="flex flex-wrap items-center justify-center gap-3 text-[9px] font-sans font-semibold tracking-[0.14em] uppercase text-[#5C524A]">
+              <div
+                className="flex flex-wrap items-center justify-center gap-3 text-[9px] font-semibold tracking-[0.14em] uppercase"
+                style={{ color: activeTemplate.styles.subheadingColor }}
+              >
                 <span>Granos 100% Arábica de Altura</span>
-                <span className="text-[#C5A880]">•</span>
+                <span style={{ color: activeTemplate.styles.accentColor }}>•</span>
                 <span>Cocina Artesanal Libre de Gluten</span>
-                <span className="text-[#C5A880]">•</span>
+                <span style={{ color: activeTemplate.styles.accentColor }}>•</span>
                 <span>San Juan, Argentina</span>
               </div>
 
@@ -1563,9 +1804,10 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                   contentEditable={isEditMode}
                   suppressContentEditableWarning={true}
                   onBlur={(e) => setConfig((prev) => ({ ...prev, experienceText: e.currentTarget.textContent?.replace(/[«»]/g, '').trim() || prev.experienceText }))}
-                  className={`text-xs italic text-[#6E645D] font-serif max-w-lg mx-auto pt-1 leading-relaxed ${
+                  className={`text-xs italic max-w-lg mx-auto pt-1 leading-relaxed ${
                     isEditMode ? 'cursor-text hover:bg-amber-100/60 focus:bg-amber-100/90 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1.5' : ''
                   }`}
+                  style={{ color: activeTemplate.styles.descColor }}
                   title={isEditMode ? 'Haz clic para editar el manifiesto de la casa' : undefined}
                 >
                   « {config.experienceText} »
@@ -1585,16 +1827,37 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 }
 
                 return (
-                  <section className="border border-[#C5A880] p-1 bg-[#FBF8F2] rounded-xs shadow-2xs">
-                    <div className="border border-[#D8C3A5] p-4 text-center space-y-3">
+                  <section
+                    className="border p-1 rounded-xs shadow-2xs transition-colors"
+                    style={{
+                      backgroundColor: activeTemplate.styles.combos.bg,
+                      borderColor: activeTemplate.styles.combos.border,
+                    }}
+                  >
+                    <div
+                      className="border p-4 text-center space-y-3"
+                      style={{ borderColor: activeTemplate.styles.combos.innerBorder }}
+                    >
                       <div>
-                        <span className="text-[9px] font-sans font-bold tracking-[0.25em] text-[#A07844] uppercase block">
-                          ✦ SELECCIÓN DE LA CASA ✦
+                        <span
+                          className="text-[9px] font-bold tracking-[0.25em] uppercase block"
+                          style={{ color: activeTemplate.styles.combos.crestColor }}
+                        >
+                          {activeTemplate.styles.headerDividerSymbol} SELECCIÓN DE LA CASA {activeTemplate.styles.headerDividerSymbol}
                         </span>
-                        <h2 className="text-base sm:text-lg font-bold uppercase tracking-[0.12em] text-[#122315] font-serif">
+                        <h2
+                          className="text-base sm:text-lg font-bold uppercase tracking-[0.12em]"
+                          style={{
+                            color: activeTemplate.styles.combos.titleColor,
+                            fontFamily: activeTemplate.styles.headingFontFamily,
+                          }}
+                        >
                           Combos y Promociones
                         </h2>
-                        <p className="text-[9px] font-sans text-[#7A6F66] tracking-wide">
+                        <p
+                          className="text-[9px] tracking-wide"
+                          style={{ color: activeTemplate.styles.combos.descColor }}
+                        >
                           Combinaciones sugeridas por nuestro barista y maestro pastelero
                         </p>
                       </div>
@@ -1603,13 +1866,20 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                         {allCombos.map((item, itemIdx) => (
                           <div
                             key={item.id}
-                            className={`space-y-0.5 border-b sm:border-b-0 border-[#EFE5D7] pb-2 sm:pb-0 transition-opacity ${
+                            className={`space-y-0.5 border-b sm:border-b-0 border-black/5 pb-2 sm:pb-0 transition-opacity ${
                               item.isExcluded ? 'opacity-40 line-through' : ''
                             }`}
                           >
                             <div className="flex items-baseline justify-between gap-1 w-full">
-                              <span className="font-bold text-xs text-[#1A1412] font-serif flex items-center gap-1.5 flex-1 min-w-0">
-                                <span className="text-[8px] font-sans font-bold bg-[#F3EBDD] border border-[#D8C3A5] text-[#8A5E2E] px-1 py-0.2 rounded-2xs shrink-0">
+                              <span className="font-bold text-xs flex items-center gap-1.5 flex-1 min-w-0">
+                                <span
+                                  className="text-[8px] font-bold px-1 py-0.2 rounded-2xs shrink-0"
+                                  style={{
+                                    backgroundColor: activeTemplate.styles.combos.tagBg,
+                                    color: activeTemplate.styles.combos.tagColor,
+                                    border: `0.5px solid ${activeTemplate.styles.combos.tagBorder}`,
+                                  }}
+                                >
                                   COMBO
                                 </span>
                                 <span
@@ -1621,14 +1891,28 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                                       ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
                                       : ''
                                   }`}
+                                  style={{
+                                    color: activeTemplate.styles.textColor,
+                                    fontFamily: activeTemplate.styles.headingFontFamily,
+                                  }}
                                   title={isEditMode ? 'Haz clic para editar el nombre' : undefined}
                                 >
                                   {item.name}
                                 </span>
-                                {item.isFeatured && <span className="text-[#A07844] text-[10px] shrink-0">✦</span>}
+                                {item.isFeatured && (
+                                  <span className="text-[10px] shrink-0" style={{ color: activeTemplate.styles.accentColor }}>
+                                    {activeTemplate.styles.headerDividerSymbol}
+                                  </span>
+                                )}
                               </span>
 
-                              <span className="flex-1 border-b border-dotted border-[#CBBFB0] mx-1.5 mb-1 hidden sm:block" />
+                              <span
+                                className="flex-1 border-b mx-1.5 mb-1 hidden sm:block"
+                                style={{
+                                  borderColor: activeTemplate.styles.dotLeaderColor,
+                                  borderStyle: activeTemplate.styles.dotLeaderStyle,
+                                }}
+                              />
 
                               <span
                                 contentEditable={isEditMode}
@@ -1638,11 +1922,15 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                                   const num = parseFloat(raw.replace(/[^0-9]/g, ''));
                                   if (!isNaN(num)) handleUpdateItemPrice(item.id, num);
                                 }}
-                                className={`font-bold text-xs text-[#8C6239] font-serif shrink-0 ${
+                                className={`font-bold text-xs shrink-0 ${
                                   isEditMode
                                     ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
                                     : ''
                                 }`}
+                                style={{
+                                  color: activeTemplate.styles.priceColor,
+                                  fontFamily: activeTemplate.styles.headingFontFamily,
+                                }}
                                 title={isEditMode ? 'Haz clic para editar el precio' : undefined}
                               >
                                 {formatCurrency(item.price)}
@@ -1689,19 +1977,29 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                               contentEditable={isEditMode}
                               suppressContentEditableWarning={true}
                               onBlur={(e) => handleUpdateItemDesc(item.id, e.currentTarget.textContent || '')}
-                              className={`text-[10px] text-[#6E645D] font-sans leading-tight ${
+                              className={`text-[10px] leading-tight ${
                                 isEditMode
                                   ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
                                   : ''
                               }`}
+                              style={{ color: activeTemplate.styles.descColor }}
                               title={isEditMode ? 'Haz clic para editar la descripción' : undefined}
                             >
                               {item.description || (isEditMode ? '(Sin descripción, haz clic para agregar)' : '')}
                             </p>
 
                             {item.compositeItems && item.compositeItems.length > 0 && (
-                              <div className="text-[9px] font-sans text-[#4A423D] bg-[#F4EFE6] border-l-2 border-[#C5A880] px-2 py-0.5 mt-1 leading-snug">
-                                <strong className="text-[#8C6239] uppercase text-[8px] tracking-wider">Maridaje:</strong>{' '}
+                              <div
+                                className="text-[9px] px-2 py-0.5 mt-1 leading-snug"
+                                style={{
+                                  backgroundColor: activeTemplate.styles.combos.maridajeBg,
+                                  borderLeft: `2px solid ${activeTemplate.styles.combos.maridajeBorder}`,
+                                  color: activeTemplate.styles.combos.maridajeText,
+                                }}
+                              >
+                                <strong className="uppercase text-[8px] tracking-wider" style={{ color: activeTemplate.styles.accentColor }}>
+                                  Maridaje:
+                                </strong>{' '}
                                 {item.compositeItems
                                   .map((ci) => `${ci.quantity > 1 ? ci.quantity + 'x ' : ''}${ci.productName}`)
                                   .join(' + ')}
@@ -1720,18 +2018,31 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 const catProds = getProductsForCategory(cat.id, false);
                 if (catProds.length === 0) return null;
 
+                const catPrefix =
+                  activeTemplate.styles.categoryHeader.numeralFormat === 'roman'
+                    ? `${toRoman(index + 1)}.  `
+                    : activeTemplate.styles.categoryHeader.numeralFormat === 'decimal'
+                    ? `${String(index + 1).padStart(2, '0')}.  `
+                    : '';
+
                 return (
                   <section key={cat.id} className="space-y-2.5">
                     {/* Refined Category Divider Header */}
                     <div className="flex items-center gap-3 py-1">
-                      <div className="h-[0.75px] flex-1 bg-[#C5A880] opacity-70" />
-                      <h2 className="text-xs sm:text-sm font-bold uppercase tracking-[0.22em] text-[#122315] font-serif whitespace-nowrap">
-                        {toRoman(index + 1)}. &nbsp; {cat.name}
+                      <div className="h-[0.75px] flex-1 opacity-70" style={{ backgroundColor: activeTemplate.styles.accentColor }} />
+                      <h2
+                        className="text-xs sm:text-sm font-bold uppercase tracking-[0.22em] whitespace-nowrap"
+                        style={{
+                          color: activeTemplate.styles.headingColor,
+                          fontFamily: activeTemplate.styles.headingFontFamily,
+                        }}
+                      >
+                        {catPrefix}{cat.name}
                       </h2>
-                      <div className="h-[0.75px] flex-1 bg-[#C5A880] opacity-70" />
+                      <div className="h-[0.75px] flex-1 opacity-70" style={{ backgroundColor: activeTemplate.styles.accentColor }} />
                     </div>
 
-                    {/* Products Grid (Dotted leaders restaurant list) */}
+                    {/* Products Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
                       {catProds.map((item, itemIdx) => (
                         <div
@@ -1741,7 +2052,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                           }`}
                         >
                           <div className="flex items-baseline justify-between gap-1 w-full">
-                            <span className="font-bold text-xs text-[#1A1412] font-serif truncate flex items-center gap-1 flex-1 min-w-0">
+                            <span className="font-bold text-xs truncate flex items-center gap-1 flex-1 min-w-0">
                               <span
                                 contentEditable={isEditMode}
                                 suppressContentEditableWarning={true}
@@ -1751,14 +2062,28 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                                     ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
                                     : ''
                                 }`}
+                                style={{
+                                  color: activeTemplate.styles.textColor,
+                                  fontFamily: activeTemplate.styles.headingFontFamily,
+                                }}
                                 title={isEditMode ? 'Haz clic para editar el nombre' : undefined}
                               >
                                 {item.name}
                               </span>
-                              {item.isFeatured && <span className="text-[#A07844] text-[10px] ml-1 shrink-0">✦</span>}
+                              {item.isFeatured && (
+                                <span className="text-[10px] ml-1 shrink-0" style={{ color: activeTemplate.styles.accentColor }}>
+                                  {activeTemplate.styles.headerDividerSymbol}
+                                </span>
+                              )}
                             </span>
 
-                            <span className="flex-1 border-b border-dotted border-[#CBBFB0] mx-1.5 mb-1" />
+                            <span
+                              className="flex-1 border-b mx-1.5 mb-1"
+                              style={{
+                                borderColor: activeTemplate.styles.dotLeaderColor,
+                                borderStyle: activeTemplate.styles.dotLeaderStyle,
+                              }}
+                            />
 
                             <span
                               contentEditable={isEditMode}
@@ -1768,11 +2093,15 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                                 const num = parseFloat(raw.replace(/[^0-9]/g, ''));
                                 if (!isNaN(num)) handleUpdateItemPrice(item.id, num);
                               }}
-                              className={`font-bold text-xs text-[#8C6239] font-serif shrink-0 ${
+                              className={`font-bold text-xs shrink-0 ${
                                 isEditMode
                                   ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
                                   : ''
                               }`}
+                              style={{
+                                color: activeTemplate.styles.priceColor,
+                                fontFamily: activeTemplate.styles.headingFontFamily,
+                              }}
                               title={isEditMode ? 'Haz clic para editar el precio' : undefined}
                             >
                               {formatCurrency(item.price)}
@@ -1819,11 +2148,12 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                             contentEditable={isEditMode}
                             suppressContentEditableWarning={true}
                             onBlur={(e) => handleUpdateItemDesc(item.id, e.currentTarget.textContent || '')}
-                            className={`text-[10px] text-[#6E645D] font-sans leading-tight ${
+                            className={`text-[10px] leading-tight ${
                               isEditMode
                                 ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
                                 : ''
                             }`}
+                            style={{ color: activeTemplate.styles.descColor }}
                             title={isEditMode ? 'Haz clic para editar la descripción' : undefined}
                           >
                             {item.description || (isEditMode ? '(Sin descripción, haz clic para agregar)' : '')}
@@ -1861,12 +2191,24 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               );
             })()}
 
-            {/* Haute Pâtisserie Editorial Footer */}
-            <div className="pt-4 border-t border-[#C5A880] flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] font-sans text-[#7A6F66]">
-              <div className="font-serif font-bold text-xs text-[#122315] tracking-wider uppercase">
+            {/* Editorial Footer */}
+            <div
+              className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px]"
+              style={{
+                borderTop: `1px solid ${activeTemplate.styles.accentColor}`,
+                color: activeTemplate.styles.subheadingColor,
+              }}
+            >
+              <div
+                className="font-bold text-xs tracking-wider uppercase"
+                style={{
+                  color: activeTemplate.styles.headingColor,
+                  fontFamily: activeTemplate.styles.headingFontFamily,
+                }}
+              >
                 {config.title} &bull; Carta Oficial de Salón
               </div>
-              <div className="text-right text-[10px] text-[#8C6239] font-medium">
+              <div className="text-right text-[10px] font-medium" style={{ color: activeTemplate.styles.priceColor }}>
                 {config.footerNote}
               </div>
             </div>
@@ -1877,7 +2219,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
         <div className="bg-[#FAF8F5] border-t border-[#D8C7B0] p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#7A6F66] print:hidden">
           <div className="flex items-center gap-2">
             <span className="font-bold text-[#8C6239] bg-[#F4EFE6] px-2 py-0.5 rounded border border-[#C5A880]/50 font-serif">
-              ✦ Haute Édition
+              ✦ {activeTemplate.name}
             </span>
             <span>
               {isEditMode
