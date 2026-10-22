@@ -14,6 +14,8 @@ import {
   Check,
   Layers,
   Sparkles,
+  Edit3,
+  CheckCircle2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency } from '../../utils/currency';
@@ -37,13 +39,30 @@ interface MenuPrintConfig {
   repeatHeaderOnAllPages: boolean;
 }
 
-const STORAGE_KEY = 'hilos_de_amor_printable_menu_config';
+interface ItemOverride {
+  name?: string;
+  price?: number;
+  description?: string;
+  isExcluded?: boolean;
+}
+
+interface MenuEdits {
+  itemOverrides: Record<string, ItemOverride>;
+  productOrderPerCategory: Record<string, string[]>;
+  comboOrder: string[];
+}
+
+type PrintableProduct = Product & { isExcluded?: boolean };
+
+const CONFIG_STORAGE_KEY = 'hilos_de_amor_printable_menu_config';
+const EDITS_STORAGE_KEY = 'hilos_de_amor_printable_menu_edits';
 
 export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, onClose }) => {
   const { categories, products } = useApp();
   const printRef = useRef<HTMLDivElement>(null);
 
   const [showConfig, setShowConfig] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [wordExportSuccess, setWordExportSuccess] = useState(false);
 
   // Configuration state
@@ -61,7 +80,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
     };
 
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         const currentIds = categories.map((c) => c.id);
@@ -84,6 +103,29 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
     return defaultConfig;
   });
 
+  // Inline edits state (names, prices, descriptions, exclusions, custom order)
+  const [edits, setEdits] = useState<MenuEdits>(() => {
+    const defaultEdits: MenuEdits = {
+      itemOverrides: {},
+      productOrderPerCategory: {},
+      comboOrder: [],
+    };
+    try {
+      const saved = localStorage.getItem(EDITS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          itemOverrides: parsed.itemOverrides || {},
+          productOrderPerCategory: parsed.productOrderPerCategory || {},
+          comboOrder: parsed.comboOrder || [],
+        };
+      }
+    } catch {
+      // fallback
+    }
+    return defaultEdits;
+  });
+
   // Keep categoryOrder in sync if categories change
   useEffect(() => {
     const currentIds = categories.map((c) => c.id);
@@ -100,11 +142,20 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
   // Persist configuration in localStorage
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
     } catch (e) {
       console.warn('Could not save menu print config', e);
     }
   }, [config]);
+
+  // Persist edits in localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(EDITS_STORAGE_KEY, JSON.stringify(edits));
+    } catch (e) {
+      console.warn('Could not save menu print edits', e);
+    }
+  }, [edits]);
 
   if (!isOpen) return null;
 
@@ -119,21 +170,169 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
     );
   };
 
+  // Helper to get effective item data merged with custom edits
+  const getEffectiveItem = (p: Product) => {
+    const override = edits.itemOverrides[p.id];
+    return {
+      ...p,
+      name: override?.name !== undefined ? override.name : p.name,
+      price: override?.price !== undefined ? override.price : p.price,
+      description: override?.description !== undefined ? override.description : (p.description || ''),
+      isExcluded: Boolean(override?.isExcluded),
+    };
+  };
+
   // Extract combos & sorted categories
-  const allCombos = products.filter((p) => p.isAvailable && isProductCombo(p));
+  const rawCombos = products.filter((p) => p.isAvailable && isProductCombo(p)).map(getEffectiveItem);
+
+  // Apply custom combo ordering
+  const allCombos = [...rawCombos].sort((a, b) => {
+    const order = edits.comboOrder;
+    if (order.length === 0) return 0;
+    const idxA = order.indexOf(a.id);
+    const idxB = order.indexOf(b.id);
+    if (idxA === -1 && idxB === -1) return 0;
+    if (idxA === -1) return 1;
+    if (idxB === -1) return -1;
+    return idxA - idxB;
+  });
 
   // Ordered categories based on config
   const orderedCategories = config.categoryOrder
     .map((id) => categories.find((c) => c.id === id))
     .filter((c): c is Category => c !== undefined && !config.hiddenCategoryIds.includes(c.id));
 
-  // Category products helper: if comboPosition !== 'inline', remove combos from category list
-  const getProductsForCategory = (catId: string) => {
-    return products.filter((p) => {
-      if (!p.isAvailable || p.categoryId !== catId) return false;
-      if (config.comboPosition !== 'inline' && isProductCombo(p)) return false;
-      return true;
+  // Category products helper: merges custom overrides and user ordering
+  const getProductsForCategory = (catId: string, forPrint = false) => {
+    const rawProds = products
+      .filter((p) => {
+        if (!p.isAvailable || p.categoryId !== catId) return false;
+        if (config.comboPosition !== 'inline' && isProductCombo(p)) return false;
+        return true;
+      })
+      .map(getEffectiveItem);
+
+    // Apply custom product order within this category
+    const catOrder = edits.productOrderPerCategory[catId] || [];
+    const sorted = [...rawProds].sort((a, b) => {
+      if (catOrder.length === 0) return 0;
+      const idxA = catOrder.indexOf(a.id);
+      const idxB = catOrder.indexOf(b.id);
+      if (idxA === -1 && idxB === -1) return 0;
+      if (idxA === -1) return 1;
+      if (idxB === -1) return -1;
+      return idxA - idxB;
     });
+
+    if (forPrint) {
+      // In print/Word mode, omit excluded products completely
+      return sorted.filter((p) => !p.isExcluded);
+    }
+    return sorted;
+  };
+
+  // Inline Edits Handlers
+  const handleUpdateItemName = (id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setEdits((prev) => ({
+      ...prev,
+      itemOverrides: {
+        ...prev.itemOverrides,
+        [id]: {
+          ...prev.itemOverrides[id],
+          name: trimmed,
+        },
+      },
+    }));
+  };
+
+  const handleUpdateItemPrice = (id: string, price: number) => {
+    if (isNaN(price) || price < 0) return;
+    setEdits((prev) => ({
+      ...prev,
+      itemOverrides: {
+        ...prev.itemOverrides,
+        [id]: {
+          ...prev.itemOverrides[id],
+          price,
+        },
+      },
+    }));
+  };
+
+  const handleUpdateItemDesc = (id: string, description: string) => {
+    setEdits((prev) => ({
+      ...prev,
+      itemOverrides: {
+        ...prev.itemOverrides,
+        [id]: {
+          ...prev.itemOverrides[id],
+          description: description.trim(),
+        },
+      },
+    }));
+  };
+
+  const handleToggleItemExclusion = (id: string) => {
+    setEdits((prev) => {
+      const current = Boolean(prev.itemOverrides[id]?.isExcluded);
+      return {
+        ...prev,
+        itemOverrides: {
+          ...prev.itemOverrides,
+          [id]: {
+            ...prev.itemOverrides[id],
+            isExcluded: !current,
+          },
+        },
+      };
+    });
+  };
+
+  const handleMoveProduct = (catId: string, currentIndex: number, direction: 'up' | 'down') => {
+    const prods = getProductsForCategory(catId, false);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= prods.length) return;
+
+    const currentOrder = prods.map((p) => p.id);
+    const temp = currentOrder[currentIndex];
+    currentOrder[currentIndex] = currentOrder[targetIndex];
+    currentOrder[targetIndex] = temp;
+
+    setEdits((prev) => ({
+      ...prev,
+      productOrderPerCategory: {
+        ...prev.productOrderPerCategory,
+        [catId]: currentOrder,
+      },
+    }));
+  };
+
+  const handleMoveCombo = (currentIndex: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= allCombos.length) return;
+
+    const currentOrder = allCombos.map((c) => c.id);
+    const temp = currentOrder[currentIndex];
+    currentOrder[currentIndex] = currentOrder[targetIndex];
+    currentOrder[targetIndex] = temp;
+
+    setEdits((prev) => ({
+      ...prev,
+      comboOrder: currentOrder,
+    }));
+  };
+
+  const handleResetAllEdits = () => {
+    if (window.confirm('¿Restablecer todos los nombres, precios y orden editados a sus valores originales del sistema?')) {
+      setEdits({
+        itemOverrides: {},
+        productOrderPerCategory: {},
+        comboOrder: [],
+      });
+      localStorage.removeItem(EDITS_STORAGE_KEY);
+    }
   };
 
   // Reorder categories handlers
@@ -173,7 +372,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
       repeatHeaderOnAllPages: true,
     };
     setConfig(defaultConfig);
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(CONFIG_STORAGE_KEY);
   };
 
   // Helper to format Roman numerals for categories
@@ -188,7 +387,8 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
   const generateMenuPrintHTML = () => {
     // Render Combos / Maridajes HTML Block
     const renderCombosHTML = () => {
-      if (allCombos.length === 0 || config.comboPosition === 'hidden' || config.comboPosition === 'inline') {
+      const printableCombos = allCombos.filter((c) => !c.isExcluded);
+      if (printableCombos.length === 0 || config.comboPosition === 'hidden' || config.comboPosition === 'inline') {
         return '';
       }
 
@@ -200,7 +400,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             <div class="combos-desc-bar">Combinaciones sugeridas por nuestro barista y maestro pastelero</div>
 
             <div class="products-grid-curated">
-              ${allCombos
+              ${printableCombos
                 .map(
                   (item) => `
                 <div class="product-item-curated">
@@ -236,7 +436,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
     // Render Category HTML Block
     const renderCategoryHTML = (cat: Category, index: number) => {
-      const catProds = getProductsForCategory(cat.id);
+      const catProds = getProductsForCategory(cat.id, true);
       if (catProds.length === 0) return '';
 
       return `
@@ -290,7 +490,6 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
       bodyCategoriesHTML += orderedCategories.map((c, i) => renderCategoryHTML(c, i)).join('');
       bodyCategoriesHTML += renderCombosHTML();
     } else {
-      // inline or hidden
       bodyCategoriesHTML += orderedCategories.map((c, i) => renderCategoryHTML(c, i)).join('');
     }
 
@@ -334,7 +533,6 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               background: #FAF8F5;
             }
 
-            /* Main Print Page Table for seamless repeating headers across all pages */
             .print-page-table {
               width: 100%;
               border-collapse: collapse;
@@ -370,24 +568,13 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               vertical-align: bottom;
             }
 
-            /* Haute Pâtisserie Editorial Header */
             .editorial-header {
               text-align: center;
-              padding: 10px 0 6px 0;
+              padding: 8px 0 6px 0;
               border-bottom: 1.5px solid #C5A880;
               margin-bottom: 12px;
               break-inside: avoid;
               page-break-inside: avoid;
-            }
-
-            .crest-tag {
-              font-family: 'Montserrat', sans-serif;
-              font-size: 8px;
-              font-weight: 700;
-              letter-spacing: 0.35em;
-              text-transform: uppercase;
-              color: #A07844;
-              margin-bottom: 3px;
             }
 
             .brand-title {
@@ -461,7 +648,6 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               line-height: 1.3;
             }
 
-            /* Combos Curated Box (Haute Box) */
             .combos-curated-box {
               border: 1px solid #C5A880;
               padding: 2.5px;
@@ -505,7 +691,6 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               margin-bottom: 8px;
             }
 
-            /* Categories */
             .category-block {
               margin-bottom: 12px;
               break-inside: auto;
@@ -541,7 +726,6 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               white-space: nowrap;
             }
 
-            /* Product Grid & Dotted Leaders Layout */
             .products-grid-curated {
               display: grid;
               grid-template-columns: 1fr 1fr;
@@ -635,7 +819,6 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               letter-spacing: 0.05em;
             }
 
-            /* Footer */
             .editorial-footer {
               border-top: 1px solid #C5A880;
               padding-top: 6px;
@@ -778,14 +961,14 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
   // LUXURY WORD (.DOC) EXPORT
   // =========================================================================
   const handleExportWord = () => {
-    // Helper to generate 2-column editorial Word table with dotted leaders
-    const generateWordProductsTable = (items: Product[]) => {
+    const generateWordProductsTable = (items: PrintableProduct[]) => {
+      const printableItems = items.filter((p) => !p.isExcluded);
       let rows = '';
-      for (let i = 0; i < items.length; i += 2) {
-        const item1 = items[i];
-        const item2 = items[i + 1];
+      for (let i = 0; i < printableItems.length; i += 2) {
+        const item1 = printableItems[i];
+        const item2 = printableItems[i + 1];
 
-        const renderCell = (it?: Product) => {
+        const renderCell = (it?: PrintableProduct) => {
           if (!it) {
             return `<td style="width: 50%; padding: 4pt 8pt; border: none;"></td>`;
           }
@@ -837,9 +1020,9 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
       `;
     };
 
-    // Render combos section for Word
     const renderCombosWord = () => {
-      if (allCombos.length === 0 || config.comboPosition === 'hidden' || config.comboPosition === 'inline') {
+      const printableCombos = allCombos.filter((c) => !c.isExcluded);
+      if (printableCombos.length === 0 || config.comboPosition === 'hidden' || config.comboPosition === 'inline') {
         return '';
       }
 
@@ -861,7 +1044,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
             </tr>
             <tr>
               <td style="padding: 2pt 4pt 6pt 4pt;">
-                ${generateWordProductsTable(allCombos)}
+                ${generateWordProductsTable(printableCombos)}
               </td>
             </tr>
           </table>
@@ -869,9 +1052,8 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
       `;
     };
 
-    // Render category section for Word
     const renderCategoryWord = (cat: Category, index: number) => {
-      const catProds = getProductsForCategory(cat.id);
+      const catProds = getProductsForCategory(cat.id, true);
       if (catProds.length === 0) return '';
 
       return `
@@ -890,7 +1072,6 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
       `;
     };
 
-    // Build Word body
     let wordSectionsHTML = '';
     const cafeteriaCat = orderedCategories.find(
       (c) => c.slug === 'cafeteria' || c.name.toLowerCase().includes('café') || c.name.toLowerCase().includes('cafeter')
@@ -1059,13 +1240,27 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                 </span>
               </div>
               <p className="text-xs text-[#D8E4C3]/80">
-                Diseño Haute Pâtisserie &bull; {products.filter((p) => p.isAvailable).length} productos disponibles &bull; {allCombos.length} maridajes
+                {products.filter((p) => p.isAvailable).length} productos disponibles &bull; {allCombos.length} combos detectados
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Toggle Configurator Button */}
+            {/* Inline WYSIWYG Editing Toggle Button */}
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+                isEditMode
+                  ? 'bg-amber-400 hover:bg-amber-300 text-stone-950 font-black ring-2 ring-amber-200'
+                  : 'bg-amber-600 hover:bg-amber-700 text-white'
+              }`}
+              title="Permite hacer clic directamente en cualquier texto o precio de la carta para editarlo"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>{isEditMode ? 'Guardar / Salir de Edición' : '✏️ Editar Textos y Precios'}</span>
+            </button>
+
+            {/* General Settings Drawer Button */}
             <button
               onClick={() => setShowConfig(!showConfig)}
               className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
@@ -1073,10 +1268,10 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                   ? 'bg-[#C5A880] text-[#122315] shadow-md font-extrabold ring-2 ring-[#E6D4B8]'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
-              title="Ajustar orden de categorías, maridajes y textos"
+              title="Ajustar paginación, ubicación de combos y orden de secciones"
             >
               <Settings2 className="w-4 h-4" />
-              <span>{showConfig ? 'Cerrar Ajustes' : 'Personalizar Carta'}</span>
+              <span>{showConfig ? 'Cerrar Ajustes' : 'Ajustes Generales'}</span>
             </button>
 
             {/* Word Export Button */}
@@ -1112,26 +1307,26 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
           </div>
         </div>
 
-        {/* Collapsible Customizer Drawer */}
+        {/* Collapsible Customizer Drawer (Fixed height & no clipping) */}
         {showConfig && (
-          <div className="bg-[#F4EFE6] border-b border-[#D8C7B0] p-4 text-[#1A1412] space-y-4 print:hidden animate-fade-in shadow-inner max-h-[38vh] overflow-y-auto">
+          <div className="bg-[#F4EFE6] border-b border-[#D8C7B0] p-4 text-[#1A1412] space-y-4 print:hidden animate-fade-in shadow-inner max-h-[50vh] overflow-y-auto">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[#D8C7B0]/80 pb-2">
               <div className="flex items-center gap-2">
                 <Settings2 className="w-4 h-4 text-[#8C6239]" />
                 <h3 className="font-extrabold text-sm text-[#122315] font-serif">
-                  Configuración de Estilo y Orden Editorial
+                  Configuración de Paginación y Secciones
                 </h3>
               </div>
               <button
                 onClick={resetConfig}
                 className="text-xs text-[#7A6F66] hover:text-[#122315] flex items-center gap-1 font-semibold underline underline-offset-2"
               >
-                <RotateCcw className="w-3.5 h-3.5" /> Restablecer valores de autor
+                <RotateCcw className="w-3.5 h-3.5" /> Restablecer opciones
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* 1. Ubicación de Maridajes */}
+              {/* 1. Ubicación de Combos */}
               <div className="bg-white p-3 rounded-xl border border-[#D8C7B0] shadow-xs space-y-2">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-[#8C6239]">
                   <Sparkles className="w-4 h-4 text-[#A07844]" />
@@ -1145,7 +1340,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                   onChange={(e) => setConfig({ ...config, comboPosition: e.target.value as ComboPosition })}
                   className="w-full text-xs font-serif font-bold bg-[#FAF8F5] border border-[#D8C7B0] rounded-lg p-2 focus:ring-2 focus:ring-[#8C6239] outline-none text-[#1A1412]"
                 >
-                  <option value="top">✦ Al inicio (Portada de degustación)</option>
+                  <option value="top">✦ Al inicio (Portada destacada)</option>
                   <option value="after-cafeteria">☕ Después de Cafetería</option>
                   <option value="bottom">📌 Al final de la carta</option>
                   <option value="inline">🔀 Dentro de su categoría original</option>
@@ -1188,7 +1383,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                   <span>Paginación Editorial</span>
                 </div>
                 <p className="text-[11px] text-[#6E645D] leading-tight">
-                  Repite el membrete institucional francés en cada hoja A4 al imprimir o exportar.
+                  Repite el membrete institucional en cada hoja A4 al imprimir o exportar.
                 </p>
                 <label className="flex items-start gap-2 text-xs text-[#1A1412] cursor-pointer pt-1 bg-[#FAF8F5] p-2 rounded-lg border border-[#D8C7B0]">
                   <input
@@ -1228,7 +1423,7 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                         className={`flex items-center justify-between gap-1 p-1.5 rounded-lg border text-xs transition-colors ${
                           isHidden
                             ? 'bg-stone-100 border-stone-200 text-stone-400'
-                            : 'bg-[#FAF8F5] border-[#D8C7B0] text-[#122315]'
+                            : 'bg-[#FAF8F5] border-[#D8CBB6] text-[#122315]'
                         }`}
                       >
                         <span className="font-bold truncate max-w-[100px] font-serif">
@@ -1272,10 +1467,38 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
           </div>
         )}
 
-        {/* Scrollable Modal Body (Haute Pâtisserie Visual Preview) */}
+        {/* Informational Notification Banner when Inline Edit Mode is Active */}
+        {isEditMode && (
+          <div className="bg-amber-100 border-b border-amber-300 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950 print:hidden animate-fade-in">
+            <div className="flex items-center gap-2">
+              <span className="p-1 bg-amber-500 text-white rounded-md">
+                <Edit3 className="w-3.5 h-3.5" />
+              </span>
+              <span>
+                <strong>Modo Edición Directo Activado:</strong> Haz clic directamente sobre cualquier <u>nombre</u>, <u>precio</u>, <u>descripción</u> o <u>título</u> en la carta para escribir. Usa <strong>[👁️]</strong> para no imprimir un producto y <strong>[▲/▼]</strong> para reordenarlo.
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleResetAllEdits}
+                className="px-2.5 py-1 bg-white hover:bg-stone-50 border border-amber-300 rounded-lg text-[11px] font-bold text-amber-900 transition-colors flex items-center gap-1 shadow-2xs"
+              >
+                <RotateCcw className="w-3 h-3" /> Restablecer al Original
+              </button>
+              <button
+                onClick={() => setIsEditMode(false)}
+                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 shadow-2xs"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" /> Finalizar Edición
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Scrollable Modal Body (Haute Pâtisserie Visual Preview with Inline Editing) */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-[#EFEAE2] print:overflow-visible print:p-0 print:block print:bg-transparent">
           {/* Subtle indicator of repeating header */}
-          {config.repeatHeaderOnAllPages && (
+          {!isEditMode && config.repeatHeaderOnAllPages && (
             <div className="max-w-[820px] mx-auto mb-3 flex items-center justify-center gap-2 bg-[#F5EFE6] border border-[#C5A880]/40 py-1.5 px-3 rounded-full text-xs text-[#8C6239] font-medium shadow-2xs print:hidden">
               <span className="text-xs">✦</span>
               <span>
@@ -1295,11 +1518,27 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
           >
             {/* Editorial Header Section */}
             <div className="text-center space-y-2 border-b border-[#C5A880] pb-4">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-[0.18em] uppercase text-[#122315] font-serif">
+              <h1
+                contentEditable={isEditMode}
+                suppressContentEditableWarning={true}
+                onBlur={(e) => setConfig((prev) => ({ ...prev, title: e.currentTarget.textContent || prev.title }))}
+                className={`text-3xl sm:text-4xl font-bold tracking-[0.18em] uppercase text-[#122315] font-serif ${
+                  isEditMode ? 'cursor-text hover:bg-amber-100/60 focus:bg-amber-100/90 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1.5' : ''
+                }`}
+                title={isEditMode ? 'Haz clic para editar el título' : undefined}
+              >
                 {config.title}
               </h1>
 
-              <p className="text-[10px] font-sans font-medium tracking-[0.22em] uppercase text-[#7A6F66]">
+              <p
+                contentEditable={isEditMode}
+                suppressContentEditableWarning={true}
+                onBlur={(e) => setConfig((prev) => ({ ...prev, subtitle: e.currentTarget.textContent || prev.subtitle }))}
+                className={`text-[10px] font-sans font-medium tracking-[0.22em] uppercase text-[#7A6F66] ${
+                  isEditMode ? 'cursor-text hover:bg-amber-100/60 focus:bg-amber-100/90 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1.5' : ''
+                }`}
+                title={isEditMode ? 'Haz clic para editar la bajada' : undefined}
+              >
                 {config.subtitle}
               </p>
 
@@ -1320,7 +1559,15 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               </div>
 
               {config.experienceText && (
-                <p className="text-xs italic text-[#6E645D] font-serif max-w-lg mx-auto pt-1 leading-relaxed">
+                <p
+                  contentEditable={isEditMode}
+                  suppressContentEditableWarning={true}
+                  onBlur={(e) => setConfig((prev) => ({ ...prev, experienceText: e.currentTarget.textContent?.replace(/[«»]/g, '').trim() || prev.experienceText }))}
+                  className={`text-xs italic text-[#6E645D] font-serif max-w-lg mx-auto pt-1 leading-relaxed ${
+                    isEditMode ? 'cursor-text hover:bg-amber-100/60 focus:bg-amber-100/90 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1.5' : ''
+                  }`}
+                  title={isEditMode ? 'Haz clic para editar el manifiesto de la casa' : undefined}
+                >
                   « {config.experienceText} »
                 </p>
               )}
@@ -1353,26 +1600,105 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-left pt-1">
-                        {allCombos.map((item) => (
-                          <div key={item.id} className="space-y-0.5 border-b sm:border-b-0 border-[#EFE5D7] pb-2 sm:pb-0">
+                        {allCombos.map((item, itemIdx) => (
+                          <div
+                            key={item.id}
+                            className={`space-y-0.5 border-b sm:border-b-0 border-[#EFE5D7] pb-2 sm:pb-0 transition-opacity ${
+                              item.isExcluded ? 'opacity-40 line-through' : ''
+                            }`}
+                          >
                             <div className="flex items-baseline justify-between gap-1 w-full">
-                              <span className="font-bold text-xs text-[#1A1412] font-serif truncate flex items-center gap-1.5">
-                                <span className="text-[8px] font-sans font-bold bg-[#F3EBDD] border border-[#D8C3A5] text-[#8A5E2E] px-1 py-0.2 rounded-2xs">
+                              <span className="font-bold text-xs text-[#1A1412] font-serif flex items-center gap-1.5 flex-1 min-w-0">
+                                <span className="text-[8px] font-sans font-bold bg-[#F3EBDD] border border-[#D8C3A5] text-[#8A5E2E] px-1 py-0.2 rounded-2xs shrink-0">
                                   COMBO
                                 </span>
-                                {item.name}
-                                {item.isFeatured && <span className="text-[#A07844] text-[10px]">✦</span>}
+                                <span
+                                  contentEditable={isEditMode}
+                                  suppressContentEditableWarning={true}
+                                  onBlur={(e) => handleUpdateItemName(item.id, e.currentTarget.textContent || item.name)}
+                                  className={`truncate ${
+                                    isEditMode
+                                      ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
+                                      : ''
+                                  }`}
+                                  title={isEditMode ? 'Haz clic para editar el nombre' : undefined}
+                                >
+                                  {item.name}
+                                </span>
+                                {item.isFeatured && <span className="text-[#A07844] text-[10px] shrink-0">✦</span>}
                               </span>
+
                               <span className="flex-1 border-b border-dotted border-[#CBBFB0] mx-1.5 mb-1 hidden sm:block" />
-                              <span className="font-bold text-xs text-[#8C6239] font-serif shrink-0">
+
+                              <span
+                                contentEditable={isEditMode}
+                                suppressContentEditableWarning={true}
+                                onBlur={(e) => {
+                                  const raw = e.currentTarget.textContent || '';
+                                  const num = parseFloat(raw.replace(/[^0-9]/g, ''));
+                                  if (!isNaN(num)) handleUpdateItemPrice(item.id, num);
+                                }}
+                                className={`font-bold text-xs text-[#8C6239] font-serif shrink-0 ${
+                                  isEditMode
+                                    ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
+                                    : ''
+                                }`}
+                                title={isEditMode ? 'Haz clic para editar el precio' : undefined}
+                              >
                                 {formatCurrency(item.price)}
                               </span>
+
+                              {/* Edit Mode Buttons */}
+                              {isEditMode && (
+                                <div className="flex items-center gap-0.5 shrink-0 ml-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleItemExclusion(item.id)}
+                                    className={`p-1 rounded text-xs transition-colors ${
+                                      item.isExcluded
+                                        ? 'bg-rose-100 text-rose-700'
+                                        : 'text-stone-400 hover:text-rose-600 hover:bg-stone-200'
+                                    }`}
+                                    title={item.isExcluded ? 'Restaurar en la carta' : 'Ocultar de la carta'}
+                                  >
+                                    {item.isExcluded ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={itemIdx === 0}
+                                    onClick={() => handleMoveCombo(itemIdx, 'up')}
+                                    className="p-1 text-stone-400 hover:text-[#8C6239] disabled:opacity-20 rounded"
+                                    title="Subir"
+                                  >
+                                    <ChevronUp className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={itemIdx === allCombos.length - 1}
+                                    onClick={() => handleMoveCombo(itemIdx, 'down')}
+                                    className="p-1 text-stone-400 hover:text-[#8C6239] disabled:opacity-20 rounded"
+                                    title="Bajar"
+                                  >
+                                    <ChevronDown className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                            {item.description && (
-                              <p className="text-[10px] text-[#6E645D] font-sans leading-tight">
-                                {item.description}
-                              </p>
-                            )}
+
+                            <p
+                              contentEditable={isEditMode}
+                              suppressContentEditableWarning={true}
+                              onBlur={(e) => handleUpdateItemDesc(item.id, e.currentTarget.textContent || '')}
+                              className={`text-[10px] text-[#6E645D] font-sans leading-tight ${
+                                isEditMode
+                                  ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
+                                  : ''
+                              }`}
+                              title={isEditMode ? 'Haz clic para editar la descripción' : undefined}
+                            >
+                              {item.description || (isEditMode ? '(Sin descripción, haz clic para agregar)' : '')}
+                            </p>
+
                             {item.compositeItems && item.compositeItems.length > 0 && (
                               <div className="text-[9px] font-sans text-[#4A423D] bg-[#F4EFE6] border-l-2 border-[#C5A880] px-2 py-0.5 mt-1 leading-snug">
                                 <strong className="text-[#8C6239] uppercase text-[8px] tracking-wider">Maridaje:</strong>{' '}
@@ -1391,8 +1717,8 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
               // Helper to render Category preview
               const renderCategoryPreview = (cat: Category, index: number) => {
-                const catProducts = getProductsForCategory(cat.id);
-                if (catProducts.length === 0) return null;
+                const catProds = getProductsForCategory(cat.id, false);
+                if (catProds.length === 0) return null;
 
                 return (
                   <section key={cat.id} className="space-y-2.5">
@@ -1407,23 +1733,101 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
 
                     {/* Products Grid (Dotted leaders restaurant list) */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
-                      {catProducts.map((item) => (
-                        <div key={item.id} className="space-y-0.5">
+                      {catProds.map((item, itemIdx) => (
+                        <div
+                          key={item.id}
+                          className={`space-y-0.5 transition-opacity ${
+                            item.isExcluded ? 'opacity-40 line-through' : ''
+                          }`}
+                        >
                           <div className="flex items-baseline justify-between gap-1 w-full">
-                            <span className="font-bold text-xs text-[#1A1412] font-serif truncate">
-                              {item.name}
-                              {item.isFeatured && <span className="text-[#A07844] text-[10px] ml-1">✦</span>}
+                            <span className="font-bold text-xs text-[#1A1412] font-serif truncate flex items-center gap-1 flex-1 min-w-0">
+                              <span
+                                contentEditable={isEditMode}
+                                suppressContentEditableWarning={true}
+                                onBlur={(e) => handleUpdateItemName(item.id, e.currentTarget.textContent || item.name)}
+                                className={`truncate ${
+                                  isEditMode
+                                    ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
+                                    : ''
+                                }`}
+                                title={isEditMode ? 'Haz clic para editar el nombre' : undefined}
+                              >
+                                {item.name}
+                              </span>
+                              {item.isFeatured && <span className="text-[#A07844] text-[10px] ml-1 shrink-0">✦</span>}
                             </span>
+
                             <span className="flex-1 border-b border-dotted border-[#CBBFB0] mx-1.5 mb-1" />
-                            <span className="font-bold text-xs text-[#8C6239] font-serif shrink-0">
+
+                            <span
+                              contentEditable={isEditMode}
+                              suppressContentEditableWarning={true}
+                              onBlur={(e) => {
+                                const raw = e.currentTarget.textContent || '';
+                                const num = parseFloat(raw.replace(/[^0-9]/g, ''));
+                                if (!isNaN(num)) handleUpdateItemPrice(item.id, num);
+                              }}
+                              className={`font-bold text-xs text-[#8C6239] font-serif shrink-0 ${
+                                isEditMode
+                                  ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
+                                  : ''
+                              }`}
+                              title={isEditMode ? 'Haz clic para editar el precio' : undefined}
+                            >
                               {formatCurrency(item.price)}
                             </span>
+
+                            {/* Edit Mode Buttons */}
+                            {isEditMode && (
+                              <div className="flex items-center gap-0.5 shrink-0 ml-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleItemExclusion(item.id)}
+                                  className={`p-1 rounded text-xs transition-colors ${
+                                    item.isExcluded
+                                      ? 'bg-rose-100 text-rose-700'
+                                      : 'text-stone-400 hover:text-rose-600 hover:bg-stone-200'
+                                  }`}
+                                  title={item.isExcluded ? 'Restaurar en la carta' : 'Ocultar de la carta'}
+                                >
+                                  {item.isExcluded ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={itemIdx === 0}
+                                  onClick={() => handleMoveProduct(cat.id, itemIdx, 'up')}
+                                  className="p-1 text-stone-400 hover:text-[#8C6239] disabled:opacity-20 rounded"
+                                  title="Subir"
+                                >
+                                  <ChevronUp className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={itemIdx === catProds.length - 1}
+                                  onClick={() => handleMoveProduct(cat.id, itemIdx, 'down')}
+                                  className="p-1 text-stone-400 hover:text-[#8C6239] disabled:opacity-20 rounded"
+                                  title="Bajar"
+                                >
+                                  <ChevronDown className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
                           </div>
-                          {item.description && (
-                            <p className="text-[10px] text-[#6E645D] font-sans leading-tight">
-                              {item.description}
-                            </p>
-                          )}
+
+                          <p
+                            contentEditable={isEditMode}
+                            suppressContentEditableWarning={true}
+                            onBlur={(e) => handleUpdateItemDesc(item.id, e.currentTarget.textContent || '')}
+                            className={`text-[10px] text-[#6E645D] font-sans leading-tight ${
+                              isEditMode
+                                ? 'cursor-text hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none focus:ring-1 focus:ring-[#8C6239] rounded px-1'
+                                : ''
+                            }`}
+                            title={isEditMode ? 'Haz clic para editar la descripción' : undefined}
+                          >
+                            {item.description || (isEditMode ? '(Sin descripción, haz clic para agregar)' : '')}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -1476,11 +1880,25 @@ export const PrintableMenuModal: React.FC<PrintableMenuModalProps> = ({ isOpen, 
               ✦ Haute Édition
             </span>
             <span>
-              Maquetación clásica con guías punteadas, tipografía editorial y membrete institucional en todas las hojas.
+              {isEditMode
+                ? 'Modo edición activo. Haz clic sobre cualquier elemento de la carta para modificarlo.'
+                : 'Haz clic en "✏️ Editar Textos y Precios" para modificar nombres, valores o descripciones directamente.'}
             </span>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`px-4 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs ${
+                isEditMode
+                  ? 'bg-amber-400 hover:bg-amber-300 text-stone-950 ring-2 ring-amber-200'
+                  : 'bg-amber-600 hover:bg-amber-700 text-white'
+              }`}
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>{isEditMode ? 'Listo / Guardar' : 'Editar en Pantalla'}</span>
+            </button>
+
             <button
               onClick={handleExportWord}
               className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs ${
