@@ -76,6 +76,18 @@ export const TraditionalMenuPage: React.FC = () => {
         >
           Todo el Menú
         </button>
+        {products.some((p) => p.isAvailable && (p.isComposite || p.categoryId === 'combos')) && (
+          <button
+            onClick={() => scrollToCategory('combos')}
+            className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1 ${
+              activeCategory === 'combos'
+                ? 'bg-amber-600 text-[#FFFDF8] shadow-xs'
+                : 'bg-amber-100/80 text-amber-950 border border-amber-300'
+            }`}
+          >
+            <span>📦 Combos & Promos</span>
+          </button>
+        )}
         {categories.map((cat) => (
           <button
             key={cat.id}
@@ -93,9 +105,83 @@ export const TraditionalMenuPage: React.FC = () => {
 
       {/* Traditional Menu Body */}
       <main className="p-4 space-y-8">
+        {/* Dedicated Combos Section */}
+        {(() => {
+          const comboProducts = products.filter((p) => {
+            if (!p.isAvailable) return false;
+            const isCombo = Boolean(p.isComposite) || p.categoryId === 'combos';
+            const matchesSearch =
+              p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              p.description.toLowerCase().includes(searchQuery.toLowerCase());
+            return isCombo && matchesSearch;
+          });
+
+          if (comboProducts.length === 0) return null;
+
+          return (
+            <section id="cat-sec-combos" className="space-y-4 scroll-mt-48 bg-amber-50/60 p-3 rounded-2xl border-2 border-amber-200">
+              <div className="text-center space-y-1 py-1 border-b-2 border-amber-300">
+                <h2 className="text-base font-extrabold text-amber-900 uppercase tracking-widest font-serif flex items-center justify-center gap-2">
+                  <span>🏷️</span>
+                  <span>— Combos & Promociones —</span>
+                </h2>
+                <p className="text-[11px] text-amber-800 font-serif italic">
+                  Las mejores combinaciones y ahorro especial
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {comboProducts.map((item) => (
+                  <article
+                    key={item.id}
+                    className="bg-white rounded-2xl p-4 border border-amber-200 shadow-xs transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-bold text-[#1A2E1E]">{item.name}</h3>
+                          <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded">
+                            📦 Combo
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#2F5233]/90 leading-relaxed font-serif">
+                          {item.description}
+                        </p>
+                        {item.compositeItems && item.compositeItems.length > 0 && (
+                          <p className="text-[11px] text-blue-900 font-bold bg-blue-50/80 p-1.5 rounded-lg border border-blue-200/70">
+                            Fijo: {item.compositeItems.map((ci) => `${ci.quantity}x ${ci.productName}`).join(' + ')}
+                          </p>
+                        )}
+                        {item.compositeGroups && item.compositeGroups.length > 0 && (
+                          <div className="text-[11px] text-amber-950 font-medium bg-amber-50/90 p-1.5 rounded-lg border border-amber-200/70 space-y-0.5">
+                            <span className="font-bold text-amber-900 block text-[10px] uppercase">A elección:</span>
+                            {item.compositeGroups.map((g) => (
+                              <div key={g.id}>
+                                • <strong className="text-amber-950">{g.name}:</strong> {g.options.map((o) => o.productName).join(' ó ')}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-sm font-extrabold text-[#2F5233] font-mono">
+                          {formatCurrency(item.price)}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          );
+        })()}
+
         {categories.map((cat) => {
           const catProducts = products.filter((p) => {
             if (!p.isAvailable) return false;
+            // Exclude combos so they never appear inside pastelería or other categories
+            if (p.isComposite || p.categoryId === 'combos') return false;
             const matchesCat = p.categoryId === cat.id;
             const matchesSearch =
               p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
